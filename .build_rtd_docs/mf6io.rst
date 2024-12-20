@@ -1,8 +1,9 @@
-MODFLOW 6 Input Guide
----------------------
+Input Guide
+-----------
 
-The latest version of the complete MODFLOW 6 input output guide can be found
+The latest version of the complete MODFLOW 6 input/output guide can be found
 `here <https://github.com/MODFLOW-USGS/modflow6-nightly-build/releases/>`_.
+This section enumerates and describes MODFLOW 6 input files.
 
 Simulation
 ^^^^^^^^^^
@@ -42,6 +43,26 @@ Groundwater Transport
    :glob:
 
    _mf6io/gwt-*
+
+
+Groundwater Energy Transport
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. toctree::
+   :maxdepth: 1
+   :glob:
+
+   _mf6io/gwe-*
+
+
+Particle Tracking
+^^^^^^^^^^^^^^^^^
+
+.. toctree::
+   :maxdepth: 1
+   :glob:
+
+   _mf6io/prt-*
 
 
 Model Exchanges

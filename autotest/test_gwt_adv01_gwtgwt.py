@@ -8,7 +8,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["adv01a_gwtgwt", "adv01b_gwtgwt", "adv01c_gwtgwt"]
@@ -96,9 +95,7 @@ def get_gwf_model(sim, gwfname, gwfpath, modelshape, chdspd=None, welspd=None):
     return gwf
 
 
-def get_gwt_model(
-    sim, gwtname, gwtpath, modelshape, scheme, sourcerecarray=None
-):
+def get_gwt_model(sim, gwtname, gwtpath, modelshape, scheme, sourcerecarray=None):
     nlay, nrow, ncol, xshift, yshift = modelshape
     delr = 1.0
     delc = 1.0
@@ -145,9 +142,7 @@ def get_gwt_model(
         gwt,
         budget_filerecord=f"{gwtname}.cbc",
         concentration_filerecord=f"{gwtname}.ucn",
-        concentrationprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        concentrationprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
     )
@@ -189,9 +184,7 @@ def build_models(idx, test):
 
     # build MODFLOW 6 files
     ws = test.workspace
-    sim = flopy.mf6.MFSimulation(
-        sim_name=ws, version="mf6", exe_name="mf6", sim_ws=ws
-    )
+    sim = flopy.mf6.MFSimulation(sim_name=ws, version="mf6", exe_name="mf6", sim_ws=ws)
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
         sim, time_units="DAYS", nper=nper, perioddata=tdis_rc, pname="sim.tdis"
@@ -335,9 +328,7 @@ def check_output(idx, test):
 
     fpth = os.path.join(test.workspace, gwtname, f"{gwtname}.ucn")
     try:
-        cobj = flopy.utils.HeadFile(
-            fpth, precision="double", text="CONCENTRATION"
-        )
+        cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
         conc1 = cobj.get_data()
     except:
         assert False, f'could not load data from "{fpth}"'
@@ -346,9 +337,7 @@ def check_output(idx, test):
 
     fpth = os.path.join(test.workspace, gwtname, f"{gwtname}.ucn")
     try:
-        cobj = flopy.utils.HeadFile(
-            fpth, precision="double", text="CONCENTRATION"
-        )
+        cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
         conc2 = cobj.get_data()
     except:
         assert False, f'could not load data from "{fpth}"'
@@ -691,10 +680,9 @@ def check_output(idx, test):
         for line in open(fpth):
             if line.lstrip().startswith("PERCENT"):
                 cumul_balance_error = float(line.split()[3])
-                assert (
-                    abs(cumul_balance_error) < 0.00001
-                ), "Cumulative balance error = {} for {}, should equal 0.0".format(
-                    cumul_balance_error, mname
+                assert abs(cumul_balance_error) < 0.00001, (
+                    f"Cumulative balance error = {cumul_balance_error} for {mname}, "
+                    "should equal 0.0"
                 )
 
         # get grid data (from GWF)
@@ -712,9 +700,7 @@ def check_output(idx, test):
         for fjf in flow_ja_face:
             fjf = fjf.flatten()
             res = fjf[ia[:-1]]
-            errmsg = (
-                f"min or max flowja residual too large {res.min()} {res.max()}"
-            )
+            errmsg = f"min or max flowja residual too large {res.min()} {res.max()}"
             # TODO: this is not implemented yet:
             # assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
 

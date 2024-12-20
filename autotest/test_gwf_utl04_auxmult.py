@@ -7,15 +7,12 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["auxmult01", "auxmult02"]
 
-wellist = [
-    [(0, 2, 2), "tsq", "tsqfact"],
-    [(0, 2, 2), 1.0000000, "tsqfact"]
-]
+wellist = [[(0, 2, 2), "tsq", "tsqfact"], [(0, 2, 2), 1.0000000, "tsqfact"]]
+
 
 def build_models(idx, test):
     global numstep
@@ -45,9 +42,7 @@ def build_models(idx, test):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(sim, modelname=name, save_flows=True)
@@ -121,9 +116,7 @@ def build_models(idx, test):
 
     # wel obs
     obs = {
-        "wel.obs.csv": [
-            ["q", "wel", (0, 2, 2)]
-        ],
+        "wel.obs.csv": [["q", "wel", (0, 2, 2)]],
     }
     welobs = wel.obs.initialize(
         print_input=True,
@@ -196,7 +189,7 @@ def check_output(idx, test):
         assert False, f'could not load data from "{fpth}"'
 
     rate = obs["Q"]
-    obs_answer = [1.0 if x%2==0 else 0.0 for x in range(numstep)]
+    obs_answer = [1.0 if x % 2 == 0 else 0.0 for x in range(numstep)]
     msg = f"err {rate} /= {obs_answer}"
     assert np.allclose(rate, obs_answer), msg
 

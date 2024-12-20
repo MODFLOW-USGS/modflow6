@@ -1,11 +1,11 @@
 import os
 import pathlib as pl
+
 import flopy
 import numpy as np
 import pytest
-
-from framework import TestFramework
 from conftest import try_get_target
+from framework import TestFramework
 
 cases = ["npf01a_75x75", "npf01b_75x75"]
 top = [100.0, 0.0]
@@ -63,9 +63,7 @@ def build_models(idx, test):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwf = flopy.mf6.MFModel(

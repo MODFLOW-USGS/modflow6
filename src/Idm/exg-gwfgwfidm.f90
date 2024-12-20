@@ -9,6 +9,7 @@ module ExgGwfgwfInputModule
   public exg_gwfgwf_block_definitions
   public ExgGwfgwfParamFoundType
   public exg_gwfgwf_multi_package
+  public exg_gwfgwf_subpackages
 
   type ExgGwfgwfParamFoundType
     logical :: auxiliary = .false.
@@ -46,6 +47,12 @@ module ExgGwfgwfInputModule
 
   logical :: exg_gwfgwf_multi_package = .true.
 
+  character(len=16), parameter :: &
+    exg_gwfgwf_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     exggwfgwf_auxiliary = InputParamDefinitionType &
     ( &
@@ -56,6 +63,7 @@ module ExgGwfgwfInputModule
     'AUXILIARY', & ! fortran variable
     'STRING', & ! type
     'NAUX', & ! shape
+    'keyword to specify aux variables', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -73,6 +81,7 @@ module ExgGwfgwfInputModule
     'BOUNDNAMES', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -90,6 +99,7 @@ module ExgGwfgwfInputModule
     'IPRPAK', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to print input to list file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -107,6 +117,7 @@ module ExgGwfgwfInputModule
     'IPRFLOW', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to print gwfgwf flows to list file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -124,6 +135,7 @@ module ExgGwfgwfInputModule
     'IPAKCB', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to save GWFGWF flows', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -141,6 +153,7 @@ module ExgGwfgwfInputModule
     'CELL_AVERAGING', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'conductance weighting option', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -158,6 +171,7 @@ module ExgGwfgwfInputModule
     'CVOPTIONS', & ! fortran variable
     'RECORD VARIABLECV DEWATERED', & ! type
     '', & ! shape
+    'vertical conductance options', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -175,6 +189,7 @@ module ExgGwfgwfInputModule
     'VARIABLECV', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to activate VARIABLECV option', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -192,6 +207,7 @@ module ExgGwfgwfInputModule
     'DEWATERED', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to activate DEWATERED option', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -209,6 +225,7 @@ module ExgGwfgwfInputModule
     'NEWTON', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to activate Newton-Raphson', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -226,6 +243,7 @@ module ExgGwfgwfInputModule
     'XT3D', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to activate XT3D', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -243,6 +261,7 @@ module ExgGwfgwfInputModule
     'GNC_FILERECORD', & ! fortran variable
     'RECORD GNC6 FILEIN GNC6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -260,6 +279,7 @@ module ExgGwfgwfInputModule
     'FILEIN', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'file keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -277,6 +297,7 @@ module ExgGwfgwfInputModule
     'GNC6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'gnc6 keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -294,6 +315,7 @@ module ExgGwfgwfInputModule
     'GNC6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'gnc6 input filename', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -311,6 +333,7 @@ module ExgGwfgwfInputModule
     'MVR_FILERECORD', & ! fortran variable
     'RECORD MVR6 FILEIN MVR6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -328,6 +351,7 @@ module ExgGwfgwfInputModule
     'MVR6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'obs keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -345,6 +369,7 @@ module ExgGwfgwfInputModule
     'MVR6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'mvr6 input filename', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -362,6 +387,7 @@ module ExgGwfgwfInputModule
     'OBS_FILERECORD', & ! fortran variable
     'RECORD OBS6 FILEIN OBS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -379,6 +405,7 @@ module ExgGwfgwfInputModule
     'OBS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'obs keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -396,6 +423,7 @@ module ExgGwfgwfInputModule
     'OBS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'obs6 input filename', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -413,6 +441,7 @@ module ExgGwfgwfInputModule
     'DEV_IFMOD_ON', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'activate interface model on exchange', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -430,6 +459,7 @@ module ExgGwfgwfInputModule
     'NEXG', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of exchanges', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -447,6 +477,7 @@ module ExgGwfgwfInputModule
     'CELLIDM1', & ! fortran variable
     'INTEGER1D', & ! type
     'NCELLDIM', & ! shape
+    'cellid of first cell', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -464,6 +495,7 @@ module ExgGwfgwfInputModule
     'CELLIDM2', & ! fortran variable
     'INTEGER1D', & ! type
     'NCELLDIM', & ! shape
+    'cellid of second cell', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -481,6 +513,7 @@ module ExgGwfgwfInputModule
     'IHC', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'integer flag for connection type', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -498,6 +531,7 @@ module ExgGwfgwfInputModule
     'CL1', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'connection distance', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -515,6 +549,7 @@ module ExgGwfgwfInputModule
     'CL2', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'connection distance', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -532,6 +567,7 @@ module ExgGwfgwfInputModule
     'HWVA', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'horizontal cell width or area for vertical flow', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -549,6 +585,7 @@ module ExgGwfgwfInputModule
     'AUXVAR', & ! fortran variable
     'DOUBLE1D', & ! type
     'NAUX', & ! shape
+    'auxiliary variables', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -566,6 +603,7 @@ module ExgGwfgwfInputModule
     'BOUNDNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'exchange boundname', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -619,6 +657,7 @@ module ExgGwfgwfInputModule
     'EXCHANGEDATA', & ! fortran variable
     'RECARRAY CELLIDM1 CELLIDM2 IHC CL1 CL2 HWVA AUX BOUNDNAME', & ! type
     'NEXG', & ! shape
+    'exchange data', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

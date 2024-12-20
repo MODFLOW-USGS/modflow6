@@ -690,7 +690,6 @@ contains ! module procedures
     class is (SpatialModelConnectionType)
       res => obj
     end select
-    return
   end function cast_as_smc
 
   !> @brief Add connection to a list
@@ -705,8 +704,6 @@ contains ! module procedures
     !
     obj => conn
     call list%Add(obj)
-    !
-    return
   end subroutine add_smc_to_list
 
   !> @brief Get the connection from a list
@@ -720,8 +717,6 @@ contains ! module procedures
     class(*), pointer :: obj
     obj => list%GetItem(idx)
     res => cast_as_smc(obj)
-    !
-    return
   end function get_smc_from_list
 
 end module SpatialModelConnectionModule

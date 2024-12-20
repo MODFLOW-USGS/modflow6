@@ -1,4 +1,0 @@
-BEGIN DIMENSIONS
-  MAXMVR <maxmvr>
-  MAXPACKAGES <maxpackages>
-END DIMENSIONS

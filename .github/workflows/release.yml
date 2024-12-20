@@ -37,7 +37,7 @@ on:
         description: 'Linux runner image to build binaries on.'
         required: false
         type: string
-        default: 'ubuntu-20.04'
+        default: 'ubuntu-22.04'
       run_tests:
         description: Run tests after building binaries.'
         required: false
@@ -62,7 +62,7 @@ env:
   PIXI_BETA_WARNING_OFF: true
 jobs:
   build:
-    name: Build binaries (${{ matrix.os }}, parallel=${{ matrix.parallel }})
+    name: Build binaries (${{ matrix.os }}, extended=${{ matrix.extended }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -72,27 +72,27 @@ jobs:
             compiler: ${{ inputs.compiler_toolchain }}
             version: ${{ inputs.compiler_version }}
             optimization: 2
-            parallel: false
+            extended: false
           - os: macos-13
             compiler: ${{ inputs.compiler_toolchain }}
             version: ${{ inputs.compiler_version }}
             optimization: 2
-            parallel: false
+            extended: false
           - os: macos-14
             compiler: gcc
             version: 13
             optimization: 1
-            parallel: false
+            extended: false
           - os: windows-2022
             compiler: ${{ inputs.compiler_toolchain }}
             version: ${{ inputs.compiler_version }}
             optimization: 2
-            parallel: false
+            extended: false
           - os: windows-2022
             compiler: intel-classic
             version: "2021.7"
             optimization: 2
-            parallel: true
+            extended: true
     defaults:
       run:
         shell: bash -l {0}
@@ -108,14 +108,18 @@ jobs:
           ref: ${{ inputs.branch }}
 
       - name: Setup pixi
-        uses: prefix-dev/setup-pixi@v0.7.0
+        uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.19.1
+          pixi-version: v0.24.2
           manifest-path: "modflow6/pixi.toml"
 
       - name: Custom pixi install
         working-directory: modflow6
         run: pixi run install
+
+      - name: Install additional netcdf testing packages
+        working-directory: modflow6
+        run: pixi run pip install xugrid xarray netcdf4
 
       - name: Setup Micromamba
         uses: mamba-org/setup-micromamba@v1
@@ -128,7 +132,7 @@ jobs:
             powershell
 
       - name: Setup ${{ matrix.compiler }} ${{ matrix.version }}
-        if: (!(runner.os == 'Windows' && matrix.parallel))
+        if: (!(runner.os == 'Windows' && matrix.extended))
         id: setup-fortran
         uses: fortran-lang/setup-fortran@v1
         with:
@@ -165,8 +169,8 @@ jobs:
         id: ostag
         run: |
           ostag=$(python -c "from modflow_devtools.ostags import get_ostag; print(get_ostag())")
-          if [[ "${{ matrix.parallel }}" == "true" ]]; then
-            ostag="${ostag}par"
+          if [[ "${{ matrix.extended }}" == "true" ]]; then
+            ostag="${ostag}ext"
           fi
           echo "ostag=$ostag" >> $GITHUB_OUTPUT
 
@@ -189,7 +193,7 @@ jobs:
           fi
 
       - name: Build binaries
-        if: (!(runner.os == 'Windows' && matrix.parallel))
+        if: (!(runner.os == 'Windows' && matrix.extended))
         working-directory: modflow6
         run: |
           meson setup builddir --prefix=$(pwd) --libdir=bin -Doptimization=${{ matrix.optimization }}
@@ -204,21 +208,21 @@ jobs:
           lipo -info mf6 
 
       - name: Build binaries (Windows)
-        if: runner.os == 'Windows' && matrix.parallel && !inputs.run_tests
-        uses: ./modflow6/.github/actions/build-par-win
+        if: runner.os == 'Windows' && matrix.extended && !inputs.run_tests
+        uses: ./modflow6/.github/actions/build-extended-win
 
       - name: Build and test binaries (Windows)
-        if: runner.os == 'Windows' && matrix.parallel && inputs.run_tests && inputs.developmode
-        uses: ./modflow6/.github/actions/test-par-win
+        if: runner.os == 'Windows' && matrix.extended && inputs.run_tests && inputs.developmode
+        uses: ./modflow6/.github/actions/test-extended-win
 
       - name: Build and test binaries (Windows)
-        if: runner.os == 'Windows' && matrix.parallel && inputs.run_tests && !inputs.developmode
-        uses: ./modflow6/.github/actions/test-par-win
+        if: runner.os == 'Windows' && matrix.extended && inputs.run_tests && !inputs.developmode
+        uses: ./modflow6/.github/actions/test-extended-win
         env:
           MARKERS: not developmode
 
       - name: Copy deps to bin dir
-        if: runner.os == 'Windows' && matrix.parallel
+        if: runner.os == 'Windows' && matrix.extended
         working-directory: modflow6/bin
         shell: cmd
         run: |
@@ -244,6 +248,12 @@ jobs:
           copy "C:\Program Files (x86)\Intel\oneAPI\mpi\latest\bin\hydra_pmi_proxy.exe" .
           copy "C:\Program Files (x86)\Intel\oneAPI\mpi\latest\bin\hydra_service.exe" .
           copy "%GITHUB_WORKSPACE%\petsc\arch-mswin-c-opt\lib\libpetsc.dll" .
+          copy "%GITHUB_WORKSPACE%\netcdf\netCDF4.9.2-NC4-64\bin\hdf5.dll" .
+          copy "%GITHUB_WORKSPACE%\netcdf\netCDF4.9.2-NC4-64\bin\hdf5_hl.dll" .
+          copy "%GITHUB_WORKSPACE%\netcdf\netCDF4.9.2-NC4-64\bin\libcurl.dll" .
+          copy "%GITHUB_WORKSPACE%\netcdf\netCDF4.9.2-NC4-64\bin\netcdf.dll" .
+          copy "%GITHUB_WORKSPACE%\netcdf\netCDF4.9.2-NC4-64\bin\zlib1.dll" .
+          copy "%GITHUB_WORKSPACE%\netcdf\netcdf-fortran-4.6.1\build\fortran\netcdff.dll" .
 
           :: remove rebuilt and downloaded dirs
           if exist rebuilt rd /s /q rebuilt
@@ -459,6 +469,10 @@ jobs:
           name: deprecations
           path: modflow6/doc/mf6io/mf6ivar/md/deprecations.md
 
+      - name: Build MF6IO files from DFNs
+        working-directory: modflow6/doc/mf6io/mf6ivar
+        run: python mf6ivar.py
+
       - name: Build documentation
         env:
           # this step is lazy about building the mf6 examples PDF document, first
@@ -498,9 +512,9 @@ jobs:
           - os: macos-13
           - os: macos-14
           - os: windows-2022
-            parallel: false
+            extended: false
           - os: windows-2022
-            parallel: true
+            extended: true
     defaults:
       run:
         shell: bash -l {0}
@@ -552,8 +566,8 @@ jobs:
         id: ostag
         run: |
           ostag=$(python -c "from modflow_devtools.ostags import get_ostag; print(get_ostag())")
-          if [[ "${{ matrix.parallel }}" == "true" ]]; then
-            ostag="${ostag}par"
+          if [[ "${{ matrix.extended }}" == "true" ]]; then
+            ostag="${ostag}ext"
           fi
           echo "ostag=$ostag" >> $GITHUB_OUTPUT
 

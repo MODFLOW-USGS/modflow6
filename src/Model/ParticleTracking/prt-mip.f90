@@ -6,7 +6,7 @@ module PrtMipModule
   use BlockParserModule, only: BlockParserType
   use BaseDisModule, only: DisBaseType
   use MemoryManagerModule, only: mem_allocate, mem_deallocate
-  use MemoryManagerExtModule, only: mem_set_value, memorylist_remove
+  use MemoryManagerExtModule, only: mem_set_value, memorystore_remove
   use SimVariablesModule, only: idm_context
   use SimModule, only: store_error
   use PrtMipInputModule, only: PrtMipParamFoundType
@@ -70,7 +70,7 @@ contains
     class(PrtMipType) :: this
     !
     ! -- Deallocate input memory
-    call memorylist_remove(this%name_model, 'MIP', idm_context)
+    call memorystore_remove(this%name_model, 'MIP', idm_context)
     !
     ! -- Deallocate parent package
     call this%NumericalPackageType%da()

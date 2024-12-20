@@ -1,8 +1,0 @@
-BEGIN PERIOD <iper>
-  [IRCH
-    <irch(ncol*nrow; ncpl)> -- READARRAY]
-  RECHARGE
-    <recharge(ncol*nrow; ncpl)> -- READARRAY
-  [AUX
-    <aux(ncol*nrow; ncpl)> -- READARRAY]
-END PERIOD

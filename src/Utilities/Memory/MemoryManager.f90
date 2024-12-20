@@ -12,7 +12,8 @@ module MemoryManagerModule
   use SimVariablesModule, only: errmsg
   use SimModule, only: store_error, count_errors
   use MemoryTypeModule, only: MemoryType
-  use MemoryListModule, only: MemoryListType
+  use MemoryStoreModule, only: MemoryStoreType
+  use MemoryContainerIteratorModule, only: MemoryContainerIteratorType
   use MemoryHelperModule, only: mem_check_length, split_mem_path, &
                                 strip_context_mem_path, get_mem_path_context
   use TableModule, only: TableType, table_cr
@@ -30,7 +31,7 @@ module MemoryManagerModule
   public :: mem_write_usage
   public :: mem_da
   public :: mem_set_print_option
-  public :: get_from_memorylist
+  public :: get_from_memorystore
 
   public :: get_mem_type
   public :: get_mem_rank
@@ -39,10 +40,10 @@ module MemoryManagerModule
   public :: get_isize
   public :: copy_dbl1d
 
-  public :: memorylist
+  public :: memorystore
   public :: mem_print_detailed
 
-  type(MemoryListType) :: memorylist
+  type(MemoryStoreType) :: memorystore
   type(TableType), pointer :: memtab => null()
   integer(I8B) :: nvalues_alogical = 0
   integer(I8B) :: nvalues_astr = 0
@@ -151,13 +152,10 @@ contains
     ! -- code
     mt => null()
     var_type = 'UNKNOWN'
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     if (found) then
       var_type = mt%memtype
     end if
-    !
-    ! -- return
-    return
   end subroutine get_mem_type
 
   !> @ brief Get the variable rank
@@ -177,7 +175,7 @@ contains
     rank = -1
     !
     ! -- get the entry from the memory manager
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     !
     ! -- set rank
     if (found) then
@@ -194,9 +192,6 @@ contains
       if (associated(mt%astr1d)) rank = 1
       if (associated(mt%acharstr1d)) rank = 1
     end if
-    !
-    ! -- return
-    return
   end subroutine get_mem_rank
 
   !> @ brief Get the memory size of a single element of the stored variable
@@ -216,15 +211,12 @@ contains
     size = -1
     !
     ! -- get the entry from the memory manager
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     !
     ! -- set memory size
     if (found) then
       size = mt%element_size
     end if
-    !
-    ! -- return
-    return
   end subroutine get_mem_elem_size
 
   !> @ brief Get the variable memory shape
@@ -242,7 +234,7 @@ contains
     ! -- code
     !
     ! -- get the entry from the memory manager
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     !
     ! -- set shape
     if (found) then
@@ -262,9 +254,6 @@ contains
     else
       mem_shape(1) = -1
     end if
-    !
-    ! -- return
-    return
   end subroutine get_mem_shape
 
   !> @ brief Get the number of elements for this variable
@@ -289,15 +278,12 @@ contains
     terminate = .false.
     !
     ! -- get the entry from the memory manager
-    call get_from_memorylist(name, mem_path, mt, found, terminate)
+    call get_from_memorystore(name, mem_path, mt, found, terminate)
     !
     ! -- set isize
     if (found) then
       isize = mt%isize
     end if
-    !
-    ! -- return
-    return
   end subroutine get_isize
 
   !> @ brief Get a memory type entry from the memory list
@@ -305,7 +291,7 @@ contains
   !! Default value for @par check is .true. which means that this
   !! routine will kill the program when the memory entry cannot be found.
   !<
-  subroutine get_from_memorylist(name, mem_path, mt, found, check)
+  subroutine get_from_memorystore(name, mem_path, mt, found, check)
     character(len=*), intent(in) :: name !< variable name
     character(len=*), intent(in) :: mem_path !< path where the variable is stored
     type(MemoryType), pointer, intent(inout) :: mt !< memory type entry
@@ -313,22 +299,11 @@ contains
     logical(LGP), intent(in), optional :: check !< to suppress aborting the program when not found,
                                                 !! set check = .false.
     ! -- local
-    integer(I4B) :: ipos
     logical(LGP) check_opt
     ! -- code
-    !
-    ! -- initialize
-    mt => null()
-    found = .false.
-    !
-    ! -- iterate over the memory list
-    do ipos = 1, memorylist%count()
-      mt => memorylist%Get(ipos)
-      if (mt%name == name .and. mt%path == mem_path) then
-        found = .true.
-        exit
-      end if
-    end do
+    mt => memorystore%get(name, mem_path)
+    found = associated(mt)
+
     check_opt = .true.
     if (present(check)) then
       check_opt = check
@@ -341,10 +316,7 @@ contains
         call store_error(errmsg, terminate=.TRUE.)
       end if
     end if
-    !
-    ! -- return
-    return
-  end subroutine get_from_memorylist
+  end subroutine get_from_memorystore
 
   !> @brief Issue allocation error message and stop program execution
   !<
@@ -407,10 +379,7 @@ contains
     write (mt%memtype, "(a)") 'LOGICAL'
     !
     ! -- add memory type to the memory list
-    call memorylist%add(mt)
-    !
-    ! -- return
-    return
+    call memorystore%add(mt)
   end subroutine allocate_logical
 
   !> @brief Allocate a character string
@@ -459,10 +428,7 @@ contains
     write (mt%memtype, "(a,' LEN=',i0)") 'STRING', ilen
     !
     ! -- add defined length string to the memory manager list
-    call memorylist%add(mt)
-    !
-    ! -- return
-    return
+    call memorystore%add(mt)
   end subroutine allocate_str
 
   !> @brief Allocate a 1-dimensional defined length string array
@@ -528,10 +494,7 @@ contains
     write (mt%memtype, "(a,' LEN=',i0,' (',i0,')')") 'STRING', ilen, nrow
     !
     ! -- add deferred length character array to the memory manager list
-    call memorylist%add(mt)
-    !
-    ! -- return
-    return
+    call memorystore%add(mt)
   end subroutine allocate_str1d
 
   !> @brief Allocate a 1-dimensional array of deferred-length CharacterStringType
@@ -588,10 +551,7 @@ contains
     write (mt%memtype, "(a,' LEN=',i0,' (',i0,')')") 'STRING', ilen, nrow
     !
     ! -- add deferred length character array to the memory manager list
-    call memorylist%add(mt)
-    !
-    ! -- return
-    return
+    call memorystore%add(mt)
   end subroutine allocate_charstr1d
 
   !> @brief Allocate a integer scalar
@@ -629,10 +589,7 @@ contains
     write (mt%memtype, "(a)") 'INTEGER'
     !
     ! -- add memory type to the memory list
-    call memorylist%add(mt)
-    !
-    ! -- return
-    return
+    call memorystore%add(mt)
   end subroutine allocate_int
 
   !> @brief Allocate a 1-dimensional integer array
@@ -675,10 +632,7 @@ contains
     write (mt%memtype, "(a,' (',i0,')')") 'INTEGER', isize
     !
     ! -- add memory type to the memory list
-    call memorylist%add(mt)
-    !
-    ! -- return
-    return
+    call memorystore%add(mt)
   end subroutine allocate_int1d
 
   !> @brief Allocate a 2-dimensional integer array
@@ -722,9 +676,7 @@ contains
     write (mt%memtype, "(a,' (',i0,',',i0,')')") 'INTEGER', ncol, nrow
     !
     ! -- add memory type to the memory list
-    call memorylist%add(mt)
-    !
-    ! -- return
+    call memorystore%add(mt)
   end subroutine allocate_int2d
 
   !> @brief Allocate a 3-dimensional integer array
@@ -770,10 +722,7 @@ contains
       nrow, nlay
     !
     ! -- add memory type to the memory list
-    call memorylist%add(mt)
-    !
-    ! -- return
-    return
+    call memorystore%add(mt)
   end subroutine allocate_int3d
 
   !> @brief Allocate a real scalar
@@ -811,10 +760,7 @@ contains
     write (mt%memtype, "(a)") 'DOUBLE'
     !
     ! -- add memory type to the memory list
-    call memorylist%add(mt)
-    !
-    ! -- return
-    return
+    call memorystore%add(mt)
   end subroutine allocate_dbl
 
   !> @brief Allocate a 1-dimensional real array
@@ -857,10 +803,7 @@ contains
     write (mt%memtype, "(a,' (',i0,')')") 'DOUBLE', isize
     !
     ! -- add memory type to the memory list
-    call memorylist%add(mt)
-    !
-    ! -- return
-    return
+    call memorystore%add(mt)
   end subroutine allocate_dbl1d
 
   !> @brief Allocate a 2-dimensional real array
@@ -904,10 +847,7 @@ contains
     write (mt%memtype, "(a,' (',i0,',',i0,')')") 'DOUBLE', ncol, nrow
     !
     ! -- add memory type to the memory list
-    call memorylist%add(mt)
-    !
-    ! -- return
-    return
+    call memorystore%add(mt)
   end subroutine allocate_dbl2d
 
   !> @brief Allocate a 3-dimensional real array
@@ -953,10 +893,7 @@ contains
       nrow, nlay
     !
     ! -- add memory type to the memory list
-    call memorylist%add(mt)
-    !
-    ! -- return
-    return
+    call memorystore%add(mt)
   end subroutine allocate_dbl3d
 
   !> @brief Check in an existing 1d integer array with a new address (name + path)
@@ -995,10 +932,7 @@ contains
     mt%masterPath = mem_path2
     !
     ! -- add memory type to the memory list
-    call memorylist%add(mt)
-    !
-    ! -- return
-    return
+    call memorystore%add(mt)
   end subroutine checkin_int1d
 
   !> @brief Check in an existing 2d integer array with a new address (name + path)
@@ -1038,10 +972,7 @@ contains
     mt%masterPath = mem_path2
     !
     ! -- add memory type to the memory list
-    call memorylist%add(mt)
-    !
-    ! -- return
-    return
+    call memorystore%add(mt)
   end subroutine checkin_int2d
 
   !> @brief Check in an existing 1d double precision array with a new address (name + path)
@@ -1080,10 +1011,7 @@ contains
     mt%masterPath = mem_path2
     !
     ! -- add memory type to the memory list
-    call memorylist%add(mt)
-    !
-    ! -- return
-    return
+    call memorystore%add(mt)
   end subroutine checkin_dbl1d
 
   !> @brief Check in an existing 2d double precision array with a new address (name + path)
@@ -1123,10 +1051,7 @@ contains
     mt%masterPath = mem_path2
     !
     ! -- add memory type to the memory list
-    call memorylist%add(mt)
-    !
-    ! -- return
-    return
+    call memorystore%add(mt)
   end subroutine checkin_dbl2d
 
   !> @brief Check in an existing 1d CharacterStringType array with a new address (name + path)
@@ -1167,10 +1092,7 @@ contains
     mt%masterPath = mem_path2
     !
     ! -- add memory type to the memory list
-    call memorylist%add(mt)
-    !
-    ! -- return
-    return
+    call memorystore%add(mt)
   end subroutine checkin_charstr1d
 
   !> @brief Reallocate a 1-dimensional defined length string array
@@ -1192,7 +1114,7 @@ contains
     integer(I4B) :: n
     !
     ! -- Find and assign mt
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     !
     ! -- reallocate astr1d
     if (found) then
@@ -1252,9 +1174,6 @@ contains
                "mem_allocate instead."
       call store_error(errmsg, terminate=.TRUE.)
     end if
-    !
-    ! -- return
-    return
   end subroutine reallocate_str1d
 
   !> @brief Reallocate a 1-dimensional deferred length string array
@@ -1281,7 +1200,7 @@ contains
     string = ''
     !
     ! -- Find and assign mt
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     !
     ! -- reallocate astr1d
     if (found) then
@@ -1304,6 +1223,7 @@ contains
       ! -- copy existing values
       do n = 1, nrow_old
         astrtemp(n) = acharstr1d(n)
+        call acharstr1d(n)%destroy()
       end do
       !
       ! -- fill new values with missing values
@@ -1323,6 +1243,7 @@ contains
       ! -- fill the reallocated character array
       do n = 1, nrow
         acharstr1d(n) = astrtemp(n)
+        call astrtemp(n)%destroy()
       end do
       !
       ! -- deallocate temporary storage
@@ -1342,9 +1263,6 @@ contains
                "mem_allocate instead."
       call store_error(errmsg, terminate=.TRUE.)
     end if
-    !
-    ! -- return
-    return
   end subroutine reallocate_charstr1d
 
   !> @brief Reallocate a 1-dimensional integer array
@@ -1365,7 +1283,7 @@ contains
     ! -- code
     !
     ! -- Find and assign mt
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     !
     ! -- Allocate aint and then refill
     isize = nrow
@@ -1387,9 +1305,6 @@ contains
     mt%nrealloc = mt%nrealloc + 1
     mt%master = .true.
     nvalues_aint = nvalues_aint + isize - isizeold
-    !
-    ! -- return
-    return
   end subroutine reallocate_int1d
 
   !> @brief Reallocate a 2-dimensional integer array
@@ -1412,7 +1327,7 @@ contains
     ! -- code
     !
     ! -- Find and assign mt
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     !
     ! -- Allocate aint and then refill
     ishape = shape(mt%aint2d)
@@ -1437,9 +1352,6 @@ contains
     mt%master = .true.
     nvalues_aint = nvalues_aint + isize - isizeold
     write (mt%memtype, "(a,' (',i0,',',i0,')')") 'INTEGER', ncol, nrow
-    !
-    ! -- return
-    return
   end subroutine reallocate_int2d
 
   !> @brief Reallocate a 1-dimensional real array
@@ -1460,7 +1372,7 @@ contains
     ! -- code
     !
     ! -- Find and assign mt
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     !
     ! -- Allocate adbl and then refill
     isize = nrow
@@ -1483,9 +1395,6 @@ contains
     mt%master = .true.
     nvalues_adbl = nvalues_adbl + isize - isizeold
     write (mt%memtype, "(a,' (',i0,')')") 'DOUBLE', isize
-    !
-    ! -- return
-    return
   end subroutine reallocate_dbl1d
 
   !> @brief Reallocate a 2-dimensional real array
@@ -1508,7 +1417,7 @@ contains
     ! -- code
     !
     ! -- Find and assign mt
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     !
     ! -- Allocate adbl and then refill
     ishape = shape(mt%adbl2d)
@@ -1533,9 +1442,6 @@ contains
     mt%master = .true.
     nvalues_adbl = nvalues_adbl + isize - isizeold
     write (mt%memtype, "(a,' (',i0,',',i0,')')") 'DOUBLE', ncol, nrow
-    !
-    ! -- return
-    return
   end subroutine reallocate_dbl2d
 
   !> @brief Set pointer to a logical scalar
@@ -1548,11 +1454,8 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     sclr => mt%logicalsclr
-    !
-    ! -- return
-    return
   end subroutine setptr_logical
 
   !> @brief Set pointer to integer scalar
@@ -1565,11 +1468,8 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     sclr => mt%intsclr
-    !
-    ! -- return
-    return
   end subroutine setptr_int
 
   !> @brief Set pointer to 1d integer array
@@ -1582,11 +1482,8 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     aint => mt%aint1d
-    !
-    ! -- return
-    return
   end subroutine setptr_int1d
 
   !> @brief Set pointer to 2d integer array
@@ -1599,11 +1496,8 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     aint => mt%aint2d
-    !
-    ! -- return
-    return
   end subroutine setptr_int2d
 
   !> @brief Set pointer to 3d integer array
@@ -1616,11 +1510,8 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     aint => mt%aint3d
-    !
-    ! -- return
-    return
   end subroutine setptr_int3d
 
   !> @brief Set pointer to a real scalar
@@ -1633,11 +1524,8 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     sclr => mt%dblsclr
-    !
-    ! -- return
-    return
   end subroutine setptr_dbl
 
   !> @brief Set pointer to a 1d real array
@@ -1650,11 +1538,8 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     adbl => mt%adbl1d
-    !
-    ! -- return
-    return
   end subroutine setptr_dbl1d
 
   !> @brief Set pointer to a 2d real array
@@ -1667,11 +1552,8 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     adbl => mt%adbl2d
-    !
-    ! -- return
-    return
   end subroutine setptr_dbl2d
 
   !> @brief Set pointer to a 3d real array
@@ -1684,11 +1566,8 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     adbl => mt%adbl3d
-    !
-    ! -- return
-    return
   end subroutine setptr_dbl3d
 
   !> @brief Set pointer to a string (scalar)
@@ -1701,11 +1580,8 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     asrt => mt%strsclr
-    !
-    ! -- return
-    return
   end subroutine setptr_str
 
   !> @brief Set pointer to a fixed-length string array
@@ -1719,11 +1595,8 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     astr1d => mt%astr1d
-    !
-    ! -- return
-    return
   end subroutine setptr_str1d
 
   !> @brief Set pointer to an array of CharacterStringType
@@ -1737,11 +1610,8 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     acharstr1d => mt%acharstr1d
-    !
-    ! -- return
-    return
   end subroutine setptr_charstr1d
 
   !> @brief Make a copy of a 1-dimensional integer array
@@ -1758,7 +1628,7 @@ contains
     logical(LGP) :: found
     integer(I4B) :: n
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     aint => null()
     ! -- check the copy into the memory manager
     if (present(mem_path_copy)) then
@@ -1770,9 +1640,6 @@ contains
     do n = 1, size(mt%aint1d)
       aint(n) = mt%aint1d(n)
     end do
-    !
-    ! -- return
-    return
   end subroutine copyptr_int1d
 
   !> @brief Make a copy of a 2-dimensional integer array
@@ -1792,7 +1659,7 @@ contains
     integer(I4B) :: ncol
     integer(I4B) :: nrow
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     aint => null()
     ncol = size(mt%aint2d, dim=1)
     nrow = size(mt%aint2d, dim=2)
@@ -1808,9 +1675,6 @@ contains
         aint(j, i) = mt%aint2d(j, i)
       end do
     end do
-    !
-    ! -- return
-    return
   end subroutine copyptr_int2d
 
   !> @brief Make a copy of a 1-dimensional real array
@@ -1827,7 +1691,7 @@ contains
     logical(LGP) :: found
     integer(I4B) :: n
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     adbl => null()
     ! -- check the copy into the memory manager
     if (present(mem_path_copy)) then
@@ -1839,9 +1703,6 @@ contains
     do n = 1, size(mt%adbl1d)
       adbl(n) = mt%adbl1d(n)
     end do
-    !
-    ! -- return
-    return
   end subroutine copyptr_dbl1d
 
   !> @brief Make a copy of a 2-dimensional real array
@@ -1861,7 +1722,7 @@ contains
     integer(I4B) :: ncol
     integer(I4B) :: nrow
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     adbl => null()
     ncol = size(mt%adbl2d, dim=1)
     nrow = size(mt%adbl2d, dim=2)
@@ -1877,9 +1738,6 @@ contains
         adbl(j, i) = mt%adbl2d(j, i)
       end do
     end do
-    !
-    ! -- return
-    return
   end subroutine copyptr_dbl2d
 
   !> @brief Copy values from a 1-dimensional real array in the memory
@@ -1893,13 +1751,10 @@ contains
     logical(LGP) :: found
     integer(I4B) :: n
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorystore(name, mem_path, mt, found)
     do n = 1, size(mt%adbl1d)
       adbl(n) = mt%adbl1d(n)
     end do
-    !
-    ! -- return
-    return
   end subroutine copy_dbl1d
 
   !> @brief Set the pointer for an integer scalar to
@@ -1915,8 +1770,8 @@ contains
     type(MemoryType), pointer :: mt2
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
-    call get_from_memorylist(name_target, mem_path_target, mt2, found)
+    call get_from_memorystore(name, mem_path, mt, found)
+    call get_from_memorystore(name_target, mem_path_target, mt2, found)
     if (associated(sclr)) then
       nvalues_aint = nvalues_aint - 1
       deallocate (sclr)
@@ -1931,9 +1786,6 @@ contains
     mt%master = .false.
     mt%mastername = name_target
     mt%masterPath = mem_path_target
-    !
-    ! -- return
-    return
   end subroutine reassignptr_int
 
   !> @brief Set the pointer for a 1-dimensional integer array to
@@ -1949,8 +1801,8 @@ contains
     type(MemoryType), pointer :: mt2
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
-    call get_from_memorylist(name_target, mem_path_target, mt2, found)
+    call get_from_memorystore(name, mem_path, mt, found)
+    call get_from_memorystore(name_target, mem_path_target, mt2, found)
     if (size(aint) > 0) then
       nvalues_aint = nvalues_aint - size(aint)
       deallocate (aint)
@@ -1965,9 +1817,6 @@ contains
     mt%master = .false.
     mt%mastername = name_target
     mt%masterPath = mem_path_target
-    !
-    ! -- return
-    return
   end subroutine reassignptr_int1d
 
   !> @brief Set the pointer for a 2-dimensional integer array to
@@ -1985,8 +1834,8 @@ contains
     integer(I4B) :: ncol
     integer(I4B) :: nrow
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
-    call get_from_memorylist(name_target, mem_path_target, mt2, found)
+    call get_from_memorystore(name, mem_path, mt, found)
+    call get_from_memorystore(name_target, mem_path_target, mt2, found)
     if (size(aint) > 0) then
       nvalues_aint = nvalues_aint - size(aint)
       deallocate (aint)
@@ -2003,9 +1852,6 @@ contains
     mt%master = .false.
     mt%mastername = name_target
     mt%masterPath = mem_path_target
-    !
-    ! -- return
-    return
   end subroutine reassignptr_int2d
 
   !> @brief Set the pointer for a 1-dimensional real array to
@@ -2021,8 +1867,8 @@ contains
     type(MemoryType), pointer :: mt2
     logical(LGP) :: found
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
-    call get_from_memorylist(name_target, mem_path_target, mt2, found)
+    call get_from_memorystore(name, mem_path, mt, found)
+    call get_from_memorystore(name_target, mem_path_target, mt2, found)
     if (size(adbl) > 0) then
       nvalues_adbl = nvalues_adbl - size(adbl)
       deallocate (adbl)
@@ -2037,9 +1883,6 @@ contains
     mt%master = .false.
     mt%mastername = name_target
     mt%masterPath = mem_path_target
-    !
-    ! -- return
-    return
   end subroutine reassignptr_dbl1d
 
   !> @brief Set the pointer for a 2-dimensional real array to
@@ -2057,8 +1900,8 @@ contains
     integer(I4B) :: ncol
     integer(I4b) :: nrow
     ! -- code
-    call get_from_memorylist(name, mem_path, mt, found)
-    call get_from_memorylist(name_target, mem_path_target, mt2, found)
+    call get_from_memorystore(name, mem_path, mt, found)
+    call get_from_memorystore(name_target, mem_path_target, mt2, found)
     if (size(adbl) > 0) then
       nvalues_adbl = nvalues_adbl - size(adbl)
       deallocate (adbl)
@@ -2075,9 +1918,6 @@ contains
     mt%master = .false.
     mt%mastername = name_target
     mt%masterPath = mem_path_target
-    !
-    ! -- return
-    return
   end subroutine reassignptr_dbl2d
 
   !> @brief Deallocate a variable-length character string
@@ -2089,15 +1929,17 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     found = .false.
     if (present(name) .and. present(mem_path)) then
-      call get_from_memorylist(name, mem_path, mt, found)
+      call get_from_memorystore(name, mem_path, mt, found)
       nullify (mt%strsclr)
     else
-      do ipos = 1, memorylist%count()
-        mt => memorylist%Get(ipos)
+      itr = memorystore%iterator()
+      do while (itr%has_next())
+        call itr%next()
+        mt => itr%value()
         if (associated(mt%strsclr, sclr)) then
           nullify (mt%strsclr)
           found = .true.
@@ -2114,9 +1956,6 @@ contains
         nullify (sclr)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine deallocate_str
 
   !> @brief Deallocate an array of defined-length character strings
@@ -2129,17 +1968,19 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     !
     ! -- process optional variables
     found = .false.
     if (present(name) .and. present(mem_path)) then
-      call get_from_memorylist(name, mem_path, mt, found)
+      call get_from_memorystore(name, mem_path, mt, found)
       nullify (mt%astr1d)
     else
-      do ipos = 1, memorylist%count()
-        mt => memorylist%Get(ipos)
+      itr = memorystore%iterator()
+      do while (itr%has_next())
+        call itr%next()
+        mt => itr%value()
         if (associated(mt%astr1d, astr1d)) then
           nullify (mt%astr1d)
           found = .true.
@@ -2156,9 +1997,6 @@ contains
         nullify (astr1d)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine deallocate_str1d
 
   !> @brief Deallocate an array of deferred-length character strings
@@ -2172,17 +2010,20 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType), allocatable :: itr
+    integer(I4B) :: n
     ! -- code
     !
     ! -- process optional variables
     found = .false.
     if (present(name) .and. present(mem_path)) then
-      call get_from_memorylist(name, mem_path, mt, found)
+      call get_from_memorystore(name, mem_path, mt, found)
       nullify (mt%acharstr1d)
     else
-      do ipos = 1, memorylist%count()
-        mt => memorylist%Get(ipos)
+      itr = memorystore%iterator()
+      do while (itr%has_next())
+        call itr%next()
+        mt => itr%value()
         if (associated(mt%acharstr1d, astr1d)) then
           nullify (mt%acharstr1d)
           found = .true.
@@ -2195,14 +2036,14 @@ contains
                        terminate=.TRUE.)
     else
       if (mt%master) then
+        do n = 1, size(astr1d)
+          call astr1d(n)%destroy()
+        end do
         deallocate (astr1d)
       else
         nullify (astr1d)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine deallocate_charstr1d
 
   !> @brief Deallocate a logical scalar
@@ -2212,11 +2053,13 @@ contains
     ! -- local
     class(MemoryType), pointer :: mt
     logical(LGP) :: found
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     found = .false.
-    do ipos = 1, memorylist%count()
-      mt => memorylist%Get(ipos)
+    itr = memorystore%iterator()
+    do while (itr%has_next())
+      call itr%next()
+      mt => itr%value()
       if (associated(mt%logicalsclr, sclr)) then
         nullify (mt%logicalsclr)
         found = .true.
@@ -2233,9 +2076,6 @@ contains
         nullify (sclr)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine deallocate_logical
 
   !> @brief Deallocate a integer scalar
@@ -2245,11 +2085,13 @@ contains
     ! -- local
     class(MemoryType), pointer :: mt
     logical(LGP) :: found
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     found = .false.
-    do ipos = 1, memorylist%count()
-      mt => memorylist%Get(ipos)
+    itr = memorystore%iterator()
+    do while (itr%has_next())
+      call itr%next()
+      mt => itr%value()
       if (associated(mt%intsclr, sclr)) then
         nullify (mt%intsclr)
         found = .true.
@@ -2265,9 +2107,6 @@ contains
         nullify (sclr)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine deallocate_int
 
   !> @brief Deallocate a real scalar
@@ -2277,11 +2116,13 @@ contains
     ! -- local
     class(MemoryType), pointer :: mt
     logical(LGP) :: found
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     found = .false.
-    do ipos = 1, memorylist%count()
-      mt => memorylist%Get(ipos)
+    itr = memorystore%iterator()
+    do while (itr%has_next())
+      call itr%next()
+      mt => itr%value()
       if (associated(mt%dblsclr, sclr)) then
         nullify (mt%dblsclr)
         found = .true.
@@ -2297,9 +2138,6 @@ contains
         nullify (sclr)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine deallocate_dbl
 
   !> @brief Deallocate a 1-dimensional integer array
@@ -2311,17 +2149,19 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     !
     ! -- process optional variables
     found = .false.
     if (present(name) .and. present(mem_path)) then
-      call get_from_memorylist(name, mem_path, mt, found)
+      call get_from_memorystore(name, mem_path, mt, found)
       nullify (mt%aint1d)
     else
-      do ipos = 1, memorylist%count()
-        mt => memorylist%Get(ipos)
+      itr = memorystore%iterator()
+      do while (itr%has_next())
+        call itr%next()
+        mt => itr%value()
         if (associated(mt%aint1d, aint)) then
           nullify (mt%aint1d)
           found = .true.
@@ -2338,9 +2178,6 @@ contains
         nullify (aint)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine deallocate_int1d
 
   !> @brief Deallocate a 2-dimensional integer array
@@ -2352,17 +2189,19 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     !
     ! -- process optional variables
     found = .false.
     if (present(name) .and. present(mem_path)) then
-      call get_from_memorylist(name, mem_path, mt, found)
+      call get_from_memorystore(name, mem_path, mt, found)
       nullify (mt%aint2d)
     else
-      do ipos = 1, memorylist%count()
-        mt => memorylist%Get(ipos)
+      itr = memorystore%iterator()
+      do while (itr%has_next())
+        call itr%next()
+        mt => itr%value()
         if (associated(mt%aint2d, aint)) then
           nullify (mt%aint2d)
           found = .true.
@@ -2379,9 +2218,6 @@ contains
         nullify (aint)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine deallocate_int2d
 
   !> @brief Deallocate a 3-dimensional integer array
@@ -2393,17 +2229,19 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     !
     ! -- process optional variables
     found = .false.
     if (present(name) .and. present(mem_path)) then
-      call get_from_memorylist(name, mem_path, mt, found)
+      call get_from_memorystore(name, mem_path, mt, found)
       nullify (mt%aint3d)
     else
-      do ipos = 1, memorylist%count()
-        mt => memorylist%Get(ipos)
+      itr = memorystore%iterator()
+      do while (itr%has_next())
+        call itr%next()
+        mt => itr%value()
         if (associated(mt%aint3d, aint)) then
           nullify (mt%aint3d)
           found = .true.
@@ -2420,9 +2258,6 @@ contains
         nullify (aint)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine deallocate_int3d
 
   !> @brief Deallocate a 1-dimensional real array
@@ -2434,17 +2269,19 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     !
     ! -- process optional variables
     found = .false.
     if (present(name) .and. present(mem_path)) then
-      call get_from_memorylist(name, mem_path, mt, found)
+      call get_from_memorystore(name, mem_path, mt, found)
       nullify (mt%adbl1d)
     else
-      do ipos = 1, memorylist%count()
-        mt => memorylist%Get(ipos)
+      itr = memorystore%iterator()
+      do while (itr%has_next())
+        call itr%next()
+        mt => itr%value()
         if (associated(mt%adbl1d, adbl)) then
           nullify (mt%adbl1d)
           found = .true.
@@ -2461,9 +2298,6 @@ contains
         nullify (adbl)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine deallocate_dbl1d
 
   !> @brief Deallocate a 2-dimensional real array
@@ -2475,17 +2309,19 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     !
     ! -- process optional variables
     found = .false.
     if (present(name) .and. present(mem_path)) then
-      call get_from_memorylist(name, mem_path, mt, found)
+      call get_from_memorystore(name, mem_path, mt, found)
       nullify (mt%adbl2d)
     else
-      do ipos = 1, memorylist%count()
-        mt => memorylist%Get(ipos)
+      itr = memorystore%iterator()
+      do while (itr%has_next())
+        call itr%next()
+        mt => itr%value()
         if (associated(mt%adbl2d, adbl)) then
           nullify (mt%adbl2d)
           found = .true.
@@ -2502,9 +2338,6 @@ contains
         nullify (adbl)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine deallocate_dbl2d
 
   !> @brief Deallocate a 3-dimensional real array
@@ -2516,17 +2349,19 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     !
     ! -- process optional variables
     found = .false.
     if (present(name) .and. present(mem_path)) then
-      call get_from_memorylist(name, mem_path, mt, found)
+      call get_from_memorystore(name, mem_path, mt, found)
       nullify (mt%adbl3d)
     else
-      do ipos = 1, memorylist%count()
-        mt => memorylist%Get(ipos)
+      itr = memorystore%iterator()
+      do while (itr%has_next())
+        call itr%next()
+        mt => itr%value()
         if (associated(mt%adbl3d, adbl)) then
           nullify (mt%adbl3d)
           found = .true.
@@ -2543,9 +2378,6 @@ contains
         nullify (adbl)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine deallocate_dbl3d
 
   !> @brief Set the memory print option
@@ -2573,7 +2405,6 @@ contains
     case default
       error_msg = "Unknown memory print option '"//trim(keyword)//"."
     end select
-    return
   end subroutine mem_set_print_option
 
   !> @brief Create a table if memory_print_option is 'SUMMARY'
@@ -2621,9 +2452,6 @@ contains
     ! -- total memory allocated
     text = 'TOTAL'
     call memtab%initialize_column(text, 15, alignment=TABCENTER)
-    !
-    ! -- return
-    return
   end subroutine mem_summary_table
 
   !> @brief Create a table if memory_print_option is 'ALL'
@@ -2665,9 +2493,6 @@ contains
     ! -- is it a pointer
     text = 'ASSOCIATED VARIABLE'
     call memtab%initialize_column(text, LENMEMADDRESS, alignment=TABLEFT)
-    !
-    ! -- return
-    return
   end subroutine mem_detailed_table
 
   !> @brief Write a row for the memory_print_option 'SUMMARY' table
@@ -2689,9 +2514,6 @@ contains
     call memtab%add_term(rint)
     call memtab%add_term(rreal)
     call memtab%add_term(bytes)
-    !
-    ! -- return
-    return
   end subroutine mem_summary_line
 
   !> @brief Determine appropriate memory unit and conversion factor
@@ -2723,9 +2545,6 @@ contains
       fact = DEM9
       cunits = 'GIGABYTES'
     end if
-    !
-    ! -- return
-    return
   end subroutine mem_units
 
   !> @brief Create and fill a table with the total allocated memory
@@ -2801,9 +2620,6 @@ contains
     !
     ! -- deallocate table
     call mem_cleanup_table()
-    !
-    ! -- return
-    return
   end subroutine mem_summary_total
 
   !> @brief Generic function to clean a memory manager table
@@ -2815,9 +2631,6 @@ contains
     call memtab%table_da()
     deallocate (memtab)
     nullify (memtab)
-    !
-    ! -- return
-    return
   end subroutine mem_cleanup_table
 
   !> @brief Write memory manager memory usage based on the
@@ -2837,7 +2650,7 @@ contains
     character(len=LENCOMPONENTNAME) :: subcomponent
     character(len=LENMEMADDRESS) :: context_component
     character(LEN=10) :: cunits
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType), allocatable :: itr
     integer(I4B) :: icomp
     integer(I4B) :: ilen
     integer(I8B) :: nchars
@@ -2877,8 +2690,10 @@ contains
         nreal = 0
         bytes = DZERO
         ilen = len_trim(cunique(icomp))
-        do ipos = 1, memorylist%count()
-          mt => memorylist%Get(ipos)
+        itr = memorystore%iterator()
+        do while (itr%has_next())
+          call itr%next()
+          mt => itr%value()
           call split_mem_path(mt%path, component, subcomponent)
           context = get_mem_path_context(mt%path)
           context_component = trim(context)//component
@@ -2917,20 +2732,19 @@ contains
     !
     ! -- Write total memory allocation
     call mem_summary_total(iout, simbytes)
-    !
-    ! -- return
-    return
   end subroutine mem_write_usage
 
   subroutine mem_print_detailed(iout)
     integer(I4B) :: iout
     ! local
     class(MemoryType), pointer :: mt
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType), allocatable :: itr
 
-    call mem_detailed_table(iout, memorylist%count())
-    do ipos = 1, memorylist%count()
-      mt => memorylist%Get(ipos)
+    call mem_detailed_table(iout, memorystore%count())
+    itr = memorystore%iterator()
+    do while (itr%has_next())
+      call itr%next()
+      mt => itr%value()
       call mt%table_entry(memtab)
     end do
     call mem_cleanup_table()
@@ -2942,12 +2756,14 @@ contains
   function calc_virtual_mem() result(vmem_size)
     real(DP) :: vmem_size
     ! local
-    integer(I4B) :: i
+    type(MemoryContainerIteratorType), allocatable :: itr
     type(MemoryType), pointer :: mt
 
     vmem_size = DZERO
-    do i = 1, memorylist%count()
-      mt => memorylist%Get(i)
+    itr = memorystore%iterator()
+    do while (itr%has_next())
+      call itr%next()
+      mt => itr%value()
       if (index(mt%path, "__P") == 1) then
         vmem_size = mt%element_size * mt%isize + vmem_size
       end if
@@ -2965,10 +2781,12 @@ contains
     class(MemoryType), pointer :: mt
     character(len=LINELENGTH) :: error_msg
     character(len=LENVARNAME) :: ucname
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
-    do ipos = 1, memorylist%count()
-      mt => memorylist%Get(ipos)
+    itr = memorystore%iterator()
+    do while (itr%has_next())
+      call itr%next()
+      mt => itr%value()
       if (IDEVELOPMODE == 1) then
         !
         ! -- check if memory has been deallocated
@@ -2998,13 +2816,10 @@ contains
       ! -- deallocate instance of memory type
       deallocate (mt)
     end do
-    call memorylist%clear()
+    call memorystore%clear()
     if (count_errors() > 0) then
       call store_error('Could not clear memory list.', terminate=.TRUE.)
     end if
-    !
-    ! -- return
-    return
   end subroutine mem_da
 
   !> @brief Create a array with unique first components from all memory paths.
@@ -3022,7 +2837,7 @@ contains
     character(len=LENCOMPONENTNAME) :: component
     character(len=LENCOMPONENTNAME) :: subcomponent
     character(len=LENMEMADDRESS) :: context_component
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType), allocatable :: itr
     integer(I4B) :: ipa
     ! -- code
     !
@@ -3030,8 +2845,10 @@ contains
     allocate (cunique(0))
     !
     ! -- find unique origins
-    do ipos = 1, memorylist%count()
-      mt => memorylist%Get(ipos)
+    itr = memorystore%iterator()
+    do while (itr%has_next())
+      call itr%next()
+      mt => itr%value()
       call split_mem_path(mt%path, component, subcomponent)
       context = get_mem_path_context(mt%path)
       context_component = trim(context)//component
@@ -3041,9 +2858,6 @@ contains
         cunique(size(cunique)) = context_component
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine mem_unique_origins
 
 end module MemoryManagerModule

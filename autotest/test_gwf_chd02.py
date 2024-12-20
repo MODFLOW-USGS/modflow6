@@ -4,7 +4,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = [
@@ -85,9 +84,7 @@ def check_output(idx, test):
             5.000,
         ]
     )
-    assert np.allclose(
-        hres, head
-    ), "simulated head does not match with known solution."
+    assert np.allclose(hres, head), "simulated head does not match with known solution."
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

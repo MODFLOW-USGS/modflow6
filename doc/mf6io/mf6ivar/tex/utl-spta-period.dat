@@ -1,4 +1,0 @@
-BEGIN PERIOD <iper>
-  TEMPERATURE
-    <temperature(ncol*nrow; ncpl)> -- READARRAY
-END PERIOD

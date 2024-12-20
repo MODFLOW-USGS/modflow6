@@ -70,6 +70,7 @@ contains
     ! -- modules
     use RunControlFactoryModule, only: create_run_control
     use SimulationCreateModule, only: simulation_cr
+    use SourceLoadModule, only: export_cr
 
     ! -- get the run controller for sequential or parallel builds
     run_ctrl => create_run_control()
@@ -92,6 +93,9 @@ contains
 
     ! -- allocate and read
     call simulation_ar()
+
+    ! -- create model exports
+    call export_cr()
 
   end subroutine Mf6Initialize
 
@@ -131,6 +135,7 @@ contains
     use SimulationCreateModule, only: simulation_da
     use TdisModule, only: tdis_da
     use IdmLoadModule, only: idm_da
+    use SourceLoadModule, only: export_da
     use SimVariablesModule, only: iout
     ! -- local variables
     integer(I4B) :: im
@@ -203,6 +208,7 @@ contains
     end do
     !
     call idm_da(iout)
+    call export_da()
     call simulation_da()
     call lists_da()
     !
@@ -254,9 +260,6 @@ contains
     !
     call write_message(line)
     call write_listfile_header(iout)
-    !
-    ! -- return
-    return
   end subroutine create_lstfile
 
   !> @brief Create simulation input context
@@ -285,9 +288,6 @@ contains
     !
     ! -- load in scope exchanges
     call load_exchanges(iout)
-    !
-    ! -- return
-    return
   end subroutine static_input_load
 
   !> @brief Define the simulation
@@ -482,6 +482,7 @@ contains
     use SimModule, only: converge_reset
     use SimVariablesModule, only: isim_mode
     use IdmLoadModule, only: idm_rp
+    use SourceLoadModule, only: export_post_prepare
     ! -- local variables
     class(BaseModelType), pointer :: mp => null()
     class(BaseExchangeType), pointer :: ep => null()
@@ -546,26 +547,29 @@ contains
     ! -- time update for each model
     do im = 1, basemodellist%Count()
       mp => GetBaseModelFromList(basemodellist, im)
-      call mp%model_calculate_delt()
+      call mp%model_dt()
     end do
     !
     ! -- time update for each exchange
     do ie = 1, baseexchangelist%Count()
       ep => GetBaseExchangeFromList(baseexchangelist, ie)
-      call ep%exg_calculate_delt()
+      call ep%exg_dt()
     end do
     !
     ! -- time update for each connection
     do ic = 1, baseconnectionlist%Count()
       mc => get_smc_from_list(baseconnectionlist, ic)
-      call mc%exg_calculate_delt()
+      call mc%exg_dt()
     end do
     !
     ! -- time update for each solution
     do is = 1, basesolutionlist%Count()
       sp => GetBaseSolutionFromList(basesolutionlist, is)
-      call sp%sln_calculate_delt()
+      call sp%sln_dt()
     end do
+    !
+    ! -- update exports
+    call export_post_prepare()
     !
     ! -- set time step
     call tdis_set_timestep()
@@ -647,9 +651,6 @@ contains
       call converge_reset()
 
     end if
-    !
-    ! -- return
-    return
   end subroutine sim_step_retry
 
   !> @brief Finalize time step
@@ -675,6 +676,7 @@ contains
     use BaseSolutionModule, only: BaseSolutionType, GetBaseSolutionFromList
     use SimModule, only: converge_check
     use SimVariablesModule, only: isim_mode
+    use SourceLoadModule, only: export_post_step
     ! -- return variable
     logical(LGP) :: hasConverged
     ! -- local variables
@@ -728,14 +730,13 @@ contains
         sp => GetBaseSolutionFromList(basesolutionlist, is)
         call sp%sln_ot()
       end do
+      !
+      ! -- update exports
+      call export_post_step()
     end select
     !
     ! -- Check if we're done
     call converge_check(hasConverged)
-    !
-    ! -- return
-    return
-
   end function Mf6FinalizeTimestep
 
 end module Mf6CoreModule

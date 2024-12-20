@@ -1,12 +1,11 @@
 import sys
 from pathlib import Path
-from typing import Dict
 from warnings import warn
 
 import pytest
 from modflow_devtools.ostags import get_binary_suffixes
 
-pytest_plugins = ["modflow_devtools.fixtures"]
+pytest_plugins = ["modflow_devtools.fixtures", "modflow_devtools.snapshots"]
 project_root_path = Path(__file__).resolve().parent.parent
 
 
@@ -54,7 +53,7 @@ def bin_path() -> Path:
 
 
 @pytest.fixture(scope="session")
-def targets() -> Dict[str, Path]:
+def targets() -> dict[str, Path]:
     """
     Target executables for tests. These include local development builds as
     well as binaries 1) downloaded from GitHub and 2) rebuilt from the last
@@ -81,7 +80,7 @@ def targets() -> Dict[str, Path]:
     return d
 
 
-def try_get_target(targets: Dict[str, Path], name: str) -> Path:
+def try_get_target(targets: dict[str, Path], name: str) -> Path:
     """Try to retrieve the path to a binary. If the binary is a development
     target and can't be found, an error is raised. Otherwise (if the binary
     is downloaded or rebuilt) the test is skipped. This is to allow testing
@@ -99,6 +98,11 @@ def try_get_target(targets: Dict[str, Path], name: str) -> Path:
 @pytest.fixture
 def original_regression(request) -> bool:
     return request.config.getoption("--original-regression")
+
+
+@pytest.fixture
+def plot(request) -> bool:
+    return request.config.getoption("--plot")
 
 
 @pytest.fixture(scope="session")
@@ -119,13 +123,29 @@ def pytest_addoption(parser):
         default=False,
         help="include parallel test cases",
     )
+    parser.addoption(
+        "--netcdf",
+        action="store_true",
+        default=False,
+        help="include netcdf test cases",
+    )
+    parser.addoption(
+        "--plot",
+        action="store_true",
+        default=False,
+        help="make plots of model output",
+    )
 
 
 def pytest_collection_modifyitems(config, items):
-    if config.getoption("--parallel"):
-        # --parallel given in cli: do not skip parallel tests
-        return
-    skip_parallel = pytest.mark.skip(reason="need --parallel option to run")
-    for item in items:
-        if "parallel" in item.keywords:
-            item.add_marker(skip_parallel)
+    if not config.getoption("--parallel"):
+        skip_parallel = pytest.mark.skip(reason="need --parallel option to run")
+        for item in items:
+            if "parallel" in item.keywords:
+                item.add_marker(skip_parallel)
+
+    if not config.getoption("--netcdf"):
+        skip_netcdf = pytest.mark.skip(reason="need --netcdf option to run")
+        for item in items:
+            if "netcdf" in item.keywords:
+                item.add_marker(skip_netcdf)

@@ -12,9 +12,8 @@ import os
 import flopy
 import numpy as np
 import pytest
-from modflowapi import ModflowApi
-
 from framework import TestFramework
+from modflow_devtools.markers import requires_pkg
 
 cases = ["libgwf_rch01"]
 
@@ -79,9 +78,7 @@ def get_model(ws, name, rech):
         memory_print_option="all",
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create iterative model solution and register the gwf model with it
     ims = flopy.mf6.ModflowIms(
@@ -148,6 +145,8 @@ def build_models(idx, test):
 
 
 def api_func(exe, idx, model_ws=None):
+    from modflowapi import ModflowApi
+
     name = cases[idx].upper()
     if model_ws is None:
         model_ws = "."
@@ -157,7 +156,7 @@ def api_func(exe, idx, model_ws=None):
     try:
         mf6 = ModflowApi(exe, working_directory=model_ws)
     except Exception as e:
-        print("Failed to load " + exe)
+        print("Failed to load " + str(exe))
         print("with message: " + str(e))
         return False, open(output_file_path).readlines()
 
@@ -199,11 +198,7 @@ def api_func(exe, idx, model_ws=None):
             kiter += 1
 
             if has_converged:
-                msg = (
-                    f"Component {1}"
-                    + f" converged in {kiter}"
-                    + " outer iterations"
-                )
+                msg = f"Component {1}" + f" converged in {kiter}" + " outer iterations"
                 print(msg)
                 break
 
@@ -230,6 +225,7 @@ def api_func(exe, idx, model_ws=None):
     return True, open(output_file_path).readlines()
 
 
+@requires_pkg("modflowapi")
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

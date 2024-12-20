@@ -1,13 +1,15 @@
 module GeomUtilModule
   use KindModule, only: I4B, DP, LGP
   use ErrorUtilModule, only: pstop
-  use ConstantsModule, only: DZERO, DONE, DHALF
+  use ConstantsModule, only: DZERO, DSAME, DONE, DTWO, DHALF, &
+                             DONETHIRD, DEP3
+
   implicit none
   private
   public :: between, point_in_polygon, &
             get_node, get_ijk, get_jk, &
             skew, transform, compose, &
-            area, shared_face
+            area, shared_face, clamp_bary
 contains
 
   !> @brief Check if a value is between two other values (inclusive).
@@ -454,5 +456,100 @@ contains
       if (found) exit
     end do outerloop
   end subroutine shared_face
+
+  !> @brief Clamp barycentric coordinates to the interior of a triangle,
+  !! with optional padding some minimum distance from any face.
+  !!
+  !! This routine requires 0 <= tol <= 1/3 and 1 = alpha + beta + gamma.
+  !<
+  subroutine clamp_bary(alpha, beta, gamma, pad)
+    ! dummy
+    real(DP), intent(inout) :: alpha
+    real(DP), intent(inout) :: beta
+    real(DP), intent(out) :: gamma
+    real(DP), intent(in), optional :: pad
+    ! local
+    real(DP) :: lolimit
+    real(DP) :: hilimit
+    real(DP) :: delta
+    real(DP) :: lpad
+
+    if (present(pad)) then
+      lpad = pad
+      if (pad < DZERO .or. pad > DONETHIRD) &
+        call pstop(1, "pad must be between 0 and 1/3, inclusive")
+    else
+      lpad = DZERO
+    end if
+
+    gamma = DONE - alpha - beta
+    lolimit = lpad
+    hilimit = DONE - DTWO * lpad
+    ! Check alpha coordinate against lower limit
+    if (alpha < lolimit) then
+      ! Alpha is too low, so nudge alpha to lower limit; this is a move
+      ! parallel to the "alpha axis," which also changes gamma
+      alpha = lolimit
+      gamma = DONE - alpha - beta
+      ! Check beta coordinate against lower limit (which in this
+      ! case is equivalent to checking gamma coordinate against
+      ! upper limit)
+      if (beta < lolimit) then
+        ! Beta is too low (gamma is too high), so nudge beta to lower limit;
+        ! this is a move parallel to the "beta axis," which also changes gamma
+        beta = lolimit
+        gamma = hilimit
+        ! Check beta coordinate against upper limit (which in this
+        ! case is equivalent to checking gamma coordinate against
+        ! lower limit)
+      else if (beta > hilimit) then
+        ! Beta is too high (gamma is too low), so nudge beta to lower limit;
+        ! this is a move parallel to the "beta axis," which also changes gamma
+        beta = hilimit
+        gamma = lolimit
+      end if
+    end if
+    ! Check beta coordinate against lower limit. (If alpha coordinate
+    ! was nudged to lower limit, beta and gamma coordinates have also
+    ! been adjusted as necessary to place particle within subcell, and
+    ! subsequent checks on beta and gamma will evaluate to false, and
+    ! no further adjustments will be made.)
+    if (beta < lolimit) then
+      ! Beta is too low, so nudge beta to lower limit; this is a move
+      ! parallel to the "beta axis," which also changes gamma
+      beta = lolimit
+      gamma = DONE - alpha - beta
+      ! Check alpha coordinate against lower limit (which in this
+      ! case is equivalent to checking gamma coordinate against
+      ! upper limit)
+      if (alpha < lolimit) then
+        ! Alpha is too low (gamma is too high), so nudge alpha to lower limit;
+        ! this is a move parallel to the "alpha axis," which also changes gamma
+        alpha = lolimit
+        gamma = hilimit
+        ! Check alpha coordinate against upper limit (which in this
+        ! case is equivalent to checking gamma coordinate against
+        ! lower limit)
+      else if (alpha > hilimit) then
+        ! Alpha is too high (gamma is too low), so nudge alpha to lower limit;
+        ! this is a move parallel to the "alpha axis," which also changes gamma
+        alpha = hilimit
+        gamma = lolimit
+      end if
+    end if
+    ! Check gamma coordinate against lower limit.(If alpha and/or beta
+    ! coordinate was nudged to lower limit, gamma coordinate has also
+    ! been adjusted as necessary to place particle within subcell, and
+    ! subsequent check on gamma will evaluate to false, and no further
+    ! adjustment will be made.)
+    if (gamma < lolimit) then
+      ! Gamma is too low, so nudge gamma to lower limit; this is a move
+      ! parallel to the "gamma axis," which also changes alpha and beta
+      delta = DHALF * (lolimit - gamma)
+      gamma = lpad
+      alpha = alpha - delta
+      beta = beta - delta
+    end if
+  end subroutine clamp_bary
 
 end module GeomUtilModule

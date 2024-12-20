@@ -1,8 +1,0 @@
-BEGIN OPTIONS
-  [CONTINUE]
-  [NOCHECK]
-  [MEMORY_PRINT_OPTION <memory_print_option>]
-  [MAXERRORS <maxerrors>]
-  [PRINT_INPUT]
-  [HPC6 FILEIN <hpc6_filename>]
-END OPTIONS

@@ -9,11 +9,13 @@ module GwtDspInputModule
   public gwt_dsp_block_definitions
   public GwtDspParamFoundType
   public gwt_dsp_multi_package
+  public gwt_dsp_subpackages
 
   type GwtDspParamFoundType
     logical :: xt3d_off = .false.
     logical :: xt3d_rhs = .false.
     logical :: export_ascii = .false.
+    logical :: export_nc = .false.
     logical :: diffc = .false.
     logical :: alh = .false.
     logical :: alv = .false.
@@ -23,6 +25,12 @@ module GwtDspInputModule
   end type GwtDspParamFoundType
 
   logical :: gwt_dsp_multi_package = .false.
+
+  character(len=16), parameter :: &
+    gwt_dsp_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     gwtdsp_xt3d_off = InputParamDefinitionType &
@@ -34,6 +42,7 @@ module GwtDspInputModule
     'XT3D_OFF', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'deactivate xt3d', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -51,6 +60,7 @@ module GwtDspInputModule
     'XT3D_RHS', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'xt3d on right-hand side', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -68,6 +78,25 @@ module GwtDspInputModule
     'EXPORT_ASCII', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'export array variables to layered ascii files.', & ! longname
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwtdsp_export_nc = InputParamDefinitionType &
+    ( &
+    'GWT', & ! component
+    'DSP', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_ARRAY_NETCDF', & ! tag name
+    'EXPORT_NC', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'export array variables to netcdf output files.', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -85,6 +114,7 @@ module GwtDspInputModule
     'DIFFC', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'effective molecular diffusion coefficient', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -102,6 +132,7 @@ module GwtDspInputModule
     'ALH', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'longitudinal dispersivity in horizontal direction', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -119,6 +150,7 @@ module GwtDspInputModule
     'ALV', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'longitudinal dispersivity in vertical direction', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -136,6 +168,7 @@ module GwtDspInputModule
     'ATH1', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'transverse dispersivity in horizontal direction', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -153,6 +186,7 @@ module GwtDspInputModule
     'ATH2', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'transverse dispersivity in horizontal direction', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -170,6 +204,7 @@ module GwtDspInputModule
     'ATV', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'transverse dispersivity when flow is in vertical direction', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -183,6 +218,7 @@ module GwtDspInputModule
     gwtdsp_xt3d_off, &
     gwtdsp_xt3d_rhs, &
     gwtdsp_export_ascii, &
+    gwtdsp_export_nc, &
     gwtdsp_diffc, &
     gwtdsp_alh, &
     gwtdsp_alv, &
@@ -203,6 +239,7 @@ module GwtDspInputModule
     '', & ! fortran variable
     '', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

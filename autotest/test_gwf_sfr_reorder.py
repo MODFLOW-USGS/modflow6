@@ -3,7 +3,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 paktest = "sfr"
@@ -88,9 +87,7 @@ def build_model(idx, ws):
     spd = [
         [(0, 0, 0), 0.0],
     ]
-    chd = flopy.mf6.modflow.ModflowGwfchd(
-        gwf, stress_period_data=spd, pname="chd-1"
-    )
+    chd = flopy.mf6.modflow.ModflowGwfchd(gwf, stress_period_data=spd, pname="chd-1")
 
     # sfr file
     packagedata = []
@@ -210,9 +207,7 @@ def check_output(idx, test):
 
     assert np.allclose(obs0["INFLOW"], obs1["INFLOW"]), "inflows are not equal"
 
-    assert np.allclose(
-        obs0["OUTFLOW"], obs1["OUTFLOW"]
-    ), "outflows are not equal"
+    assert np.allclose(obs0["OUTFLOW"], obs1["OUTFLOW"]), "outflows are not equal"
 
     fpth = os.path.join(test.workspace, f"{name}.lst")
     with open(fpth, "r") as f:
@@ -230,9 +225,7 @@ def check_output(idx, test):
             break
     actual = np.arange(nreaches, dtype=int)[::-1]
 
-    assert np.array_equal(
-        order, actual
-    ), "DAG did not correctly reorder reaches."
+    assert np.array_equal(order, actual), "DAG did not correctly reorder reaches."
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

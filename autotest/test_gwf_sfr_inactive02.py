@@ -1,12 +1,9 @@
 # Test evap in SFR reaches (no interaction with gwf)
 
-import math
-import pathlib as pl
 
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 HDRY, HNOFLO = -1e30, 1e30
@@ -74,7 +71,8 @@ def build_models(idx, test):
     # sfr data
     nreaches = 4
 
-    # <ifno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> <man> <ncon> <ustrf> <ndv>
+    # <ifno> <cellid(ncelldim)> <rlen> <rwid> <rgrd> <rtp> <rbth> <rhk> ...
+    #        <man> <ncon> <ustrf> <ndv>
     package_data = [
         (0, (0, 0, 0), delr, 1.0, 1e-3, 0.0, 1.0, 1.0, 0.001, 1, 0.0, 0),
         (1, (0, 0, 0), delr, 1.0, 1e-3, 0.0, 1.0, 1.0, 0.001, 1, 1.0, 0),
@@ -164,9 +162,7 @@ def check_output(idx, test):
         assert (
             stage[idx, 2] == HDRY
         ), f"reach 3 stage is not HDRY in stress period {idx + 1}"
-    assert (
-        stage[1, 1] == HNOFLO
-    ), "reach 4 stage is not HNOFLO in stress period 2"
+    assert stage[1, 1] == HNOFLO, "reach 4 stage is not HNOFLO in stress period 2"
 
     bobj = sfr.output.budget()
     data_names = (
@@ -182,9 +178,7 @@ def check_output(idx, test):
     )
     for name in data_names:
         v = bobj.get_data(text=name, totim=2.0)[0]
-        assert (
-            v["q"][1] == 0.0
-        ), f"{name} flow for reach 2 is not zero ({v['q'][1]})"
+        assert v["q"][1] == 0.0, f"{name} flow for reach 2 is not zero ({v['q'][1]})"
 
     # skip GWF for reach 3 since it is not connected
     # to a GWF cell (data_names[0])
@@ -200,7 +194,7 @@ def check_output(idx, test):
     node2 = v["node2"]
     conn = (node[0], node2[0])
     conn2 = (node2[1], node[1])
-    assert conn == conn2, f"FLOW-JA-FACE connectivity is not symmetric"
+    assert conn == conn2, "FLOW-JA-FACE connectivity is not symmetric"
 
     q = v["q"]
     assert np.allclose(

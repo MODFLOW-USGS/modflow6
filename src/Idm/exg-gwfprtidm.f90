@@ -9,11 +9,18 @@ module ExgGwfprtInputModule
   public exg_gwfprt_block_definitions
   public ExgGwfprtParamFoundType
   public exg_gwfprt_multi_package
+  public exg_gwfprt_subpackages
 
   type ExgGwfprtParamFoundType
   end type ExgGwfprtParamFoundType
 
   logical :: exg_gwfprt_multi_package = .false.
+
+  character(len=16), parameter :: &
+    exg_gwfprt_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     exg_gwfprt_param_definitions(*) = &
@@ -27,6 +34,7 @@ module ExgGwfprtInputModule
     '', & ! fortran variable
     '', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -47,6 +55,7 @@ module ExgGwfprtInputModule
     '', & ! fortran variable
     '', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

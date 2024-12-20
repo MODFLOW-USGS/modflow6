@@ -7,7 +7,8 @@ module TimeSeriesModule
                              DZERO, DONE, DNODATA
   use MathUtilModule, only: is_close
   use InputOutputModule, only: GetUnit, openfile, ParseLine, upcase
-  use ListModule, only: ListType, ListNodeType
+  use ListModule, only: ListType
+  use ListNodeModule, only: ListNodeType
   use SimVariablesModule, only: errmsg
   use SimModule, only: count_errors, store_error, &
                        store_error_unit
@@ -97,9 +98,6 @@ contains
     !
     allocate (newTimeSeriesFile)
     allocate (newTimeSeriesFile%parser)
-    !
-    ! -- Return
-    return
   end subroutine ConstructTimeSeriesFile
 
   !> @brief Cast an unlimited polymorphic object as class(TimeSeriesFileType)
@@ -117,9 +115,6 @@ contains
     type is (TimeSeriesFileType)
       res => obj
     end select
-    !
-    ! -- Return
-    return
   end function CastAsTimeSeriesFileType
 
   !> @brief Cast an unlimited polymorphic object as class(TimeSeriesFileType)
@@ -137,9 +132,6 @@ contains
     class is (TimeSeriesFileType)
       res => obj
     end select
-    !
-    ! -- Return
-    return
   end function CastAsTimeSeriesFileClass
 
   !> @brief Add time series file to list
@@ -153,9 +145,6 @@ contains
     !
     obj => tsfile
     call list%Add(obj)
-    !
-    ! -- Return
-    return
   end subroutine AddTimeSeriesFileToList
 
   !> @brief Get time series from list
@@ -175,9 +164,6 @@ contains
     if (.not. associated(res)) then
       res => CastAsTimeSeriesFileClass(obj)
     end if
-    !
-    ! -- Return
-    return
   end function GetTimeSeriesFileFromList
 
   !> @brief Compare two time series; if they are identical, return true
@@ -208,9 +194,6 @@ contains
     end do
     !
     same = .true.
-    !
-    ! -- Return
-    return
   end function SameTimeSeries
 
   ! Type-bound procedures of TimeSeriesType
@@ -246,9 +229,6 @@ contains
     case (LINEAREND)
       GetValue = this%get_value_at_time(time1, extend)
     end select
-    !
-    ! -- Return
-    return
   end function GetValue
 
   !> @brief Initialize time series
@@ -283,9 +263,6 @@ contains
       errmsg = 'Name not specified for time series.'
       call store_error(errmsg, terminate=.TRUE.)
     end if
-    !
-    ! -- Return
-    return
   end subroutine initialize_time_series
 
   !> @brief Get surrounding records
@@ -375,9 +352,6 @@ contains
     !
     if (time0 < time .or. is_close(time0, time)) tsrecEarlier => tsrec0
     if (time1 > time .or. is_close(time1, time)) tsrecLater => tsrec1
-    !
-    ! -- Return
-    return
   end subroutine get_surrounding_records
 
   !> @brief Get surrounding nodes
@@ -475,9 +449,6 @@ contains
       tsrecLater => tsrec1
       nodeLater => tsNode1
     end if
-    !
-    ! -- Return
-    return
   end subroutine get_surrounding_nodes
 
   !> @brief Read next record
@@ -498,9 +469,6 @@ contains
     if (.not. read_next_record) then
       this%tsfile%finishedReading = .true.
     end if
-    !
-    ! -- Return
-    return
   end function read_next_record
 
   !> @brief Get value for a time
@@ -583,9 +551,6 @@ contains
       write (errmsg, 10) time, trim(this%Name)
       call store_error(errmsg, terminate=.TRUE.)
     end if
-    !
-    ! -- Return
-    return
   end function get_value_at_time
 
   !> @brief Get integrated value
@@ -722,9 +687,6 @@ contains
         end if
       end if
     end if
-    !
-    ! -- Return
-    return
   end function get_integrated_value
 
   !> @brief Get average value
@@ -757,9 +719,6 @@ contains
       value = this%get_value_at_time(time0, extendToEndOfSimulation)
     end if
     get_average_value = value
-    !
-    ! -- Return
-    return
   end function get_average_value
 
   !> @brief Get latest preceding node
@@ -830,9 +789,6 @@ contains
     end if
     !
     if (time0 < time .or. is_close(time0, time)) tslNode => tsNode0
-    !
-    ! -- Return
-    return
   end subroutine get_latest_preceding_node
 
   !> @brief Deallocate
@@ -845,9 +801,6 @@ contains
       call this%list%Clear(.true.)
       deallocate (this%list)
     end if
-    !
-    ! -- Return
-    return
   end subroutine ts_da
 
   !> @brief Add ts record
@@ -861,9 +814,6 @@ contains
     !
     obj => tsr
     call this%list%Add(obj)
-    !
-    ! -- Return
-    return
   end subroutine AddTimeSeriesRecord
 
   !> @brief Get current ts record
@@ -882,9 +832,6 @@ contains
     if (associated(obj)) then
       res => CastAsTimeSeriesRecordType(obj)
     end if
-    !
-    ! -- Return
-    return
   end function GetCurrentTimeSeriesRecord
 
   !> @brief Get previous ts record
@@ -903,9 +850,6 @@ contains
     if (associated(obj)) then
       res => CastAsTimeSeriesRecordType(obj)
     end if
-    !
-    ! -- Return
-    return
   end function GetPreviousTimeSeriesRecord
 
   !> @brief Get next ts record
@@ -924,9 +868,6 @@ contains
     if (associated(obj)) then
       res => CastAsTimeSeriesRecordType(obj)
     end if
-    !
-    ! -- Return
-    return
   end function GetNextTimeSeriesRecord
 
   !> @brief Get ts record
@@ -955,9 +896,6 @@ contains
         exit
       end if
     end do
-    !
-    ! -- Return
-    return
   end function GetTimeSeriesRecord
 
   !> @brief Reset
@@ -967,9 +905,6 @@ contains
     class(TimeSeriesType) :: this
     !
     call this%list%Reset()
-    !
-    ! -- Return
-    return
   end subroutine Reset
 
   !> @brief Insert a time series record
@@ -1049,9 +984,6 @@ contains
         call this%AddTimeSeriesRecord(tsr)
       end if
     end if
-    !
-    ! -- Return
-    return
   end subroutine InsertTsr
 
   !> @brief Find latest time
@@ -1079,9 +1011,6 @@ contains
     obj => this%list%GetItem(nrecords)
     tsr => CastAsTimeSeriesRecordType(obj)
     endtime = tsr%tsrTime
-    !
-    ! -- Return
-    return
   end function FindLatestTime
 
   !> @brief Clear the list of time series records
@@ -1092,9 +1021,6 @@ contains
     logical, optional, intent(in) :: destroy
     !
     call this%list%Clear(destroy)
-    !
-    ! -- Return
-    return
   end subroutine Clear
 
 ! Type-bound procedures of TimeSeriesFileType
@@ -1112,9 +1038,6 @@ contains
     else
       Count = 0
     end if
-    !
-    ! -- Return
-    return
   end function Count
 
   !> @brief Get time series
@@ -1130,9 +1053,6 @@ contains
     if (indx > 0 .and. indx <= this%nTimeSeries) then
       res => this%timeSeries(indx)
     end if
-    !
-    ! -- Return
-    return
   end function GetTimeSeries
 
   !> @brief Open time-series tsfile file and read options and first record,
@@ -1339,9 +1259,6 @@ contains
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
     end if
-    !
-    ! -- Return
-    return
   end subroutine Initializetsfile
 
   !> @brief Read time series file line
@@ -1378,9 +1295,6 @@ contains
       call AddTimeSeriesRecordToList(this%timeSeries(i)%list, tsRecord)
     end do tsloop
     read_tsfile_line = .true.
-    !
-    ! -- Return
-    return
   end function read_tsfile_line
 
   !> @brief Deallocate memory
@@ -1403,9 +1317,6 @@ contains
     !
     deallocate (this%timeSeries)
     deallocate (this%parser)
-    !
-    ! -- Return
-    return
   end subroutine tsf_da
 
 end module TimeSeriesModule

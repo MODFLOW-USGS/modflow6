@@ -9,6 +9,7 @@ module SwfCxsInputModule
   public swf_cxs_block_definitions
   public SwfCxsParamFoundType
   public swf_cxs_multi_package
+  public swf_cxs_subpackages
 
   type SwfCxsParamFoundType
     logical :: iprpak = .false.
@@ -23,6 +24,12 @@ module SwfCxsInputModule
 
   logical :: swf_cxs_multi_package = .false.
 
+  character(len=16), parameter :: &
+    swf_cxs_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     swfcxs_iprpak = InputParamDefinitionType &
     ( &
@@ -33,6 +40,7 @@ module SwfCxsInputModule
     'IPRPAK', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print input to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -50,6 +58,7 @@ module SwfCxsInputModule
     'NSECTIONS', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of reaches', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -67,6 +76,7 @@ module SwfCxsInputModule
     'NPOINTS', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'total number of points defined for all reaches', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -84,6 +94,7 @@ module SwfCxsInputModule
     'IDCXS', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'reach number for this entry', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -101,6 +112,7 @@ module SwfCxsInputModule
     'NXSPOINTS', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of points used to define cross section', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -118,6 +130,7 @@ module SwfCxsInputModule
     'XFRACTION', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'fractional width', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -135,6 +148,7 @@ module SwfCxsInputModule
     'HEIGHT', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'depth', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -152,6 +166,7 @@ module SwfCxsInputModule
     'MANFRACTION', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'Mannings roughness coefficient', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -182,6 +197,7 @@ module SwfCxsInputModule
     'PACKAGEDATA', & ! fortran variable
     'RECARRAY IDCXS NXSPOINTS', & ! type
     'NSECTIONS', & ! shape
+    '', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -199,6 +215,7 @@ module SwfCxsInputModule
     'CROSSSECTIONDATA', & ! fortran variable
     'RECARRAY XFRACTION HEIGHT MANFRACTION', & ! type
     'NPOINTS', & ! shape
+    '', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

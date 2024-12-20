@@ -9,7 +9,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["mst03"]
@@ -46,9 +45,7 @@ def build_models(idx, test):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwfname = "gwf_" + name
@@ -174,14 +171,10 @@ def build_models(idx, test):
     ic = flopy.mf6.ModflowGwtic(gwt, strt=100.0)
 
     # advection
-    adv = flopy.mf6.ModflowGwtadv(
-        gwt, scheme="UPSTREAM", filename=f"{gwtname}.adv"
-    )
+    adv = flopy.mf6.ModflowGwtadv(gwt, scheme="UPSTREAM", filename=f"{gwtname}.adv")
 
     # mass storage and transfer
-    mst = flopy.mf6.ModflowGwtmst(
-        gwt, porosity=sy[idx], filename=f"{gwtname}.mst"
-    )
+    mst = flopy.mf6.ModflowGwtmst(gwt, porosity=sy[idx], filename=f"{gwtname}.mst")
 
     # sources
     sourcerecarray = [("WEL-1", "AUX", "CONCENTRATION")]
@@ -194,9 +187,7 @@ def build_models(idx, test):
         gwt,
         budget_filerecord=f"{gwtname}.cbc",
         concentration_filerecord=f"{gwtname}.ucn",
-        concentrationprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        concentrationprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("CONCENTRATION", "ALL")],
         printrecord=[("CONCENTRATION", "ALL"), ("BUDGET", "ALL")],
     )
@@ -263,14 +254,14 @@ def check_output(idx, test):
     volume_sim = head * 10 * 1.0
     print("volume sim", volume_sim)
     print("volume calc", volume_calc)
-    errmsg = "{}\n{}".format(volume_calc, volume_sim, atol=1.0e-8)
+    errmsg = f"{volume_calc}\n{volume_sim}"
     assert np.allclose(volume_calc, volume_sim), errmsg
 
     # compare calculated and simulated head
     hanswer = np.array(head_calc)
     print("head sim", head)
     print("head calc", hanswer)
-    errmsg = "{}\n{}".format(head, hanswer, atol=1.0e-8)
+    errmsg = f"{head}\n{hanswer}"
     assert np.allclose(head, hanswer), errmsg
 
     # compare calculated and simulated concentration

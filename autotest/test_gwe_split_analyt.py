@@ -1,21 +1,21 @@
 r"""
- An analytical solution provided by Carslaw & Jaeger (1947) and discussed in 
+ An analytical solution provided by Carslaw & Jaeger (1947) and discussed in
  accompanying Techniques & Methods report.
- 
+
  Energy is added to the right hand side boundary using the energy source loading
- (ESL) package.  Basic model set up is below, with a slab of unit thickness 
+ (ESL) package.  Basic model set up is below, with a slab of unit thickness
  (1.0 m) that is 1 m "deep" ("into the page") with energy being loaded on right
- side.  Temperature will begin to rise on the right and propagate to the left. 
+ side.  Temperature will begin to rise on the right and propagate to the left.
  There are no sinks in this first example.  There are two additional conceptual
  models named "case ii" and "case iii". The titles that follow, for example
  "Section 43, case x" refer to specific analytical solutions found in Carslaw &
  Jaeger (1947)
- 
+
  Section 43, case i:
  -------------------
 
        | <---------   5 m   ----------> |              | <---------   5 m   ----------> |
-    
+
        +--------------------------------+              +--------------------------------+
        |    Initial temperature = T_0   | <-exchange-> |   Initial temperature = T_0    | <-- *ESL
        +--------------------------------+              +--------------------------------+
@@ -23,12 +23,12 @@ r"""
        |
        No heat-flow boundary
 
- 
+
  Section 43, case ii:
  --------------------
- 
+
        | <---------   5 m   ----------> |              | <---------   5 m   ----------> |
-      
+
        +--------------------------------+              +--------------------------------+
        |    Initial temperature = T_0   | <-exchange-> |    Initial temperature = T_0   | <-- *ESL
        +--------------------------------+              +--------------------------------+
@@ -49,14 +49,14 @@ CTP -> |    Initial temperature = T_0   | <-exchange-> |    Initial temperature 
 
    Specified temperature boundary, T_0
 
-"""
+"""  # noqa
 
-import os
 import math
-import pytest
+import os
+
 import flopy
 import numpy as np
-
+import pytest
 from framework import TestFramework
 
 # Parameters that vary by scenario
@@ -154,9 +154,8 @@ def calc_ener_input(primer_val):
     return ener_add_rate
 
 
-# Define function to solve analytical solution
+# Instantiate model to compare against analytical solution
 def assemble_half_model(sim, gwfname, gwfpath, side="right"):
-    
     # Create GWF model
     gwf = flopy.mf6.MFModel(
         sim,
@@ -205,7 +204,7 @@ def assemble_half_model(sim, gwfname, gwfpath, side="right"):
         steady_state=False,
         transient=True,
     )
-    
+
     # Output control
     flopy.mf6.ModflowGwfoc(
         gwf,
@@ -215,13 +214,12 @@ def assemble_half_model(sim, gwfname, gwfpath, side="right"):
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
-    
+
     gwf.set_model_relative_path(gwfpath)
     return gwf
 
 
 def get_gwe_model(idx, sim, gwename, gwepath, ener_input, side="right"):
-    
     gwe = flopy.mf6.MFModel(
         sim,
         model_type="gwe6",
@@ -269,13 +267,16 @@ def get_gwe_model(idx, sim, gwename, gwepath, ener_input, side="right"):
     flopy.mf6.ModflowGweest(
         gwe,
         porosity=theta,
-        cps=Cps,
-        rhos=rhos,
-        packagedata=[Cpw, rhow, lhv],
+        heat_capacity_water=Cpw,
+        density_water=rhow,
+        latent_heat_vaporization=lhv,
+        heat_capacity_solid=Cps,
+        density_solid=rhos,
     )
 
     # Constant temperature goes on the left side of the left model
-    # Note: Implementation of the CTP boundary depends on which analytical sln is in view
+    # Note: Implementation of the CTP boundary depends on which analytical sln
+    #       is in view
     #       See notes at top of script regarding scenarios
     if side == "left":
         if idx > 0:
@@ -321,15 +322,13 @@ def get_gwe_model(idx, sim, gwename, gwepath, ener_input, side="right"):
             save_flows=False,
             pname="ESL-" + side[0],
         )
-    
+
     # Output control
     flopy.mf6.ModflowGweoc(
         gwe,
         budget_filerecord=f"{gwename}.cbc",
         temperature_filerecord=f"{gwename}.ucn",
-        temperatureprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        temperatureprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("TEMPERATURE", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("TEMPERATURE", "LAST"), ("BUDGET", "LAST")],
     )
@@ -354,9 +353,7 @@ def build_models(idx, test):
 
     # Build MODFLOW 6 files
     ws = test.workspace
-    sim = flopy.mf6.MFSimulation(
-        sim_name=ws, version="mf6", exe_name="mf6", sim_ws=ws
-    )
+    sim = flopy.mf6.MFSimulation(sim_name=ws, version="mf6", exe_name="mf6", sim_ws=ws)
 
     # Create tdis package
     tdis_rc = []
@@ -369,14 +366,12 @@ def build_models(idx, test):
 
     # left model
     gwf1 = assemble_half_model(sim, "flow1", "flow1", side="left")
-    
+
     # right model
     gwf2 = assemble_half_model(sim, "flow2", "flow2", side="right")
 
     # Add the exchange data
-    exgdata = [
-        ((0, 0, ncol - 1), (0, 0, 0), 1, delr / 2, delr / 2, delc, 0.0, delr)
-    ]
+    exgdata = [((0, 0, ncol - 1), (0, 0, 0), 1, delr / 2, delr / 2, delc, 0.0, delr)]
     flopy.mf6.ModflowGwfgwf(
         sim,
         exgtype="GWF6-GWF6",
@@ -387,7 +382,7 @@ def build_models(idx, test):
         xt3d=xt3d[0],
         print_flows=True,
         auxiliary=["ANGLDEGX", "CDIST"],
-        filename="{}.gwfgwf".format("exchng"),
+        filename="exchng.gwfgwf",
         dev_interfacemodel_on=True,
     )
 
@@ -409,12 +404,12 @@ def build_models(idx, test):
     )
     sim.register_ims_package(imsgwf, [gwf1.name, gwf2.name])
 
-    # Create gw3 model
+    # Create first gwe model
     gwe1 = get_gwe_model(idx, sim, "energy1", "energy1", ener_input, side="left")
 
-    # Create gwe model
+    # Create second gwe model
     gwe2 = get_gwe_model(idx, sim, "energy2", "energy2", ener_input, side="right")
-    
+
     # Create GWE GWE exchange
     flopy.mf6.ModflowGwegwe(
         sim,
@@ -427,9 +422,9 @@ def build_models(idx, test):
         exgmnameb=gwe2.name,
         exchangedata=exgdata,
         auxiliary=["ANGLDEGX", "CDIST"],
-        filename="{}.gwegwe".format("exchng"),
+        filename="exchng.gwegwe",
     )
-    
+
     # GWF-GWE exchange
     flopy.mf6.ModflowGwfgwe(
         sim,
@@ -445,7 +440,7 @@ def build_models(idx, test):
         exgmnameb="energy2",
         filename="flow2_transport2.gwfgwe",
     )
-    
+
     # create iterative model solution and register the gwt model with it
     imsgwe = flopy.mf6.ModflowIms(
         sim,
@@ -539,23 +534,18 @@ def check_output(idx, test):
     gwename = "energy1"
     fpth = os.path.join(test.workspace, gwename, f"{gwename}.ucn")
     try:
-        tobj = flopy.utils.HeadFile(
-            fpth, precision="double", text="TEMPERATURE"
-        )
+        tobj = flopy.utils.HeadFile(fpth, precision="double", text="TEMPERATURE")
         sim_temps_l = tobj.get_alldata()
     except:
         assert False, f'could not load data from "{fpth}"'
-    
+
     gwename = "energy2"
     fpth = os.path.join(test.workspace, gwename, f"{gwename}.ucn")
     try:
-        tobj = flopy.utils.HeadFile(
-            fpth, precision="double", text="TEMPERATURE"
-        )
+        tobj = flopy.utils.HeadFile(fpth, precision="double", text="TEMPERATURE")
         sim_temps_r = tobj.get_alldata()
     except:
         assert False, f'could not load data from "{fpth}"'
-    
 
     # stitch the left and right sides together
     sim_temps = np.concatenate(
@@ -588,14 +578,13 @@ def check_output(idx, test):
             assert np.allclose(
                 analytical_temps, sim_temps[sp, 0, 0, :], atol=0.005
             ), "simulated solution is whacked"
-            # plt.plot(cell_centroids, analytical_temps, "r-", label="Analytical Solution")
+            # plt.plot(cell_centroids, analytical_temps, "r-", label="Analytical Solution")  # noqa
             # plt.plot(cell_centroids, sim_temps[sp, 0, 0, :], "b--", label="GWE")
             # plt.axhline(0.0, color='black')
             # plt.legend()
             # plt.show()
-    
-    elif idx == 2:
 
+    elif idx == 2:
         t_accumulate = 0.0
         ener_src = ener_input / (delr * delc * delz)
 

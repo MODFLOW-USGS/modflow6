@@ -9,14 +9,40 @@ module UtlHpcInputModule
   public utl_hpc_block_definitions
   public UtlHpcParamFoundType
   public utl_hpc_multi_package
+  public utl_hpc_subpackages
 
   type UtlHpcParamFoundType
+    logical :: print_table = .false.
     logical :: dev_log_mpi = .false.
     logical :: mname = .false.
     logical :: mrank = .false.
   end type UtlHpcParamFoundType
 
   logical :: utl_hpc_multi_package = .false.
+
+  character(len=16), parameter :: &
+    utl_hpc_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
+
+  type(InputParamDefinitionType), parameter :: &
+    utlhpc_print_table = InputParamDefinitionType &
+    ( &
+    'UTL', & ! component
+    'HPC', & ! subcomponent
+    'OPTIONS', & ! block
+    'PRINT_TABLE', & ! tag name
+    'PRINT_TABLE', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'model print table to listing file', & ! longname
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
 
   type(InputParamDefinitionType), parameter :: &
     utlhpc_dev_log_mpi = InputParamDefinitionType &
@@ -28,6 +54,7 @@ module UtlHpcInputModule
     'DEV_LOG_MPI', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'log mpi traffic', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -45,6 +72,7 @@ module UtlHpcInputModule
     'MNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'model name', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -62,6 +90,7 @@ module UtlHpcInputModule
     'MRANK', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'model rank', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -72,6 +101,7 @@ module UtlHpcInputModule
   type(InputParamDefinitionType), parameter :: &
     utl_hpc_param_definitions(*) = &
     [ &
+    utlhpc_print_table, &
     utlhpc_dev_log_mpi, &
     utlhpc_mname, &
     utlhpc_mrank &
@@ -87,7 +117,8 @@ module UtlHpcInputModule
     'PARTITIONS', & ! fortran variable
     'RECARRAY MNAME MRANK', & ! type
     '', & ! shape
-    .true., & ! required
+    'list of partition numbers', & ! longname
+    .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
     .false., & ! layered
@@ -111,7 +142,7 @@ module UtlHpcInputModule
     ), &
     InputBlockDefinitionType( &
     'PARTITIONS', & ! blockname
-    .true., & ! required
+    .false., & ! required
     .true., & ! aggregate
     .false. & ! block_variable
     ) &

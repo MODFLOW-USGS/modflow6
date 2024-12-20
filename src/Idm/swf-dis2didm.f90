@@ -9,6 +9,7 @@ module SwfDis2DInputModule
   public swf_dis2d_block_definitions
   public SwfDis2dParamFoundType
   public swf_dis2d_multi_package
+  public swf_dis2d_subpackages
 
   type SwfDis2dParamFoundType
     logical :: length_units = .false.
@@ -21,11 +22,17 @@ module SwfDis2DInputModule
     logical :: ncol = .false.
     logical :: delr = .false.
     logical :: delc = .false.
-    logical :: botm = .false.
+    logical :: bottom = .false.
     logical :: idomain = .false.
   end type SwfDis2dParamFoundType
 
   logical :: swf_dis2d_multi_package = .false.
+
+  character(len=16), parameter :: &
+    swf_dis2d_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     swfdis2d_length_units = InputParamDefinitionType &
@@ -37,6 +44,7 @@ module SwfDis2DInputModule
     'LENGTH_UNITS', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'model length units', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -54,6 +62,7 @@ module SwfDis2DInputModule
     'NOGRB', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'do not write binary grid file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -71,6 +80,7 @@ module SwfDis2DInputModule
     'XORIGIN', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'x-position of the model grid origin', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -88,6 +98,7 @@ module SwfDis2DInputModule
     'YORIGIN', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'y-position of the model grid origin', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -105,6 +116,7 @@ module SwfDis2DInputModule
     'ANGROT', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'rotation angle', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -122,6 +134,7 @@ module SwfDis2DInputModule
     'EXPORT_ASCII', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'export array variables to layered ascii files.', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -139,6 +152,7 @@ module SwfDis2DInputModule
     'NROW', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of rows', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -156,6 +170,7 @@ module SwfDis2DInputModule
     'NCOL', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of columns', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -173,6 +188,7 @@ module SwfDis2DInputModule
     'DELR', & ! fortran variable
     'DOUBLE1D', & ! type
     'NCOL', & ! shape
+    'spacing along a row', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -190,6 +206,7 @@ module SwfDis2DInputModule
     'DELC', & ! fortran variable
     'DOUBLE1D', & ! type
     'NROW', & ! shape
+    'spacing along a column', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -198,15 +215,16 @@ module SwfDis2DInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swfdis2d_botm = InputParamDefinitionType &
+    swfdis2d_bottom = InputParamDefinitionType &
     ( &
     'SWF', & ! component
     'DIS2D', & ! subcomponent
     'GRIDDATA', & ! block
-    'BOTM', & ! tag name
-    'BOTM', & ! fortran variable
+    'BOTTOM', & ! tag name
+    'BOTTOM', & ! fortran variable
     'DOUBLE2D', & ! type
     'NCOL NROW', & ! shape
+    'cell bottom elevation', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -224,6 +242,7 @@ module SwfDis2DInputModule
     'IDOMAIN', & ! fortran variable
     'INTEGER2D', & ! type
     'NCOL NROW', & ! shape
+    'idomain existence array', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -244,7 +263,7 @@ module SwfDis2DInputModule
     swfdis2d_ncol, &
     swfdis2d_delr, &
     swfdis2d_delc, &
-    swfdis2d_botm, &
+    swfdis2d_bottom, &
     swfdis2d_idomain &
     ]
 
@@ -260,6 +279,7 @@ module SwfDis2DInputModule
     '', & ! fortran variable
     '', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

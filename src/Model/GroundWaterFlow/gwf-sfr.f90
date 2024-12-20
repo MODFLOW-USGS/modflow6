@@ -59,6 +59,7 @@ module SfrModule
     character(len=LENBOUNDNAME), dimension(:), pointer, &
       contiguous :: sfrname => null() !< internal SFR reach name
     ! -- integers
+    integer(I4B), pointer :: istorage => null() !< flag for using kinematic wave approximation
     integer(I4B), pointer :: iprhed => null() !< flag for printing stages to listing file
     integer(I4B), pointer :: istageout => null() !< flag and unit number for binary stage output
     integer(I4B), pointer :: ibudgetout => null() !< flag and unit number for binary sfr budget output
@@ -80,6 +81,7 @@ module SfrModule
     real(DP), pointer :: timeconv => NULL() !< time conversion factor (SI to model units)
     real(DP), pointer :: dmaxchg => NULL() !< maximum depth change allowed
     real(DP), pointer :: deps => NULL() !< perturbation value
+    real(DP), pointer :: storage_weight => NULL() !< time weighting factor for kinematic wave approximation
     ! -- integer vectors
     integer(I4B), dimension(:), pointer, contiguous :: isfrorder => null() !< sfr reach order determined from DAG of upstream reaches
     integer(I4B), dimension(:), pointer, contiguous :: ia => null() !< CRS row pointer for SFR reaches
@@ -113,13 +115,18 @@ module SfrModule
     integer(I4B), dimension(:), pointer, contiguous :: ndiv => null() !< number of diversions for each reach
     real(DP), dimension(:), pointer, contiguous :: usflow => null() !< upstream reach flow
     real(DP), dimension(:), pointer, contiguous :: dsflow => null() !< downstream reach flow
+    real(DP), dimension(:), pointer, contiguous :: dsflowold => null() !< downstream reach flow for previous time step
+    real(DP), dimension(:), pointer, contiguous :: usinflow => null() !< upstream reach flow for previous time step
+    real(DP), dimension(:), pointer, contiguous :: usinflowold => null() !< upstream reach flow for previous time step
     real(DP), dimension(:), pointer, contiguous :: depth => null() !< reach depth
     real(DP), dimension(:), pointer, contiguous :: stage => null() !< reach stage
+    real(DP), dimension(:), pointer, contiguous :: stageold => null() !< reach stage for last timestep
     real(DP), dimension(:), pointer, contiguous :: gwflow => null() !< flow from groundwater to reach
     real(DP), dimension(:), pointer, contiguous :: simevap => null() !< simulated reach evaporation
     real(DP), dimension(:), pointer, contiguous :: simrunoff => null() !< simulated reach runoff
     real(DP), dimension(:), pointer, contiguous :: stage0 => null() !< previous reach stage iterate
     real(DP), dimension(:), pointer, contiguous :: usflow0 => null() !< previous upstream reach flow iterate
+    real(DP), dimension(:), pointer, contiguous :: storage => null() !< previous upstream reach flow iterate
     ! -- cross-section data
     integer(I4B), pointer :: ncrossptstot => null() !< total number of cross-section points
     integer(I4B), dimension(:), pointer, contiguous :: ncrosspts => null() !< number of cross-section points for each reach
@@ -183,6 +190,7 @@ module SfrModule
     procedure, private :: sfr_set_stressperiod
     procedure, private :: sfr_solve
     procedure, private :: sfr_calc_constant
+    procedure, private :: sfr_calc_transient
     procedure, private :: sfr_calc_steady
     procedure, private :: sfr_update_flows
     procedure, private :: sfr_adjust_ro_ev
@@ -204,14 +212,17 @@ module SfrModule
     procedure, private :: sfr_read_crossection
     procedure, private :: sfr_read_connectiondata
     procedure, private :: sfr_read_diversions
+    procedure, private :: sfr_read_initial_stages
     ! -- calculations
     procedure, private :: sfr_calc_reach_depth
     procedure, private :: sfr_calc_xs_depth
     ! -- error checking
     procedure, private :: sfr_check_conversion
+    procedure, private :: sfr_check_storage_weight
     procedure, private :: sfr_check_reaches
     procedure, private :: sfr_check_connections
     procedure, private :: sfr_check_diversions
+    procedure, private :: sfr_check_initialstages
     procedure, private :: sfr_check_ustrf
     ! -- budget
     procedure, private :: sfr_setup_budobj
@@ -224,6 +235,55 @@ module SfrModule
     ! -- viscosity
     procedure :: sfr_activate_viscosity
   end type SfrType
+
+  interface
+    module subroutine sfr_calc_steady(this, n, d1, hgwf, &
+                                      qu, qi, qfrommvr, qr, qe, qro, &
+                                      qgwf, qd)
+      class(SfrType) :: this !< SfrType object
+      integer(I4B), intent(in) :: n !< reach number
+      real(DP), intent(inout) :: d1 !< current reach depth estimate
+      real(DP), intent(in) :: hgwf !< head in gw cell
+      real(DP), intent(in) :: qu !< reach upstream flow
+      real(DP), intent(in) :: qi !< reach specified inflow
+      real(DP), intent(in) :: qfrommvr !< reach flow from mover
+      real(DP), intent(in) :: qr !< reach rainfall
+      real(DP), intent(in) :: qe !< reach evaporation
+      real(DP), intent(in) :: qro !< reach runoff flow
+      real(DP), intent(inout) :: qgwf !< reach-aquifer exchange
+      real(DP), intent(inout) :: qd !< reach outflow
+    end subroutine
+  end interface
+
+  interface
+    module subroutine sfr_calc_transient(this, n, d1, hgwf, &
+                                         qu, qi, qfrommvr, qr, qe, qro, &
+                                         qgwf, qd)
+      class(SfrType) :: this !< SfrType object
+      integer(I4B), intent(in) :: n !< reach number
+      real(DP), intent(inout) :: d1 !< current reach depth estimate
+      real(DP), intent(in) :: hgwf !< head in gw cell
+      real(DP), intent(in) :: qu !< reach upstream flow
+      real(DP), intent(in) :: qi !< reach specified inflow
+      real(DP), intent(in) :: qfrommvr !< reach flow from mover
+      real(DP), intent(in) :: qr !< reach rainfall
+      real(DP), intent(in) :: qe !< reach evaporation
+      real(DP), intent(in) :: qro !< reach runoff flow
+      real(DP), intent(inout) :: qgwf !< reach-aquifer exchange
+      real(DP), intent(inout) :: qd !< reach outflow
+    end subroutine
+  end interface
+
+  interface
+    module subroutine sfr_calc_constant(this, n, d1, hgwf, qgwf, qd)
+      class(SfrType) :: this !< SfrType object
+      integer(I4B), intent(in) :: n !< reach number
+      real(DP), intent(inout) :: d1 !< current reach depth estimate
+      real(DP), intent(in) :: hgwf !< head in gw cell
+      real(DP), intent(inout) :: qgwf !< reach-aquifer exchange
+      real(DP), intent(inout) :: qd !< reach outflow
+    end subroutine
+  end interface
 
 contains
 
@@ -268,9 +328,6 @@ contains
     packobj%iscloc = 0 ! not supported
     packobj%isadvpak = 1
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
-    !
-    ! -- return
-    return
   end subroutine sfr_create
 
   !> @ brief Allocate scalars
@@ -290,6 +347,7 @@ contains
     call this%BndType%allocate_scalars()
     !
     ! -- allocate the object and assign values to object variables
+    call mem_allocate(this%istorage, 'ISTORAGE', this%memoryPath)
     call mem_allocate(this%iprhed, 'IPRHED', this%memoryPath)
     call mem_allocate(this%istageout, 'ISTAGEOUT', this%memoryPath)
     call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%memoryPath)
@@ -305,6 +363,7 @@ contains
     call mem_allocate(this%timeconv, 'TIMECONV', this%memoryPath)
     call mem_allocate(this%dmaxchg, 'DMAXCHG', this%memoryPath)
     call mem_allocate(this%deps, 'DEPS', this%memoryPath)
+    call mem_allocate(this%storage_weight, 'STORAGE_WEIGHT', this%memoryPath)
     call mem_allocate(this%nconn, 'NCONN', this%memoryPath)
     call mem_allocate(this%icheck, 'ICHECK', this%memoryPath)
     call mem_allocate(this%iconvchk, 'ICONVCHK', this%memoryPath)
@@ -316,6 +375,7 @@ contains
     call mem_setptr(this%gwfiss, 'ISS', create_mem_path(this%name_model))
     !
     ! -- Set values
+    this%istorage = 0
     this%iprhed = 0
     this%istageout = 0
     this%ibudgetout = 0
@@ -331,6 +391,7 @@ contains
     this%timeconv = DNODATA
     this%dmaxchg = DEM5
     this%deps = DP999 * this%dmaxchg
+    this%storage_weight = DNODATA
     this%nconn = 0
     this%icheck = 1
     this%iconvchk = 1
@@ -338,9 +399,6 @@ contains
     this%ivsc = 0
     this%ianynone = 0
     this%ncrossptstot = 0
-    !
-    ! -- return
-    return
   end subroutine sfr_allocate_scalars
 
   !> @ brief Allocate arrays
@@ -389,6 +447,20 @@ contains
                       this%memoryPath)
     call mem_allocate(this%stage0, this%maxbound, 'STAGE0', this%memoryPath)
     call mem_allocate(this%usflow0, this%maxbound, 'USFLOW0', this%memoryPath)
+    !
+    ! -- stage, usflow, inflow, and dsflow for previous timestep
+    if (this%istorage == 1) then
+      call mem_allocate(this%stageold, this%maxbound, 'STAGEOLD', &
+                        this%memoryPath)
+      call mem_allocate(this%usinflow, this%maxbound, 'USINFLOW', &
+                        this%memoryPath)
+      call mem_allocate(this%usinflowold, this%maxbound, 'USINFLOWOLD', &
+                        this%memoryPath)
+      call mem_allocate(this%dsflowold, this%maxbound, 'DSFLOWOLD', &
+                        this%memoryPath)
+      call mem_allocate(this%storage, this%maxbound, 'STORAGE', &
+                        this%memoryPath)
+    end if
     !
     ! -- reach order and connection data
     call mem_allocate(this%isfrorder, this%maxbound, 'ISFRORDER', &
@@ -454,6 +526,15 @@ contains
       this%simrunoff(i) = DZERO
       this%stage0(i) = DZERO
       this%usflow0(i) = DZERO
+      !
+      ! -- stage
+      if (this%istorage == 1) then
+        this%stageold(i) = DZERO
+        this%usinflow(i) = DZERO
+        this%usinflowold(i) = DZERO
+        this%dsflowold(i) = DZERO
+        this%storage(i) = DZERO
+      end if
       !
       ! -- boundary data
       this%rough(i) = DZERO
@@ -527,9 +608,6 @@ contains
     !
     ! -- allocate viscratios to size 0
     call mem_allocate(this%viscratios, 2, 0, 'VISCRATIOS', this%memoryPath)
-    !
-    ! -- return
-    return
   end subroutine sfr_allocate_arrays
 
   !> @ brief Read dimensions for package
@@ -611,14 +689,14 @@ contains
     ! -- read diversion data
     call this%sfr_read_diversions()
     !
+    ! -- read initial stage data
+    call this%sfr_read_initial_stages()
+    !
     ! -- setup the budget object
     call this%sfr_setup_budobj()
     !
     ! -- setup the stage table object
     call this%sfr_setup_tableobj()
-    !
-    ! -- return
-    return
   end subroutine sfr_read_dimensions
 
   !> @ brief Read additional options for package
@@ -629,7 +707,7 @@ contains
   subroutine sfr_options(this, option, found)
     ! -- modules
     use OpenSpecModule, only: access, form
-    use InputOutputModule, only: getunit, openfile
+    use InputOutputModule, only: getunit, assign_iounit, openfile
     ! -- dummy variables
     class(SfrType), intent(inout) :: this !< SfrType object
     character(len=*), intent(inout) :: option !< option keyword string
@@ -652,10 +730,16 @@ contains
     character(len=*), parameter :: fmtsfrbin = &
       "(4x, 'SFR ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, &
     &'OPENED ON UNIT: ', I0)"
+    character(len=*), parameter :: fmtstoweight = &
+      &"(4x, 'KINEMATIC STORAGE WEIGHT (',g0,') SPECIFIED.')"
     !
     ! -- Check for SFR options
     found = .true.
     select case (option)
+    case ('STORAGE')
+      this%istorage = 1
+      write (this%iout, '(4x,a)') trim(adjustl(this%text))// &
+        ' REACH STORAGE IS ACTIVE.'
     case ('PRINT_STAGE')
       this%iprhed = 1
       write (this%iout, '(4x,a)') trim(adjustl(this%text))// &
@@ -677,7 +761,7 @@ contains
       call this%parser%GetStringCaps(keyword)
       if (keyword == 'FILEOUT') then
         call this%parser%GetString(fname)
-        this%ibudgetout = getunit()
+        call assign_iounit(this%ibudgetout, this%inunit, "BUDGET fileout")
         call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE', MNORMAL)
         write (this%iout, fmtsfrbin) &
@@ -690,7 +774,7 @@ contains
       call this%parser%GetStringCaps(keyword)
       if (keyword == 'FILEOUT') then
         call this%parser%GetString(fname)
-        this%ibudcsv = getunit()
+        call assign_iounit(this%ibudcsv, this%inunit, "BUDGETCSV fileout")
         call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
                       filstat_opt='REPLACE')
         write (this%iout, fmtsfrbin) &
@@ -760,6 +844,17 @@ contains
       write (this%iout, '(4x,a)') &
         'A FINAL CONVERGENCE CHECK OF THE CHANGE IN STREAM FLOW ROUTING &
         &STAGES AND FLOWS WILL NOT BE MADE'
+    case ('DEV_STORAGE_WEIGHT')
+      r = this%parser%GetDouble()
+      if (r < DHALF .or. r > DONE) then
+        write (errmsg, '(a,g0,a)') &
+          "STORAGE_WEIGHT SPECIFIED TO BE '", r, &
+          "' BUT CANNOT BE LESS THAN 0.5 OR GREATER THAN 1.0"
+        call store_error(errmsg)
+      else
+        this%storage_weight = r
+        write (this%iout, fmtstoweight) this%storage_weight
+      end if
       !
       ! -- no valid options found
     case default
@@ -767,9 +862,6 @@ contains
       ! -- No options found
       found = .false.
     end select
-    !
-    ! -- return
-    return
   end subroutine sfr_options
 
   !> @ brief Allocate and read method for package
@@ -808,6 +900,9 @@ contains
     ! -- check the sfr unit conversion data
     call this%sfr_check_conversion()
     !
+    ! -- check the storage_weight
+    call this%sfr_check_storage_weight()
+    !
     ! -- check the sfr reach data
     call this%sfr_check_reaches()
 
@@ -817,6 +912,11 @@ contains
     ! -- check the diversion data
     if (this%idiversions /= 0) then
       call this%sfr_check_diversions()
+    end if
+
+    ! -- check the diversion data
+    if (this%istorage == 1) then
+      call this%sfr_check_initialstages()
     end if
     !
     ! -- terminate if errors were detected in any of the static sfr data
@@ -830,9 +930,6 @@ contains
       allocate (this%pakmvrobj)
       call this%pakmvrobj%ar(this%maxbound, this%maxbound, this%memoryPath)
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_ar
 
   !> @ brief Read packagedata for the package
@@ -1084,9 +1181,6 @@ contains
     if (this%naux > 0) then
       deallocate (caux)
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_read_packagedata
 
   !> @ brief Read crosssection block for the package
@@ -1226,9 +1320,6 @@ contains
       deallocate (cross_data)
       nullify (cross_data)
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_read_crossection
 
   !> @ brief Read connectiondata for the package
@@ -1507,9 +1598,6 @@ contains
     if (istat == 0) then
       deallocate (order)
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_read_connectiondata
 
   !> @ brief Read diversions for the package
@@ -1710,10 +1798,106 @@ contains
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_read_diversions
+
+  !> @ brief Read initialstages data for the package
+  !!
+  !!  Method to read initialstages data for each reach for the SFR package.
+  !!
+  !<
+  subroutine sfr_read_initial_stages(this)
+    ! -- modules
+    use TimeSeriesManagerModule, only: read_value_or_time_series_adv
+    ! -- dummy variables
+    class(SfrType), intent(inout) :: this !< SfrType object
+    ! -- local variables
+    integer(I4B) :: n
+    integer(I4B) :: ierr
+    logical(LGP) :: isfound
+    logical(LGP) :: endOfBlock
+    integer(I4B) :: i
+    real(DP) :: rval
+    integer, allocatable, dimension(:) :: nboundchk
+    !
+    ! -- read data
+    call this%parser%GetBlock('INITIALSTAGES', isfound, ierr, &
+                              supportOpenClose=.true., &
+                              blockRequired=.false.)
+    !
+    ! -- parse block if detected
+    if (isfound) then
+      write (this%iout, '(/1x,a)') &
+        'PROCESSING '//trim(adjustl(this%text))//' INITIALSTAGES'
+
+      allocate (nboundchk(this%maxbound))
+      do n = 1, this%maxbound
+        nboundchk(n) = 0
+      end do
+
+      do
+        call this%parser%GetNextLine(endOfBlock)
+        if (endOfBlock) exit
+
+        ! -- read reach number
+        n = this%parser%GetInteger()
+
+        if (n < 1 .or. n > this%maxbound) then
+          write (errmsg, '(a,i0,a,1x,i0,a)') &
+            'Reach number (', n, ') must be greater than 0 and less &
+            &than or equal to', this%maxbound, '.'
+          call store_error(errmsg)
+          cycle
+        end if
+
+        ! -- increment nboundchk
+        nboundchk(n) = nboundchk(n) + 1
+
+        rval = this%parser%GetDouble()
+        this%stage(n) = rval
+        this%depth(n) = rval - this%strtop(n)
+
+        if (rval < this%strtop(n)) then
+          write (errmsg, '(a,g0,a,1x,i0,1x,a,g0,a)') &
+            'Initial stage (', rval, ') for reach', n, &
+            'is less than the reach top (', this%strtop(n), ').'
+          call store_error(errmsg)
+        end if
+      end do
+
+      write (this%iout, '(1x,a)') &
+        'END OF '//trim(adjustl(this%text))//' INITIALSTAGES'
+
+      !
+      ! -- Check to make sure that every reach is specified and that no reach
+      !    is specified more than once.
+      do i = 1, this%maxbound
+        if (nboundchk(i) == 0) then
+          write (errmsg, '(a,i0,1x,a)') &
+            'Information for reach ', i, 'not specified in initialstages block.'
+          call store_error(errmsg)
+        else if (nboundchk(i) > 1) then
+          write (errmsg, '(a,1x,i0,1x,a,1x,i0)') &
+            'Initial stage information specified', &
+            nboundchk(i), 'times for reach', i
+          call store_error(errmsg)
+        end if
+      end do
+      deallocate (nboundchk)
+    else
+      ! -- set default initial stage based on a zero depth
+      if (this%istorage == 1) then
+        do n = 1, this%maxbound
+          rval = this%strtop(n)
+          this%stage(n) = rval
+        end do
+      end if
+    end if
+    !
+    ! -- terminate if errors encountered in reach block
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+    end if
+  end subroutine sfr_read_initial_stages
 
   !> @ brief Read and prepare period data for package
     !!
@@ -1895,9 +2079,6 @@ contains
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_rp
 
   !> @ brief Advance the package
@@ -1914,6 +2095,15 @@ contains
     ! -- local variables
     integer(I4B) :: n
     integer(I4B) :: iaux
+
+    ! -- update previous values
+    if (this%istorage == 1) then
+      do n = 1, this%maxbound
+        this%stageold(n) = this%stage(n)
+        this%usinflowold(n) = this%usinflow(n)
+        this%dsflowold(n) = this%dsflow(n)
+      end do
+    end if
     !
     ! -- Most advanced package AD routines have to restore state if
     !    the solution failed and the time step is being retried with a smaller
@@ -1958,9 +2148,6 @@ contains
     !    simulation time from "current" to "preceding" and reset
     !    "current" value.
     call this%obs%obs_ad()
-    !
-    ! -- return
-    return
   end subroutine sfr_ad
 
   !> @ brief Formulate the package hcof and rhs terms.
@@ -1990,9 +2177,6 @@ contains
       this%igwfnode(n) = igwfnode
       this%nodelist(n) = igwfnode
     end do
-    !
-    ! -- return
-    return
   end subroutine sfr_cf
 
   !> @ brief Copy hcof and rhs terms into solution.
@@ -2094,9 +2278,6 @@ contains
       ipos = ia(node)
       call matrix_sln%add_value_pos(idxglo(ipos), this%hcof(n))
     end do
-    !
-    ! -- return
-    return
   end subroutine sfr_fc
 
   !> @ brief Add Newton-Raphson terms for package into solution.
@@ -2148,9 +2329,6 @@ contains
       call matrix_sln%add_value_pos(idxglo(ipos), drterm - this%hcof(i))
       rhs(n) = rhs(n) - rterm + drterm * this%xnew(n)
     end do
-    !
-    ! -- return
-    return
   end subroutine sfr_fn
 
   !> @ brief Convergence check for package.
@@ -2354,9 +2532,6 @@ contains
         end if
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_cc
 
   !> @ brief Calculate package flows.
@@ -2435,9 +2610,6 @@ contains
     !
     ! -- fill the budget object
     call this%sfr_fill_budobj()
-    !
-    ! -- return
-    return
   end subroutine sfr_cq
 
   !> @ brief Output package flow terms.
@@ -2492,9 +2664,6 @@ contains
         call this%budobj%write_flowtable(this%dis, kstp, kper)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_ot_package_flows
 
   !> @ brief Output package dependent-variable terms.
@@ -2608,9 +2777,6 @@ contains
         end if
       end do
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_ot_dv
 
   !> @ brief Output advanced package budget summary.
@@ -2629,9 +2795,6 @@ contains
     integer(I4B), intent(in) :: ibudfl !< flag indicating budget should be written
     !
     call this%budobj%write_budtable(kstp, kper, iout, ibudfl, totim, delt)
-    !
-    ! -- return
-    return
   end subroutine sfr_ot_bdsummary
 
   !> @ brief Deallocate package memory
@@ -2676,6 +2839,15 @@ contains
     call mem_deallocate(this%usflow0)
     call mem_deallocate(this%denseterms)
     call mem_deallocate(this%viscratios)
+    !
+    ! -- stage, usflow, and dsflow for previous timestep
+    if (this%istorage == 1) then
+      call mem_deallocate(this%stageold)
+      call mem_deallocate(this%dsflowold)
+      call mem_deallocate(this%storage)
+      call mem_deallocate(this%usinflow)
+      call mem_deallocate(this%usinflowold)
+    end if
     !
     ! -- deallocate reach order and connection data
     call mem_deallocate(this%isfrorder)
@@ -2735,6 +2907,8 @@ contains
     end if
     !
     ! -- deallocate scalars
+    call mem_deallocate(this%istorage)
+    call mem_deallocate(this%storage_weight)
     call mem_deallocate(this%iprhed)
     call mem_deallocate(this%istageout)
     call mem_deallocate(this%ibudgetout)
@@ -2760,9 +2934,6 @@ contains
     !
     ! -- call base BndType deallocate
     call this%BndType%bnd_da()
-    !
-    ! -- return
-    return
   end subroutine sfr_da
 
   !> @ brief Define the list label for the package
@@ -2791,9 +2962,6 @@ contains
     if (this%inamedbound == 1) then
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
-    !
-    ! -- return
-    return
   end subroutine define_listlabel
 
   !
@@ -2813,9 +2981,6 @@ contains
     !
     ! -- set boolean
     sfr_obs_supported = .true.
-    !
-    ! -- return
-    return
   end function sfr_obs_supported
 
   !> @brief Define the observation types available in the package
@@ -2913,9 +3078,6 @@ contains
     !    for wetted-width observation type.
     call this%obs%StoreObsType('wet-width', .false., indx)
     this%obs%obsData(indx)%ProcessIdPtr => sfr_process_obsID
-    !
-    ! -- return
-    return
   end subroutine sfr_df_obs
 
   !> @brief Save observations for the package
@@ -3009,9 +3171,6 @@ contains
         call this%parser%StoreErrorUnit()
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_bd_obs
 
   !> @brief Read and prepare observations for a package
@@ -3120,9 +3279,6 @@ contains
         call this%parser%StoreErrorUnit()
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_rp_obs
 
   !
@@ -3163,9 +3319,6 @@ contains
     !
     ! -- store reach number (NodeNumber)
     obsrv%NodeNumber = nn1
-    !
-    ! -- return
-    return
   end subroutine sfr_process_obsID
 
   !
@@ -3366,9 +3519,6 @@ contains
         trim(keyword)//'.'
       call store_error(errmsg)
     end select
-    !
-    ! -- return
-    return
   end subroutine sfr_set_stressperiod
 
   !> @brief Solve reach continuity equation
@@ -3434,6 +3584,7 @@ contains
       d1 = DZERO
       qsrc = DZERO
       qgwf = DZERO
+      qd = this%dsflow(n)
 
       ! -- calculate initial depth assuming a wide cross-section and
       !    ignore groundwater leakage
@@ -3478,9 +3629,15 @@ contains
       if (this%iboundpak(n) < 0) then
         call this%sfr_calc_constant(n, d1, hgwf, qgwf, qd)
       else
-        call this%sfr_calc_steady(n, d1, hgwf, qu, qi, &
-                                  qfrommvr, qr, qe, qro, &
-                                  qgwf, qd)
+        if (this%gwfiss == 0 .and. this%istorage == 1) then
+          call this%sfr_calc_transient(n, d1, hgwf, qu, qi, &
+                                       qfrommvr, qr, qe, qro, &
+                                       qgwf, qd)
+        else
+          call this%sfr_calc_steady(n, d1, hgwf, qu, qi, &
+                                    qfrommvr, qr, qe, qro, &
+                                    qgwf, qd)
+        end if
       end if
 
       ! -- update sfr stage
@@ -3611,9 +3768,6 @@ contains
         this%divq(jpos) = DZERO
       end do
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_update_flows
 
   !> @brief Adjust runoff and evaporation
@@ -3689,9 +3843,6 @@ contains
     !
     ! -- limit downstream flow to a positive value
     if (qd < DEM30) qd = DZERO
-    !
-    ! -- return
-    return
   end subroutine sfr_calc_qd
 
   !> @brief Calculate sum of sources
@@ -3741,9 +3892,6 @@ contains
     !
     ! -- adjust runoff or evaporation if sum of sources is negative
     call this%sfr_adjust_ro_ev(qsrc, qu, qi, qr, qro, qe, qfrommvr)
-    !
-    ! -- return
-    return
   end subroutine sfr_calc_qsource
 
   !> @brief Calculate streamflow
@@ -3814,9 +3962,6 @@ contains
       ! -- calculate stream flow
       qman = sat * qman
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_calc_qman
 
   !> @brief Calculate reach-aquifer exchange
@@ -3886,9 +4031,6 @@ contains
     ! -- Set gwfhcof and gwfrhs if present
     if (present(gwfhcof)) gwfhcof = gwfhcof0
     if (present(gwfrhs)) gwfrhs = gwfrhs0
-    !
-    ! -- return
-    return
   end subroutine sfr_calc_qgwf
 
   !> @brief Determine if a reach is connected to a gwf cell
@@ -3956,341 +4098,7 @@ contains
         cond = this%hk(n) * vscratio * this%length(n) * wp / this%bthick(n)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_calc_cond
-
-  subroutine sfr_calc_constant(this, n, d1, hgwf, qgwf, qd)
-    ! -- dummy variables
-    class(SfrType) :: this !< SfrType object
-    integer(I4B), intent(in) :: n !< reach number
-    real(DP), intent(inout) :: d1 !< current reach depth estimate
-    real(DP), intent(in) :: hgwf !< head in gw cell
-    real(DP), intent(inout) :: qgwf !< reach-aquifer exchange
-    real(DP), intent(inout) :: qd !< reach outflow
-    ! -- local variables
-    real(DP) :: qsrc
-
-    this%stage(n) = this%sstage(n)
-    d1 = max(DZERO, this%stage(n) - this%strtop(n))
-
-    call this%sfr_calc_qsource(n, d1, qsrc)
-
-    if (this%sfr_gwf_conn(n) == 1) then
-      call this%sfr_calc_qgwf(n, d1, hgwf, qgwf)
-      qgwf = -qgwf
-    else
-      qgwf = DZERO
-    end if
-
-    ! -- leakage exceeds inflow
-    if (qgwf > qsrc) then
-      d1 = DZERO
-      call this%sfr_calc_qsource(n, d1, qsrc)
-      qgwf = qsrc
-    end if
-
-    ! -- set qd
-    qd = qsrc - qgwf
-
-  end subroutine sfr_calc_constant
-
-  subroutine sfr_calc_steady(this, n, d1, hgwf, &
-                             qu, qi, qfrommvr, qr, qe, qro, &
-                             qgwf, qd)
-    ! -- dummy variables
-    class(SfrType) :: this !< SfrType object
-    integer(I4B), intent(in) :: n !< reach number
-    real(DP), intent(inout) :: d1 !< current reach depth estimate
-    real(DP), intent(in) :: hgwf !< head in gw cell
-    real(DP), intent(in) :: qu !< reach upstream flow
-    real(DP), intent(in) :: qi !< reach specified inflow
-    real(DP), intent(in) :: qfrommvr !< reach flow from mover
-    real(DP), intent(in) :: qr !< reach rainfall
-    real(DP), intent(in) :: qe !< reach evaporation
-    real(DP), intent(in) :: qro !< reach runoff flow
-    real(DP), intent(inout) :: qgwf !< reach-aquifer exchange
-    real(DP), intent(inout) :: qd !< reach outflow
-    ! -- local variables
-    integer(I4B) :: i
-    integer(I4B) :: isolve
-    integer(I4B) :: iic
-    integer(I4B) :: iic2
-    integer(I4B) :: iic3
-    integer(I4B) :: iic4
-    integer(I4B) :: ibflg
-    real(DP) :: qmp
-    real(DP) :: qsrc
-    real(DP) :: qsrcmp
-    real(DP) :: tp
-    real(DP) :: bt
-    real(DP) :: hsfr
-    real(DP) :: qc
-    real(DP) :: en1
-    real(DP) :: en2
-    real(DP) :: qen1
-    real(DP) :: f1
-    real(DP) :: f2
-    real(DP) :: qgwf1
-    real(DP) :: qgwf2
-    real(DP) :: qgwfp
-    real(DP) :: qgwfold
-    real(DP) :: fhstr1
-    real(DP) :: fhstr2
-    real(DP) :: d2
-    real(DP) :: dpp
-    real(DP) :: dx
-    real(DP) :: q1
-    real(DP) :: q2
-    real(DP) :: derv
-    real(DP) :: dlh
-    real(DP) :: dlhold
-    real(DP) :: fp
-    real(DP) :: err
-    real(DP) :: errold
-    !
-    ! -- initialize local variables
-    d2 = DZERO
-    q1 = DZERO
-    q2 = DZERO
-    qsrc = DZERO
-    qgwf = DZERO
-    qgwfold = DZERO
-    !
-    ! -- calculate the flow at end of the reach
-    !    excluding groundwater leakage
-    qc = qu + qi + qr - qe + qro + qfrommvr
-    !
-    ! -- calculate flow at the middle of the reach
-    !    excluding groundwater leakage
-    qsrcmp = qu + qi + qfrommvr + DHALF * (qr - qe + qro)
-    qmp = qsrcmp ! initial estimate flow at the midpoint
-    !
-    ! -- calculate stream depth at the midpoint
-    call this%sfr_calc_reach_depth(n, qmp, d1)
-    !
-    ! -- calculate sources/sinks for reach
-    !    excluding groundwater leakage
-    call this%sfr_calc_qsource(n, d1, qsrc)
-    !
-    ! -- calculate initial reach stage, downstream flow,
-    !    and groundwater leakage
-    tp = this%strtop(n)
-    bt = tp - this%bthick(n)
-    hsfr = d1 + tp
-    qd = MAX(qsrc, DZERO)
-    qgwf = DZERO
-    !
-    ! -- set flag to skip iterations
-    isolve = 1
-    if (hsfr <= tp .and. hgwf <= tp) isolve = 0
-    if (hgwf <= tp .and. qc < DEM30) isolve = 0
-    if (this%sfr_gwf_conn(n) == 0) isolve = 0
-    !
-    ! -- iterate to achieve solution
-    calc_solution: if (isolve /= 0) then
-      !
-      ! -- estimate initial end points
-      en1 = DZERO
-      if (d1 > DEM30) then
-        if ((tp - hgwf) > DEM30) then
-          en2 = DP9 * d1
-        else
-          en2 = D1P1 * d1 - (tp - hgwf)
-        end if
-      else if ((tp - hgwf) > DEM30) then
-        en2 = DONE
-      else
-        en2 = DP99 * (hgwf - tp)
-      end if
-      !
-      ! -- estimate flow at end points
-      ! -- end point 1
-      if (hgwf > tp) then
-        call this%sfr_calc_qgwf(n, DZERO, hgwf, qgwf1)
-        qgwf1 = -qgwf1
-        qen1 = qmp - DHALF * qgwf1
-      else
-        qgwf1 = DZERO
-        qen1 = qsrcmp
-      end if
-      if (hgwf > bt) then
-        call this%sfr_calc_qgwf(n, en2, hgwf, qgwf2)
-        qgwf2 = -qgwf2
-      else
-        call this%sfr_calc_qgwf(n, en2, bt, qgwf2)
-        qgwf2 = -qgwf2
-      end if
-      if (qgwf2 > qsrc) qgwf2 = qsrc
-      ! -- calculate two depths
-      call this%sfr_calc_reach_depth(n, (qsrcmp - DHALF * qgwf1), d1)
-      call this%sfr_calc_reach_depth(n, (qsrcmp - DHALF * qgwf2), d2)
-      ! -- determine roots
-      if (d1 > DEM30) then
-        f1 = en1 - d1
-      else
-        en1 = DZERO
-        f1 = en1 - DZERO
-      end if
-      if (d2 > DEM30) then
-        f2 = en2 - d2
-        if (f2 < DEM30) en2 = d2
-      else
-        d2 = DZERO
-        f2 = en2 - DZERO
-      end if
-      !
-      ! -- iterate to find a solution
-      dpp = DHALF * (en1 + en2)
-      dx = dpp
-      iic = 0
-      iic2 = 0
-      iic3 = 0
-      fhstr1 = DZERO
-      fhstr2 = DZERO
-      qgwfp = DZERO
-      dlhold = DZERO
-      do i = 1, this%maxsfrit
-        ibflg = 0
-        d1 = dpp
-        d2 = d1 + DTWO * this%deps
-        ! -- calculate q at midpoint at both end points
-        call this%sfr_calc_qman(n, d1, q1)
-        call this%sfr_calc_qman(n, d2, q2)
-        ! -- calculate groundwater leakage at both end points
-        call this%sfr_calc_qgwf(n, d1, hgwf, qgwf1)
-        qgwf1 = -qgwf1
-        call this%sfr_calc_qgwf(n, d2, hgwf, qgwf2)
-        qgwf2 = -qgwf2
-        !
-        if (qgwf1 >= qsrc) then
-          en2 = dpp
-          dpp = DHALF * (en1 + en2)
-          call this%sfr_calc_qgwf(n, dpp, hgwf, qgwfp)
-          qgwfp = -qgwfp
-          if (qgwfp > qsrc) qgwfp = qsrc
-          call this%sfr_calc_reach_depth(n, (qsrcmp - DHALF * qgwfp), dx)
-          ibflg = 1
-        else
-          fhstr1 = (qsrcmp - DHALF * qgwf1) - q1
-          fhstr2 = (qsrcmp - DHALF * qgwf2) - q2
-        end if
-        !
-        if (ibflg == 0) then
-          derv = DZERO
-          if (abs(d1 - d2) > DZERO) then
-            derv = (fhstr1 - fhstr2) / (d1 - d2)
-          end if
-          if (abs(derv) > DEM30) then
-            dlh = -fhstr1 / derv
-          else
-            dlh = DZERO
-          end if
-          dpp = d1 + dlh
-          !
-          ! -- updated depth outside of endpoints - use bisection instead
-          if ((dpp >= en2) .or. (dpp <= en1)) then
-            if (abs(dlh) > abs(dlhold) .or. dpp < DEM30) then
-              ibflg = 1
-              dpp = DHALF * (en1 + en2)
-            end if
-          end if
-          !
-          ! -- check for slow convergence
-          ! -- set flags to determine if the Newton-Raphson method oscillates
-          !    or if convergence is slow
-          if (qgwf1 * qgwfold < DEM30) then
-            iic2 = iic2 + 1
-          else
-            iic2 = 0
-          end if
-          if (qgwf1 < DEM30) then
-            iic3 = iic3 + 1
-          else
-            iic3 = 0
-          end if
-          if (dlh * dlhold < DEM30 .or. ABS(dlh) > ABS(dlhold)) then
-            iic = iic + 1
-          end if
-          iic4 = 0
-          if (iic3 > 7 .and. iic > 12) then
-            iic4 = 1
-          end if
-          !
-          ! -- switch to bisection when the Newton-Raphson method oscillates
-          !    or when convergence is slow
-          if (iic2 > 7 .or. iic > 12 .or. iic4 == 1) then
-            ibflg = 1
-            dpp = DHALF * (en1 + en2)
-          end if
-          !
-          ! -- Calculate perturbed gwf flow
-          call this%sfr_calc_qgwf(n, dpp, hgwf, qgwfp)
-          qgwfp = -qgwfp
-          if (qgwfp > qsrc) then
-            qgwfp = qsrc
-            if (abs(en1 - en2) < this%dmaxchg * DEM6) then
-              call this%sfr_calc_reach_depth(n, (qsrcmp - DHALF * qgwfp), dpp)
-            end if
-          end if
-          call this%sfr_calc_reach_depth(n, (qsrcmp - DHALF * qgwfp), dx)
-        end if
-        !
-        ! -- bisection to update end points
-        fp = dpp - dx
-        if (ibflg == 1) then
-          dlh = fp
-          ! -- change end points
-          ! -- root is between f1 and fp
-          if (f1 * fp < DZERO) then
-            en2 = dpp
-            f2 = fp
-            ! -- root is between fp and f2
-          else
-            en1 = dpp
-            f1 = fp
-          end if
-          err = min(abs(fp), abs(en2 - en1))
-        else
-          err = abs(dlh)
-        end if
-        !
-        ! -- check for convergence and exit if converged
-        if (err < this%dmaxchg) then
-          d1 = dpp
-          qgwf = qgwfp
-          qd = qsrc - qgwf
-          exit
-        end if
-        !
-        ! -- save iterates
-        errold = err
-        dlhold = dlh
-        if (ibflg == 1) then
-          qgwfold = qgwfp
-        else
-          qgwfold = qgwf1
-        end if
-        !
-        ! -- end of iteration
-      end do
-      ! -- depth = 0 and hgwf < bt
-    else
-      call this%sfr_calc_qgwf(n, d1, hgwf, qgwf)
-      qgwf = -qgwf
-      !
-      ! -- leakage exceeds inflow
-      if (qgwf > qsrc) then
-        d1 = DZERO
-        call this%sfr_calc_qsource(n, d1, qsrc)
-        qgwf = qsrc
-      end if
-      ! -- set qd
-      qd = qsrc - qgwf
-    end if calc_solution
-
-  end subroutine sfr_calc_steady
 
   !> @brief Calculate diversion flow
     !!
@@ -4348,9 +4156,6 @@ contains
     ! -- update upstream from for downstream reaches
     qd = qd - v
     qdiv = v
-    !
-    ! -- return
-    return
   end subroutine sfr_calc_div
 
   !> @brief Calculate the depth at the midpoint
@@ -4386,9 +4191,6 @@ contains
     else
       d1 = DZERO
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_calc_reach_depth
 
   !> @brief Calculate the depth at the midpoint of a irregular cross-section
@@ -4438,9 +4240,6 @@ contains
         exit nriter
       end if
     end do nriter
-    !
-    ! -- return
-    return
   end subroutine sfr_calc_xs_depth
 
   !> @brief Check unit conversion data
@@ -4478,10 +4277,32 @@ contains
           trim(adjustl(this%packName)), this%unitconv
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_check_conversion
+
+  !> @brief Check storage weight
+    !!
+    !! Method to check the kinematic storage weight for a SFR package.
+    !! If the kinematic storage weight has not been set it is set to
+    !! the default value.
+    !!
+  !<
+  subroutine sfr_check_storage_weight(this)
+    ! -- dummy variables
+    class(SfrType) :: this !< SfrType object
+    ! -- formats
+    character(len=*), parameter :: fmtweight = &
+      &"(1x,'SFR PACKAGE (',a,') SETTING DEFAULT',&
+      &/4x,'STORAGE_WEIGHT VALUE (',g0,').',/)"
+    !
+    ! -- set storage weight if it has not been defined yet
+    if (this%istorage == 1) then
+      if (this%storage_weight == DNODATA) then
+        this%storage_weight = DONE
+        write (this%iout, fmtweight) &
+          trim(adjustl(this%packName)), this%storage_weight
+      end if
+    end if
+  end subroutine sfr_check_storage_weight
 
   !> @brief Check reach data
     !!
@@ -4531,8 +4352,6 @@ contains
       text = 'UPSTREAM FRACTION'
       call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
     end if
-    !
-    ! --
     !
     ! -- check the reach data for simple errors
     do n = 1, this%maxbound
@@ -4602,9 +4421,6 @@ contains
         call this%inputtab%add_term(this%ustrf(n))
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine sfr_check_reaches
 
   !> @brief Check connection data
@@ -4883,9 +4699,6 @@ contains
         end do
       end do
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_check_connections
 
   !> @brief Check diversions data
@@ -4993,10 +4806,64 @@ contains
         end if
       end do
     end do
-    !
-    ! -- return
-    return
   end subroutine sfr_check_diversions
+
+  !> @brief Check initial stage data
+    !!
+    !! Method to check initial data for a SFR package and calculates
+    !! the initial upstream and downstream flows for the reach based
+    !! on the initial staalso creates the tables used to print input
+    !! data, if this option in enabled in the SFR package.
+    !!
+  !<
+  subroutine sfr_check_initialstages(this)
+    class(SfrType) :: this !< SfrType object
+
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: text
+    character(len=5) :: crch
+    integer(I4B) :: n
+    real(DP) :: qman
+
+    ! skip check if storage is not activated
+    if (this%istorage == 0) return
+
+    ! write header
+    if (this%iprpak /= 0) then
+      !
+      ! -- reset the input table object
+      title = trim(adjustl(this%text))//' PACKAGE ('// &
+              trim(adjustl(this%packName))//') REACH INITIAL STAGE DATA'
+      call table_cr(this%inputtab, this%packName, title)
+      call this%inputtab%table_df(this%maxbound, 4, this%iout)
+      text = 'REACH'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'INITIAL STAGE'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'INITIAL DEPTH'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'INITIAL FLOW'
+      call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
+    end if
+    !
+    ! -- check that data are correct
+    do n = 1, this%maxbound
+      write (crch, '(i5)') n
+
+      ! calculate the initial flows
+      call this%sfr_calc_qman(n, this%depth(n), qman)
+      this%usinflow(n) = qman
+      this%dsflow(n) = qman
+
+      ! add terms to the table
+      if (this%iprpak /= 0) then
+        call this%inputtab%add_term(n)
+        call this%inputtab%add_term(this%stage(n))
+        call this%inputtab%add_term(this%depth(n))
+        call this%inputtab%add_term(qman)
+      end if
+    end do
+  end subroutine sfr_check_initialstages
 
   !> @brief Check upstream fraction data
     !!
@@ -5200,9 +5067,6 @@ contains
         end if
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine sfr_check_ustrf
 
   !> @brief Setup budget object for package
@@ -5280,7 +5144,7 @@ contains
                                              this%name_model, &
                                              maxlist, .false., .true., &
                                              naux, auxtxt)
-    call this%budobj%budterm(idx)%reset(this%maxbound)
+    call this%budobj%budterm(idx)%reset(maxlist)
     q = DZERO
     do n = 1, this%maxbound
       n2 = this%igwfnode(n)
@@ -5419,9 +5283,6 @@ contains
     if (this%iprflow /= 0) then
       call this%budobj%flowtable_df(this%iout, cellids='GWF')
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_setup_budobj
 
   !> @brief Copy flow terms into budget object for package
@@ -5602,6 +5463,9 @@ contains
         d = this%depth(n)
         a = this%calc_surface_area_wet(n, d)
         this%qauxcbc(1) = a * d
+        if (this%gwfiss == 0 .and. this%istorage == 1) then
+          q = this%storage(n)
+        end if
       else
         q = DZERO
         this%qauxcbc(1) = DZERO
@@ -5652,9 +5516,6 @@ contains
     !
     ! --Terms are filled, now accumulate them for this time step
     call this%budobj%accumulate_terms()
-    !
-    ! -- return
-    return
   end subroutine sfr_fill_budobj
 
   !> @brief Setup stage table object for package
@@ -5732,9 +5593,6 @@ contains
       text = 'STREAMBED GRADIENT'
       call this%stagetab%initialize_column(text, 12, alignment=TABCENTER)
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_setup_tableobj
 
   ! -- reach geometry functions
@@ -5766,9 +5624,6 @@ contains
     else
       calc_area_wet = this%station(i0) * depth
     end if
-    !
-    ! -- return
-    return
   end function calc_area_wet
 
   !> @brief Calculate wetted perimeter
@@ -5798,9 +5653,6 @@ contains
     else
       calc_perimeter_wet = this%station(i0) ! no depth dependence in original implementation
     end if
-    !
-    ! -- return
-    return
   end function calc_perimeter_wet
 
   !> @brief Calculate maximum surface area
@@ -5830,9 +5682,6 @@ contains
       top_width = this%station(i0)
     end if
     calc_surface_area = top_width * this%length(n)
-    !
-    ! -- return
-    return
   end function calc_surface_area
 
   !> @brief Calculate wetted surface area
@@ -5853,9 +5702,6 @@ contains
     ! -- Calculate wetted surface area
     top_width = this%calc_top_width_wet(n, depth)
     calc_surface_area_wet = top_width * this%length(n)
-    !
-    ! -- return
-    return
   end function calc_surface_area_wet
 
   !> @brief Calculate wetted top width
@@ -5889,9 +5735,6 @@ contains
     else
       calc_top_width_wet = sat * this%station(i0)
     end if
-    !
-    ! -- return
-    return
   end function calc_top_width_wet
 
   !> @brief Activate density terms
@@ -5919,9 +5762,6 @@ contains
     end do
     write (this%iout, '(/1x,a)') 'DENSITY TERMS HAVE BEEN ACTIVATED FOR SFR &
       &PACKAGE: '//trim(adjustl(this%packName))
-    !
-    ! -- return
-    return
   end subroutine sfr_activate_density
 
   !> @brief Activate viscosity terms
@@ -5950,9 +5790,6 @@ contains
     end do
     write (this%iout, '(/1x,a)') 'VISCOSITY HAS BEEN ACTIVATED FOR SFR &
       &PACKAGE: '//trim(adjustl(this%packName))
-    !
-    ! -- return
-    return
   end subroutine sfr_activate_viscosity
 
   !> @brief Calculate density terms
@@ -6051,9 +5888,6 @@ contains
         flow = flow + d2
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine sfr_calculate_density_exchange
 
 end module SfrModule

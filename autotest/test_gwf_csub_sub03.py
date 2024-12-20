@@ -3,7 +3,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from conftest import project_root_path
 from framework import TestFramework
 
@@ -131,9 +130,7 @@ dz = [5.894, 5.08]
 nz = [1, 1]
 dstart = []
 for k in ldnd:
-    pth = str(
-        project_root_path / "autotest" / "data" / f"ibc03_dstart{k + 1}.ref"
-    )
+    pth = str(project_root_path / "autotest" / "data" / f"ibc03_dstart{k + 1}.ref")
     v = np.genfromtxt(pth)
     dstart.append(v.copy())
 
@@ -222,9 +219,7 @@ def get_model(idx, ws):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create iterative model solution
     ims = flopy.mf6.ModflowIms(

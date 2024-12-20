@@ -1,16 +1,15 @@
 import os
 import shutil
-import time
+from collections.abc import Iterable
 from itertools import repeat
 from pathlib import Path
 from subprocess import PIPE, STDOUT, Popen
 from traceback import format_exc
-from typing import Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Callable, Optional, Union
 from warnings import warn
 
 import flopy
 import numpy as np
-import pytest
 from common_regression import (
     COMPARE_PROGRAMS,
     adjust_htol,
@@ -19,8 +18,6 @@ from common_regression import (
     get_namefiles,
     get_rclose,
     get_regression_files,
-    setup_mf6,
-    setup_mf6_comparison,
 )
 from flopy.mbase import BaseModel
 from flopy.mf6 import MFSimulation
@@ -48,7 +45,7 @@ CBC_EXT = (
 )
 
 
-def api_return(success, model_ws) -> Tuple[bool, List[str]]:
+def api_return(success, model_ws) -> tuple[bool, list[str]]:
     """
     parse libmf6 stdout shared object file
     """
@@ -78,7 +75,7 @@ def get_workspace(sim_or_model) -> Path:
         raise ValueError(f"Unsupported model type: {type(sim_or_model)}")
 
 
-def run_parallel(workspace, target, ncpus) -> Tuple[bool, List[str]]:
+def run_parallel(workspace, target, ncpus) -> tuple[bool, list[str]]:
     if not is_in_ci() and get_ostag() in ["mac"]:
         oversubscribed = ["--hostfile", "localhost"]
         with open(f"{workspace}/localhost", "w") as f:
@@ -93,13 +90,9 @@ def run_parallel(workspace, target, ncpus) -> Tuple[bool, List[str]]:
 
     # parallel commands
     if get_ostag() in ["win64"]:
-        mpiexec_cmd = (
-        ["mpiexec", "-np", str(ncpus), target, "-p"]
-        )
+        mpiexec_cmd = ["mpiexec", "-np", str(ncpus), target, "-p"]
     else:
-        mpiexec_cmd = (
-            ["mpiexec"] + oversubscribed + ["-np", str(ncpus), target, "-p"]
-        )
+        mpiexec_cmd = ["mpiexec"] + oversubscribed + ["-np", str(ncpus), target, "-p"]
 
     proc = Popen(mpiexec_cmd, stdout=PIPE, stderr=STDOUT, cwd=workspace)
 
@@ -148,22 +141,18 @@ def write_input(*sims, overwrite: bool = True, verbose: bool = True):
         if isinstance(sim, flopy.mf6.MFSimulation):
             workspace = Path(sim.sim_path)
             if any(workspace.glob("*")) and not overwrite:
-                warn(f"Workspace is not empty, not writing input files")
+                warn("Workspace is not empty, not writing input files")
                 return
             if verbose:
-                print(
-                    f"Writing mf6 simulation '{sim.name}' to: {sim.sim_path}"
-                )
+                print(f"Writing mf6 simulation '{sim.name}' to: {sim.sim_path}")
             sim.write_simulation()
         elif isinstance(sim, flopy.mbase.BaseModel):
             workspace = Path(sim.model_ws)
             if any(workspace.glob("*")) and not overwrite:
-                warn(f"Workspace is not empty, not writing input files")
+                warn("Workspace is not empty, not writing input files")
                 return
             if verbose:
-                print(
-                    f"Writing {type(sim)} model '{sim.name}' to: {sim.model_ws}"
-                )
+                print(f"Writing {type(sim)} model '{sim.name}' to: {sim.model_ws}")
             sim.write_input()
         else:
             raise ValueError(f"Unsupported simulation/model type: {type(sim)}")
@@ -231,10 +220,11 @@ class TestFramework:
         self,
         name: str,
         workspace: Union[str, os.PathLike],
-        targets: Dict[str, Path],
+        targets: dict[str, Path],
         api_func: Optional[Callable] = None,
         build: Optional[Callable] = None,
         check: Optional[Callable] = None,
+        plot: Optional[Callable] = None,
         compare: Optional[str] = "auto",
         parallel=False,
         ncpus=1,
@@ -255,6 +245,7 @@ class TestFramework:
         self.targets = targets
         self.build = build
         self.check = check
+        self.plot = plot
         self.parallel = parallel
         self.ncpus = [ncpus] if isinstance(ncpus, int) else ncpus
         self.api_func = api_func
@@ -309,7 +300,9 @@ class TestFramework:
             cmp_namefile = (
                 None
                 if "mf6" in self.compare or "libmf6" in self.compare
-                else os.path.basename(nf) if nf else None
+                else os.path.basename(nf)
+                if nf
+                else None
             )
             if cmp_namefile is None:
                 pth = None
@@ -320,9 +313,7 @@ class TestFramework:
                 file1 = files1[i]
                 ext = os.path.splitext(file1)[1][1:].lower()
                 outfile = os.path.splitext(os.path.basename(file1))[0]
-                outfile = os.path.join(
-                    self.workspace, outfile + "." + ext + ".cmp.out"
-                )
+                outfile = os.path.join(self.workspace, outfile + "." + ext + ".cmp.out")
                 file2 = None if files2 is None else files2[i]
 
                 # set exfile
@@ -331,10 +322,7 @@ class TestFramework:
                     if len(exfiles) > 0:
                         exfile = exfiles[i]
                         if exfile is not None:
-                            print(
-                                f"Exclusion file {i + 1}",
-                                os.path.basename(exfile),
-                            )
+                            print(f"Exclusion file {i + 1}", os.path.basename(exfile))
 
                 # make comparison
                 success = compare_heads(
@@ -360,9 +348,7 @@ class TestFramework:
         extension = "hds"
         for i, (fpth0, fpth1) in enumerate(zip(files0, files1)):
             outfile = os.path.splitext(os.path.basename(fpth0))[0]
-            outfile = os.path.join(
-                self.workspace, outfile + f".{extension}.cmp.out"
-            )
+            outfile = os.path.join(self.workspace, outfile + f".{extension}.cmp.out")
             success = compare_heads(
                 None,
                 None,
@@ -375,10 +361,8 @@ class TestFramework:
                 verbose=self.verbose,
             )
             print(
-                (
-                    f"{EXTTEXT[extension]} comparison {i + 1}"
-                    + f"{self.name} ({os.path.basename(fpth0)})"
-                )
+                f"{EXTTEXT[extension]} comparison {i + 1}"
+                + f"{self.name} ({os.path.basename(fpth0)})"
             )
             if not success:
                 return False
@@ -392,9 +376,7 @@ class TestFramework:
         extension = "ucn"
         for i, (fpth0, fpth1) in enumerate(zip(files0, files1)):
             outfile = os.path.splitext(os.path.basename(fpth0))[0]
-            outfile = os.path.join(
-                self.workspace, outfile + f".{extension}.cmp.out"
-            )
+            outfile = os.path.join(self.workspace, outfile + f".{extension}.cmp.out")
             success = compare_heads(
                 None,
                 None,
@@ -426,23 +408,17 @@ class TestFramework:
                 f"{EXTTEXT[extension]} comparison {i + 1}",
                 f"{self.name} ({os.path.basename(fpth0)})",
             )
-            success = self._compare_budget_files(
-                extension, fpth0, fpth1, rclose
-            )
+            success = self._compare_budget_files(extension, fpth0, fpth1, rclose)
             if not success:
                 return False
         return True
 
-    def _compare_budget_files(
-        self, extension, fpth0, fpth1, rclose=0.001
-    ) -> bool:
+    def _compare_budget_files(self, extension, fpth0, fpth1, rclose=0.001) -> bool:
         success = True
         if os.stat(fpth0).st_size * os.stat(fpth0).st_size == 0:
             return success, ""
         outfile = os.path.splitext(os.path.basename(fpth0))[0]
-        outfile = os.path.join(
-            self.workspace, outfile + f".{extension}.cmp.out"
-        )
+        outfile = os.path.join(self.workspace, outfile + f".{extension}.cmp.out")
         fcmp = open(outfile, "w")
         fcmp.write("Performing CELL-BY-CELL to CELL-BY-CELL comparison\n")
         fcmp.write(f"{fpth0}\n")
@@ -565,7 +541,7 @@ class TestFramework:
         target: Union[str, os.PathLike],
         xfail: bool = False,
         ncpus: int = 1,
-    ) -> Tuple[bool, List[str]]:
+    ) -> tuple[bool, list[str]]:
         """
         Run a simulation or model with FloPy.
 
@@ -588,7 +564,7 @@ class TestFramework:
         assert tgt.is_file(), f"Target executable not found: {target}"
         assert (
             tgt in self.targets.values()
-        ), f"Targets must be explicitly registered with the test framework"
+        ), "Targets must be explicitly registered with the test framework"
 
         if self.verbose:
             print(f"Running {target} in {workspace}")
@@ -598,7 +574,9 @@ class TestFramework:
         self.cmp_namefile = (
             None
             if "mf6" in target.name or "libmf6" in target.name
-            else os.path.basename(nf) if nf else None
+            else os.path.basename(nf)
+            if nf
+            else None
         )
 
         # run the model
@@ -610,9 +588,7 @@ class TestFramework:
             elif "mf6" in target.name:
                 # parallel test if configured
                 if self.parallel and ncpus > 1:
-                    print(
-                        f"Parallel test {self.name} on {self.ncpus} processes"
-                    )
+                    print(f"Parallel test {self.name} on {self.ncpus} processes")
                     try:
                         success, buff = run_parallel(workspace, target, ncpus)
                     except Exception:
@@ -643,9 +619,7 @@ class TestFramework:
                 try:
                     nf_ext = ".mpsim" if "mp7" in target.name else ".nam"
                     namefile = next(iter(workspace.glob(f"*{nf_ext}")), None)
-                    assert (
-                        namefile
-                    ), f"Control file with extension {nf_ext} not found"
+                    assert namefile, f"Control file with extension {nf_ext} not found"
                     success, buff = flopy.run_model(
                         target, namefile, workspace, report=True
                     )
@@ -662,9 +636,7 @@ class TestFramework:
 
         except Exception:
             success = False
-            warn(
-                f"Unhandled error in comparison model {self.name}:\n{format_exc()}"
-            )
+            warn(f"Unhandled error in comparison model {self.name}:\n{format_exc()}")
 
         return success, buff
 
@@ -688,14 +660,14 @@ class TestFramework:
             assert len(self.xfail) in [
                 1,
                 nsims,
-            ], f"Invalid xfail: expected a single boolean or one for each model"
+            ], "Invalid xfail: expected a single boolean or one for each model"
             if len(self.xfail) == 1 and nsims:
                 self.xfail = list(repeat(self.xfail[0], nsims))
 
             assert len(self.ncpus) in [
                 1,
                 nsims,
-            ], f"Invalid ncpus: expected a single integer or one for each model"
+            ], "Invalid ncpus: expected a single integer or one for each model"
             if len(self.ncpus) == 1 and nsims:
                 self.ncpus = list(repeat(self.ncpus[0], nsims))
 
@@ -703,21 +675,15 @@ class TestFramework:
         else:
             self.sims = [MFSimulation.load(sim_ws=self.workspace)]
             self.buffs = [None]
-            assert (
-                len(self.xfail) == 1
-            ), f"Invalid xfail: expected a single boolean"
-            assert (
-                len(self.ncpus) == 1
-            ), f"Invalid ncpus: expected a single integer"
+            assert len(self.xfail) == 1, "Invalid xfail: expected a single boolean"
+            assert len(self.ncpus) == 1, "Invalid ncpus: expected a single integer"
 
         # run models/simulations
         for i, sim_or_model in enumerate(self.sims):
             tgts = self.targets
             workspace = get_workspace(sim_or_model)
             exe_path = (
-                Path(sim_or_model.exe_name)
-                if sim_or_model.exe_name
-                else tgts["mf6"]
+                Path(sim_or_model.exe_name) if sim_or_model.exe_name else tgts["mf6"]
             )
             target = (
                 exe_path
@@ -726,9 +692,7 @@ class TestFramework:
             )
             xfail = self.xfail[i]
             ncpus = self.ncpus[i]
-            success, buff = self._run_sim_or_model(
-                workspace, target, xfail, ncpus
-            )
+            success, buff = self._run_sim_or_model(workspace, target, xfail, ncpus)
             self.buffs[i] = buff  # store model output for assertions later
             assert success, (
                 f"{'Simulation' if 'mf6' in str(target) else 'Model'} "
@@ -738,9 +702,7 @@ class TestFramework:
         # setup and run comparison model(s), if enabled
         if self.compare:
             # get expected output files from main simulation
-            _, self.outp = get_mf6_files(
-                self.workspace / "mfsim.nam", self.verbose
-            )
+            _, self.outp = get_mf6_files(self.workspace / "mfsim.nam", self.verbose)
 
             # try to autodetect comparison type if enabled
             if self.compare == "auto":
@@ -760,7 +722,8 @@ class TestFramework:
                         shutil.rmtree(cmp_path)
                     if self.verbose:
                         print(
-                            f"Copying simulation files from {self.workspace} to {cmp_path}"
+                            "Copying simulation files "
+                            f"from {self.workspace} to {cmp_path}"
                         )
                     shutil.copytree(self.workspace, cmp_path)
 
@@ -768,17 +731,17 @@ class TestFramework:
                 if self.compare in ["mf6_regression", "libmf6"]:
                     if self.compare not in self.targets:
                         warn(
-                            f"Couldn't find comparison program '{self.compare}', skipping comparison"
+                            f"Couldn't find comparison program '{self.compare}', "
+                            "skipping comparison"
                         )
                     else:
-                        # todo: don't hardcode workspace or assume agreement with test case
-                        # simulation workspace, set & access simulation workspaces directly
+                        # todo: don't hardcode workspace or assume agreement with
+                        # test case simulation workspace, set & access simulation
+                        # workspaces directly
                         workspace = self.workspace / self.compare
                         success, _ = self._run_sim_or_model(
                             workspace,
-                            self.targets.get(
-                                self.compare, self.targets["mf6"]
-                            ),
+                            self.targets.get(self.compare, self.targets["mf6"]),
                         )
                         assert success, f"Comparison model failed: {workspace}"
 
@@ -792,3 +755,9 @@ class TestFramework:
             if self.verbose:
                 print("Checking outputs")
             self.check(self)
+
+        # plot results, if enabled
+        if self.plot:
+            if self.verbose:
+                print("Plotting outputs")
+            self.plot(self)

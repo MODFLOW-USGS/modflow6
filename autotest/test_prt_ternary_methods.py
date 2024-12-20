@@ -22,14 +22,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pytest
-from flopy.discretization import VertexGrid
-from flopy.utils import GridIntersect
-from flopy.utils.triangle import Triangle
 from framework import TestFramework
 from prt_test_utils import get_model_name
-from shapely.geometry import LineString
 from test_prt_triangle import (
-    active_domain,
     botm,
     build_gwf_sim,
     get_tri,
@@ -37,8 +32,6 @@ from test_prt_triangle import (
     porosity,
     top,
 )
-
-pytest_plugins = ["modflow_devtools.snapshots"]
 
 simname = "prtter"
 cases = [
@@ -51,9 +44,7 @@ methods = [
 ]
 
 
-def build_prt_sim(
-    idx, name, gwf_ws, prt_ws, targets, exit_solve_tolerance=1e-5
-):
+def build_prt_sim(idx, name, gwf_ws, prt_ws, targets, exit_solve_tolerance=1e-5):
     prt_ws = Path(prt_ws)
     gwfname = get_model_name(name, "gwf")
     prtname = get_model_name(name, "prt")
@@ -61,9 +52,7 @@ def build_prt_sim(
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name=targets["mf6"], sim_ws=prt_ws
     )
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", perioddata=[[1.0, 1, 1.0]]
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", perioddata=[[1.0, 1, 1.0]])
     prt = flopy.mf6.ModflowPrt(sim, modelname=prtname)
     tri = get_tri(prt_ws / "grid", targets)
     cell2d = tri.get_cell2d()
@@ -102,6 +91,7 @@ def build_prt_sim(
         stop_at_weak_sink=True,  # currently required for this problem
         dev_exit_solve_method=methods[idx],
         exit_solve_tolerance=exit_solve_tolerance,
+        extend_tracking=True,
     )
     prt_track_file = f"{prtname}.trk"
     prt_track_csv_file = f"{prtname}.trk.csv"
@@ -130,9 +120,7 @@ def build_prt_sim(
 
 
 def build_models(idx, test, exit_solve_tolerance=1e-7):
-    gwf_sim = build_gwf_sim(
-        test.name, test.workspace, test.targets, ["left", "botm"]
-    )
+    gwf_sim = build_gwf_sim(test.name, test.workspace, test.targets, ["left", "botm"])
     prt_sim = build_prt_sim(
         idx,
         test.name,
@@ -144,7 +132,27 @@ def build_models(idx, test, exit_solve_tolerance=1e-7):
     return gwf_sim, prt_sim
 
 
-def plot_output(name, gwf, head, spdis, pls, fpath):
+def plot_output(idx, test):
+    name = test.name
+    prt_ws = test.workspace / "prt"
+    gwf_name = get_model_name(name, "gwf")
+    prt_name = get_model_name(name, "prt")
+    gwf_sim = test.sims[0]
+    gwf = gwf_sim.get_model(gwf_name)
+
+    # get gwf output
+    gwf = gwf_sim.get_model()
+    head = gwf.output.head().get_data()
+    bdobj = gwf.output.budget()
+    spdis = bdobj.get_data(text="DATA-SPDIS")[0]
+    qx, qy, _ = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
+
+    # get prt output
+    prt_name = get_model_name(name, "prt")
+    prt_track_csv_file = f"{prt_name}.prp.trk.csv"
+    pls = pd.read_csv(prt_ws / prt_track_csv_file, na_filter=False)
+    endpts = pls.sort_values("t").groupby(["imdl", "iprp", "irpt", "trelease"]).tail(1)
+
     # plot in 2d with mpl
     fig = plt.figure(figsize=(16, 10))
     ax = plt.subplot(1, 1, 1, aspect="equal")
@@ -169,19 +177,11 @@ def plot_output(name, gwf, head, spdis, pls, fpath):
     if "wel" in name:
         handles.append(
             mpl.lines.Line2D(
-                [0],
-                [0],
-                marker="o",
-                linestyle="",
-                label="Well",
-                markerfacecolor="red",
-            ),
+                [0], [0], marker="o", linestyle="", label="Well", markerfacecolor="red"
+            )
         )
-    ax.legend(
-        handles=handles,
-        loc="lower right",
-    )
-    pmv.plot_vector(*spdis, normalize=True, alpha=0.25)
+    ax.legend(handles=handles, loc="lower right")
+    pmv.plot_vector(qx, qy, normalize=True, alpha=0.25)
     if "wel" in name:
         pmv.plot_bc(ftype="WEL")
     mf6_plines = pls.groupby(["iprp", "irpt", "trelease"])
@@ -203,9 +203,10 @@ def plot_output(name, gwf, head, spdis, pls, fpath):
             legend=False,
             color="black",
         )
-    xc, yc = gwf.modelgrid.get_xcellcenters_for_layer(
-        0
-    ), gwf.modelgrid.get_ycellcenters_for_layer(0)
+    xc, yc = (
+        gwf.modelgrid.get_xcellcenters_for_layer(0),
+        gwf.modelgrid.get_ycellcenters_for_layer(0),
+    )
     for i in range(gwf.modelgrid.ncpl):
         x, y = xc[i], yc[i]
         if i == 1639:
@@ -218,7 +219,7 @@ def plot_output(name, gwf, head, spdis, pls, fpath):
         ax.annotate(str(i + 1), (x, y), color="grey", alpha=0.5)
 
     plt.show()
-    plt.savefig(fpath)
+    plt.savefig(prt_ws / f"{name}.png")
 
 
 def check_output(idx, test, snapshot):
@@ -240,37 +241,26 @@ def check_output(idx, test, snapshot):
     prt_name = get_model_name(name, "prt")
     prt_track_csv_file = f"{prt_name}.prp.trk.csv"
     pls = pd.read_csv(prt_ws / prt_track_csv_file, na_filter=False)
-    endpts = (
-        pls.sort_values("t")
-        .groupby(["imdl", "iprp", "irpt", "trelease"])
-        .tail(1)
-    )
+    endpts = pls.sort_values("t").groupby(["imdl", "iprp", "irpt", "trelease"]).tail(1)
 
     # check pathline shape and endpoints
     assert pls.shape == (116, 16)
     assert endpts.shape == (2, 16)
     assert set(endpts.icell) == {111, 112}
 
-    # plot results if enabled
-    plot = False
-    if plot:
-        plot_output(
-            name, gwf, head, (qx, qy), pls, fpath=prt_ws / f"{name}.png"
-        )
-
     # check pathlines against snapshot
-    assert snapshot == pls.round(3).to_records(index=False)
+    assert snapshot == pls.drop("name", axis=1).round(3).to_records(index=False)
 
 
+@pytest.mark.developmode
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(
-    idx, name, function_tmpdir, targets, benchmark, array_snapshot
-):
+def test_mf6model(idx, name, function_tmpdir, targets, benchmark, array_snapshot, plot):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t, array_snapshot),
+        plot=lambda t: plot_output(idx, t) if plot else None,
         targets=targets,
         compare=None,
     )

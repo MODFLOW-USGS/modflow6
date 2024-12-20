@@ -155,9 +155,6 @@ contains
     lkeobj%depvartype = dvt
     lkeobj%depvarunit = dvu
     lkeobj%depvarunitabbrev = dvua
-    !
-    ! -- Return
-    return
   end subroutine lke_create
 
   !> @brief Find corresponding lke package
@@ -209,7 +206,7 @@ contains
     !
     ! -- Error if flow package not found
     if (.not. found) then
-      write (errmsg, '(a)') 'COULD NOT FIND FLOW PACKAGE WITH NAME '&
+      write (errmsg, '(a)') 'Could not find flow package with name '&
                             &//trim(adjustl(this%flowpackagename))//'.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
@@ -278,9 +275,6 @@ contains
         '   MAX NO. OF ENTRIES = ', this%flowbudptr%budterm(ip)%maxlist
     end do
     write (this%iout, '(a, //)') 'DONE PROCESSING '//ftype//' INFORMATION'
-    !
-    ! -- Return
-    return
   end subroutine find_lke_package
 
   !> @brief Add matrix terms related to LKE
@@ -402,9 +396,6 @@ contains
         call matrix_sln%add_value_pos(ipossymoffd, ctherm)
       end if
     end do
-    !
-    ! -- Return
-    return
   end subroutine lke_fc_expanded
 
   !> @brief Add terms specific to lakes to the explicit lake solve
@@ -464,9 +455,6 @@ contains
         this%dbuff(n1) = this%dbuff(n1) + rrate
       end do
     end if
-    !
-    ! -- Return
-    return
   end subroutine lke_solve
 
   !> @brief Function to return the number of budget terms just for this package.
@@ -489,9 +477,6 @@ contains
     !    7) lakebed-cond
     !
     nbudterms = 7
-    !
-    ! -- Return
-    return
   end function lke_get_nbudterms
 
   !> @brief Set up the budget object that stores all the lake flows
@@ -606,9 +591,6 @@ contains
       n2 = this%flowbudptr%budterm(this%idxbudgwf)%id2(n)
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
     end do
-    !
-    ! -- Return
-    return
   end subroutine lke_setup_budobj
 
   !> @brief Copy flow terms into this%budobj
@@ -717,9 +699,6 @@ contains
         flowja(idiag) = flowja(idiag) - q
       end if
     end do
-    !
-    ! -- Return
-    return
   end subroutine lke_fill_budobj
 
   !> @brief Allocate scalars specific to the lake energy transport (LKE)
@@ -751,9 +730,6 @@ contains
     this%idxbudwdrl = 0
     this%idxbudoutf = 0
     this%idxbudlbcd = 0
-    !
-    ! -- Return
-    return
   end subroutine allocate_scalars
 
   !> @brief Allocate arrays specific to the lake energy transport (LKE)
@@ -784,9 +760,6 @@ contains
       this%tempiflw(n) = DZERO
     end do
     !
-    !
-    ! -- Return
-    return
   end subroutine lke_allocate_arrays
 
   !> @brief Deallocate memory
@@ -814,9 +787,6 @@ contains
     !
     ! -- Deallocate scalars in TspAptType
     call this%TspAptType%bnd_da()
-    !
-    ! -- Return
-    return
   end subroutine lke_da
 
   !> @brief Rain term
@@ -842,9 +812,6 @@ contains
     if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
-    !
-    ! -- Return
-    return
   end subroutine lke_rain_term
 
   !> @brief Evaporative term
@@ -871,9 +838,6 @@ contains
     if (present(rrate)) rrate = qbnd * heatlat
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
-    !
-    ! -- Return
-    return
   end subroutine lke_evap_term
 
   !> @brief Runoff term
@@ -899,9 +863,6 @@ contains
     if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
-    !
-    ! -- Return
-    return
   end subroutine lke_roff_term
 
   !> @brief Inflow Term
@@ -930,9 +891,6 @@ contains
     if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
-    !
-    ! -- Return
-    return
   end subroutine lke_iflw_term
 
   !> @brief Specified withdrawal term
@@ -961,9 +919,6 @@ contains
     if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
     if (present(rhsval)) rhsval = DZERO
     if (present(hcofval)) hcofval = qbnd * this%eqnsclfac
-    !
-    ! -- Return
-    return
   end subroutine lke_wdrl_term
 
   !> @brief Outflow term
@@ -992,9 +947,6 @@ contains
     if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
     if (present(rhsval)) rhsval = DZERO
     if (present(hcofval)) hcofval = qbnd * this%eqnsclfac
-    !
-    ! -- Return
-    return
   end subroutine lke_outf_term
 
   !> @brief Defined observation types
@@ -1072,9 +1024,6 @@ contains
     !    for ext-outflow observation type.
     call this%obs%StoreObsType('ext-outflow', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
-    !
-    ! -- Return
-    return
   end subroutine lke_df_obs
 
   !> @brief Process package specific obs
@@ -1107,9 +1056,6 @@ contains
     case default
       found = .false.
     end select
-    !
-    ! -- Return
-    return
   end subroutine lke_rp_obs
 
   !> @brief Calculate observation value and pass it back to APT
@@ -1153,9 +1099,6 @@ contains
     case default
       found = .false.
     end select
-    !
-    ! -- Return
-    return
   end subroutine lke_bd_obs
 
   !> @brief Sets the stress period attributes for keyword use.
@@ -1233,9 +1176,6 @@ contains
     end select
     !
 999 continue
-    !
-    ! -- Return
-    return
   end subroutine lke_set_stressperiod
 
 end module GweLkeModule

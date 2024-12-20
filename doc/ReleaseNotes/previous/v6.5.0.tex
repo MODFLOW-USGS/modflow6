@@ -1,0 +1,76 @@
+% Use this template for starting initializing the release notes
+% after a release has just been made.
+	
+	\subsection{Version mf6.5.0---May 23, 2024}
+	
+	\underline{NEW FUNCTIONALITY}
+	\begin{itemize}
+		\item A new Groundwater Energy (GWE) transport model was added to simulate heat transport in the subsurface.  GWE Models can be coupled together using a new GWE-GWE Exchange.  Additional information for activating the GWE model type within a MODFLOW 6 simulation is available within the mf6io.pdf document.  Technical details about the GWE Model are given in the supplemental technical information document (mf6suptechinfo) provided with the release.  New example problems have been developed for testing and demonstrating GWE capabilities (in addition to other internal tests that help verify the accuracy of GWE); however, additional changes to the code and input may be necessary in response to user needs and further testing.
+		\item A new Particle Tracking (PRT) Model was added to simulate forward tracking of particles for Groundwater Flow (GWF) Models.  Additional information for activating the PRT model type within a MODFLOW 6 simulation is available within the mf6io.pdf document.  Technical details about the PRT Model are given in the supplemental technical information document (mf6suptechinfo) provided with the release. New example problems have been developed for testing and demonstrating PRT capabilities (in addition to other internal tests that help verify the accuracy of PRT); however, additional changes to the code and input may be necessary in response to user needs and further testing.
+		\item A new capability has been introduced to optionally write user-provided input arrays to external ASCII files.  In some cases, such as when the user provides binary files as input, it can be useful to inspect the text representation of that input.  Exporting to external ASCII files can be turned on for supported packages by specifying the EXPORT\_ARRAY\_ASCII option.  When activated supported variables will be written to files that are named based on the model, package, variable, and layer.  Only those arrays specified for the model grid can be exported.
+		\item Added capability to vary the hydraulic conductivity of the reach streambed (RHK) by stress period in the Streamflow Routing (SFR) package. RHK can be modified by stress period using the BEDK SFRSETTING. RHK can also be defined using a timeseries string in the PACKAGEDATA or PERIOD blocks.
+		\item Extend binary input support to all list style input blocks that have a regular shape and don't contain string fields (e.g. BOUNDNAME).
+		\item A special extended version of MODFLOW can be compiled to simulate multiple models in parallel.  This extended version of MODFLOW 6 is based on the Message Passing Interface (MPI) and the Portable, Extensible Toolkit for Scientific Computation (PETSc) libraries.  Testing of the extended version has been performed on laptops, desktops, and supercomputers.  Information on the extended version of MODFLOW 6 is available through a dedicated page on the \href{https://github.com/MODFLOW-USGS/modflow6/wiki/Parallel-MODFLOW-User-Guide}{MODFLOW 6 repository}.  There are several recent improvements to parallel capabilities.  A new optional High Performance Computing (HPC) input file can be activated in the OPTION block in the simulation NAM file to configure the load balance for parallel simulations. The CSV convergence report in parallel mode has been improved by adding individual model data similar to those produced for serial simulations.  A modified ILU preconditioner is now available in parallel simulations and can be configured through IMS parameters.  Settings configured in the IMS input file are now used for parallel simulations.  Simulations with multiple GWE Models can be parallelized.
+	\end{itemize}
+
+	\underline{EXAMPLES}
+	\begin{itemize}
+		\item Examples were added to demonstrate the new Groundwater Energy (GWE) Model.  These examples include: danckwerts, geotherm, gwe-prt, and gwe-radial.
+		\item Examples were added to demonstrate the new Particle Tracking (PRT) Model.  These examples include two of the test problems used to demonstrate MODPATH Version 7.
+	\end{itemize}
+
+	\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
+	\underline{BASIC FUNCTIONALITY}
+	\begin{itemize}
+		\item When the Adaptive Time Step (ATS) Package was activated, and failed time steps were rerun successfully using a shorter time step, the cumulative budgets reported in the listing files were incorrect.  Cumulative budgets included contributions from the failed time steps.  The program was fixed so that cumulative budgets are not tallied until the time step is finalized.
+		\item For multi-model groundwater flow simulations that use the Buoyancy (BUY) Package, variable-density terms were not included, in all cases, along the interface between two GWF models.  The program was corrected so that flows between two GWF models include the variable-density terms when the BUY Package is active.
+	%	\item xxx
+	\end{itemize}
+
+	%\underline{INTERNAL FLOW PACKAGES}
+	%\begin{itemize}
+	%	\item xxx
+	%	\item xxx
+	%	\item xxx
+	%\end{itemize}
+
+	\underline{STRESS PACKAGES}
+	\begin{itemize}
+		\item Floating point overflow errors would occur when negative conductance (COND) or auxiliary multiplier (AUXMULT) values were specified in the Drain, River, and General Head stress packages. This bug was fixed by checking if COND and AUXMULT values are greater than or equal to zero. The program will terminate with and error if negative COND or AUXMULT values are found.
+	%	\item xxx
+	%	\item xxx
+	\end{itemize}
+
+	\underline{ADVANCED STRESS PACKAGES}
+	\begin{itemize}
+		\item A divide by zero error would occur in the Streamflow Routing package when reaches were deactivated during a simulation. This bug was fixed by checking if the downstream reach is inactive before calculating the flow to the downstream reach.
+		\item When using the mover transport (MVT) package with UZF and UZT, rejected infiltration was paired with the calculated concentration of the UZF object rather than the user-specified concentration assigned to the infiltration.  This bug was fixed by instead pairing the rejected infiltration transferred by the MVR and MVT packages with the user-specified concentration assigned in UZTSETTING with the keyword ``INFILTRATION.''  With this change, MODFLOW 6 simulations that use UZF with the ``SIMULATE\_GWSEEP'' option will not transfer this particular source of water with the correct concentration.  Instead, the DRN package should be used to simulate groundwater discharge to land surface.  By simulating groundwater discharge to land surface with the DRN package and rejected infiltration with the UZF package, the correct concentrations will be assigned to the water transferred by the MVR package.
+		\item The SIMULATE\_GWSEEP variable in the UZF package OPTIONS block will eventually be deprecated.  The same functionality may be achieved using an option available within the DRN package called AUXDEPTHNAME.  The details of the drainage option are given in the supplemental technical information document (mf6suptechinfo) provided with the release.  Deprecation of the SIMULATE\_GWSEEP option is motivated by the potential for errors noted above.
+		\item The capability to deactivate lakes (using the STATUS INACTIVE setting) did not work properly for the GWF Lake Package.  The Lake Package was fixed so that inactive lakes have a zero flow value with connected GWF model cells and that the lake stage is assigned the inactive value (1.E30).  The listing, budget, and observation files were modified to accurately report inactive lakes.
+		\item The Streamflow Routing package would not calculate groundwater discharge to a reach in cases where the groundwater head is above the top of the reach and the inflow to the reach from upstream reaches, specified inflows, rainfall, and runoff is zero. This bug has been fixed by eliminating the requirement that the conductance calculated based on the initial calculated stage is greater than zero in order to solve for groundwater. As a result, differences in groundwater and surface-water exchange and groundwater heads in existing models may occur.  
+		\item The Streamflow Routing package stage tables written to the model listing file have been modified so that inactive reaches are identified to be INACTIVE and dry reaches are identified to be DRY.
+		\item The Streamflow Routing package would not correctly report reach flow terms for unconnected reaches even though reach flows were correctly calculated. This bug has been fixed by modifying the budget routine so that it correctly reports unconnected reach flows in the model listing file and cell-by-cell budget files. Simulated groundwater flow results should not change but differences may be observed in post-processed results and transport simulations that rely on binary cell-by-cell data.
+	%	\item xxx
+	\end{itemize}
+
+	%\underline{SOLUTION}
+	%\begin{itemize}
+	%	\item xxx
+	%	\item xxx
+	%	\item xxx
+	%\end{itemize}
+
+	\underline{EXCHANGES}
+	\begin{itemize}
+		\item In some cases, concentration instabilities appeared at the interface between two transport models. The artifacts were present for rare configurations connecting more than 2 transport models with identical grids in series.  The problem was identified in the GWT-GWT Exchange and corrected.
+	%	\item xxx
+	%	\item xxx
+	\end{itemize}
+
+	\underline{PARALLEL}
+	\begin{itemize}
+		\item Several issues were fixed for parallel simulations that used the Buoyancy Package for the GWF model.  When a simulation was run with the Buoyancy Package, irrelevant messages could be written to the screen.  In some cases, the Buoyancy Package produced  strange results at the interface between two models.  These issues have been corrected.
+		\item For parallel simulations, calculation of the residual norm used for pseudo-transient continuation (PTC) and backtracking was incorrect.  The program was fixed to calculate the correct residual norm.
+		\item Enabling XT3D on exchanges in a parallel simulation caused the program to hang for certain configurations. This issue has been corrected.
+		\item GNC is not supported on flow exchanges when running in parallel or when the XT3D option is enabled on the exchange. The program terminates with an error if the user attempts to use GNC in these cases.
+	\end{itemize}

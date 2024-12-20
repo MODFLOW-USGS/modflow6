@@ -48,12 +48,12 @@ module GwfModule
     type(GwfMvrType), pointer :: mvr => null() ! water mover package
     type(GwfObsType), pointer :: obs => null() ! observation package
     type(BudgetType), pointer :: budget => null() ! budget object
-    integer(I4B), pointer :: inic => null() ! unit number IC
+    integer(I4B), pointer :: inic => null() ! IC enabled flag
     integer(I4B), pointer :: inoc => null() ! unit number OC
     integer(I4B), pointer :: innpf => null() ! NPF enabled flag
     integer(I4B), pointer :: inbuy => null() ! unit number BUY
     integer(I4B), pointer :: invsc => null() ! unit number VSC
-    integer(I4B), pointer :: insto => null() ! unit number STO
+    integer(I4B), pointer :: insto => null() ! STO enabled flag
     integer(I4B), pointer :: incsub => null() ! unit number CSUB
     integer(I4B), pointer :: inmvr => null() ! unit number MVR
     integer(I4B), pointer :: inhfb => null() ! unit number HFB
@@ -205,9 +205,6 @@ contains
     !
     ! -- create model packages
     call this%create_packages()
-    !
-    ! -- return
-    return
   end subroutine gwf_cr
 
   !> @brief Define packages of the model
@@ -251,12 +248,10 @@ contains
     !
     ! -- Store information needed for observations
     call this%obs%obs_df(this%iout, this%name, 'GWF', this%dis)
-    !
-    ! -- return
-    return
   end subroutine gwf_df
 
   !> @brief Add the internal connections of this model to the sparse matrix
+  !<
   subroutine gwf_ac(this, sparse)
     ! -- modules
     use SparseModule, only: sparsematrix
@@ -281,9 +276,6 @@ contains
     !
     ! -- If GNC is active, then add the gnc connections to sparse
     if (this%ingnc > 0) call this%gnc%gnc_ac(sparse)
-    !
-    ! -- return
-    return
   end subroutine gwf_ac
 
   !> @brief Map the positions of this models connections in the
@@ -313,9 +305,6 @@ contains
     ! -- For implicit gnc, need to store positions of gnc connections
     !    in solution matrix connection
     if (this%ingnc > 0) call this%gnc%gnc_mc(matrix_sln)
-    !
-    ! -- return
-    return
   end subroutine gwf_mc
 
   !> @brief GroundWater Flow Model Allocate and Read
@@ -361,9 +350,6 @@ contains
       if (this%inbuy > 0) call this%buy%buy_ar_bnd(packobj, this%x)
       if (this%invsc > 0) call this%vsc%vsc_ar_bnd(packobj)
     end do
-    !
-    ! -- return
-    return
   end subroutine gwf_ar
 
   !> @brief GroundWater Flow Model Read and Prepare
@@ -400,9 +386,6 @@ contains
     !
     ! -- Check for steady state period
     call this%steady_period_check()
-    !
-    ! -- Return
-    return
   end subroutine gwf_rp
 
   !> @brief GroundWater Flow Model Time Step Advance
@@ -456,12 +439,10 @@ contains
     !
     ! -- Push simulated values to preceding time/subtime step
     call this%obs%obs_ad()
-    !
-    ! -- return
-    return
   end subroutine gwf_ad
 
   !> @brief GroundWater Flow Model calculate coefficients
+  !<
   subroutine gwf_cf(this, kiter)
     ! -- dummy
     class(GwfModelType) :: this
@@ -478,12 +459,10 @@ contains
       call packobj%bnd_cf()
       if (this%inbuy > 0) call this%buy%buy_cf_bnd(packobj, this%x)
     end do
-    !
-    ! -- return
-    return
   end subroutine gwf_cf
 
   !> @brief GroundWater Flow Model fill coefficients
+  !<
   subroutine gwf_fc(this, kiter, matrix_sln, inwtflag)
     ! -- dummy
     class(GwfModelType) :: this
@@ -573,9 +552,6 @@ contains
         call packobj%bnd_fn(this%rhs, this%ia, this%idxglo, matrix_sln)
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine gwf_fc
 
   !> @brief GroundWater Flow Model Final Convergence Check for Boundary Packages
@@ -615,9 +591,6 @@ contains
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_cc(innertot, kiter, iend, icnvgmod, cpak, ipak, dpak)
     end do
-    !
-    ! -- return
-    return
   end subroutine gwf_cc
 
   !> @brief check if pseudo-transient continuation factor should be used
@@ -641,9 +614,6 @@ contains
         iptc = this%npf%inewton
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine gwf_ptcchk
 
   !> @brief calculate maximum pseudo-transient continuation factor
@@ -714,9 +684,6 @@ contains
     if (iptc == 0) then
       if (iptct > 0) iptc = 1
     end if
-    !
-    ! -- return
-    return
   end subroutine gwf_ptc
 
   !> @brief under-relaxation
@@ -764,9 +731,6 @@ contains
         end if
       end do
     end if
-    !
-    ! -- return
-    return
   end subroutine gwf_nur
 
   !> @brief Groundwater flow model calculate flow
@@ -811,9 +775,6 @@ contains
       if (this%inbuy > 0) call this%buy%buy_cf_bnd(packobj, this%x)
       call packobj%bnd_cq(this%x, this%flowja)
     end do
-    !
-    ! -- Return
-    return
   end subroutine gwf_cq
 
   !> @brief GroundWater Flow Model Budget
@@ -860,12 +821,10 @@ contains
         call this%npf%calc_spdis(this%flowja)
       end if
     end if
-    !
-    ! -- Return
-    return
   end subroutine gwf_bd
 
   !> @brief GroundWater Flow Model Output
+  !<
   subroutine gwf_ot(this)
     ! -- modules
     use TdisModule, only: kstp, kper, tdis_ot, endofperiod
@@ -919,11 +878,10 @@ contains
     if (this%icnvg == 0) then
       write (this%iout, fmtnocnvg) kstp, kper
     end if
-    !
-    ! -- Return
-    return
   end subroutine gwf_ot
 
+  !> @brief GroundWater Flow Model output observations
+  !<
   subroutine gwf_ot_obs(this)
     class(GwfModelType) :: this
     class(BndType), pointer :: packobj
@@ -948,6 +906,8 @@ contains
 
   end subroutine gwf_ot_obs
 
+  !> @brief Groundwater Flow Model output flows
+  !<
   subroutine gwf_ot_flow(this, icbcfl, ibudfl, icbcun)
     class(GwfModelType) :: this
     integer(I4B), intent(in) :: icbcfl
@@ -997,6 +957,8 @@ contains
 
   end subroutine gwf_ot_flow
 
+  !> @brief Groundwater Flow Model output dependent variable
+  !<
   subroutine gwf_ot_dv(this, idvsave, idvprint, ipflag)
     class(GwfModelType) :: this
     integer(I4B), intent(in) :: idvsave
@@ -1026,11 +988,10 @@ contains
     !
     ! -- save head and print head
     call this%oc%oc_ot(ipflag)
-    !
-    ! -- Return
-    return
   end subroutine gwf_ot_dv
 
+  !> @brief Groundwater Flow Model output budget summary
+  !<
   subroutine gwf_ot_bdsummary(this, ibudfl, ipflag)
     use TdisModule, only: kstp, kper, totim, delt
     class(GwfModelType) :: this
@@ -1039,7 +1000,6 @@ contains
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
 
-    !
     ! -- Package budget summary
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
@@ -1064,6 +1024,7 @@ contains
   end subroutine gwf_ot_bdsummary
 
   !> @brief Final processing
+  !<
   subroutine gwf_fp(this)
     ! -- modules
     ! -- dummy
@@ -1074,15 +1035,14 @@ contains
     if (this%incsub > 0) then
       call this%csub%csub_fp()
     end if
-    !
-    return
   end subroutine gwf_fp
 
   !> @brief Deallocate
+  !<
   subroutine gwf_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
-    use MemoryManagerExtModule, only: memorylist_remove
+    use MemoryManagerExtModule, only: memorystore_remove
     use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwfModelType) :: this
@@ -1091,8 +1051,8 @@ contains
     class(BndType), pointer :: packobj
     !
     ! -- Deallocate idm memory
-    call memorylist_remove(this%name, 'NAM', idm_context)
-    call memorylist_remove(component=this%name, context=idm_context)
+    call memorystore_remove(this%name, 'NAM', idm_context)
+    call memorystore_remove(component=this%name, context=idm_context)
     !
     ! -- Internal flow packages deallocate
     call this%dis%dis_da()
@@ -1150,19 +1110,13 @@ contains
     !
     ! -- NumericalModelType
     call this%NumericalModelType%model_da()
-    !
-    ! -- return
-    return
   end subroutine gwf_da
 
   !> @brief GroundWater Flow Model Budget Entry
   !!
   !! This subroutine adds a budget entry to the flow budget.  It was added as
   !! a method for the gwf model object so that the exchange object could add its
-  !! contributions.
-  !!
-  !! (1) adds the entry to the budget object
-  !<
+  !< contributions.
   subroutine gwf_bdentry(this, budterm, budtxt, rowlabel)
     ! -- modules
     use ConstantsModule, only: LENBUDTXT
@@ -1174,9 +1128,6 @@ contains
     character(len=*), intent(in) :: rowlabel
     !
     call this%budget%addentry(budterm, delt, budtxt, rowlabel=rowlabel)
-    !
-    ! -- return
-    return
   end subroutine gwf_bdentry
 
   !> @brief return 1 if any package causes the matrix to be asymmetric.
@@ -1208,12 +1159,10 @@ contains
       packobj => GetBndFromList(this%bndlist, ip)
       if (packobj%iasym /= 0) iasym = 1
     end do
-    !
-    ! -- return
-    return
   end function gwf_get_iasym
 
   !> @brief Allocate memory for non-allocatable members
+  !<
   subroutine allocate_scalars(this, modelname)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
@@ -1252,9 +1201,6 @@ contains
     this%inobs = 0
     this%iss = 1 !default is steady-state (i.e., no STO package)
     this%inewtonur = 0 !default is to not use newton bottom head dampening
-    !
-    ! -- return
-    return
   end subroutine allocate_scalars
 
   !> @brief Create boundary condition packages for this model
@@ -1343,12 +1289,10 @@ contains
       end if
     end do
     call AddBndToList(this%bndlist, packobj)
-    !
-    ! -- return
-    return
   end subroutine package_create
 
   !> @brief Check to make sure required input files have been specified
+  !<
   subroutine ftype_check(this, indis)
     ! -- modules
     use ConstantsModule, only: LINELENGTH
@@ -1380,9 +1324,6 @@ contains
       call store_error(errmsg)
       call store_error_filename(this%filename)
     end if
-    !
-    ! -- return
-    return
   end subroutine ftype_check
 
   !> @brief Cast to GWF model
@@ -1398,8 +1339,6 @@ contains
     class is (GwfModelType)
       gwfModel => model
     end select
-    return
-
   end function CastAsGwfModel
 
   !> @brief Source package info and begin to process
@@ -1454,9 +1393,6 @@ contains
       ! -- cleanup
       deallocate (bndpkgs)
     end if
-    !
-    ! -- return
-    return
   end subroutine create_bndpkgs
 
   !> @brief Source package info and begin to process
@@ -1503,6 +1439,7 @@ contains
     integer(I4B) :: indis = 0 ! DIS enabled flag
     character(len=LENMEMPATH) :: mempathnpf = ''
     character(len=LENMEMPATH) :: mempathic = ''
+    character(len=LENMEMPATH) :: mempathsto = ''
     !
     ! -- set input model memory path
     model_mempath = create_mem_path(component=this%name, context=idm_context)
@@ -1544,7 +1481,8 @@ contains
       case ('HFB6')
         this%inhfb = inunit
       case ('STO6')
-        this%insto = inunit
+        this%insto = 1
+        mempathsto = mempath
       case ('CSUB6')
         this%incsub = inunit
       case ('IC6')
@@ -1573,7 +1511,7 @@ contains
     call vsc_cr(this%vsc, this%name, this%invsc, this%iout)
     call gnc_cr(this%gnc, this%name, this%ingnc, this%iout)
     call hfb_cr(this%hfb, this%name, this%inhfb, this%iout)
-    call sto_cr(this%sto, this%name, this%insto, this%iout)
+    call sto_cr(this%sto, this%name, mempathsto, this%insto, this%iout)
     call csub_cr(this%csub, this%name, this%insto, this%sto%packName, &
                  this%incsub, this%iout)
     call ic_cr(this%ic, this%name, mempathic, this%inic, this%iout, this%dis)
@@ -1585,9 +1523,6 @@ contains
     call this%ftype_check(indis)
     !
     call this%create_bndpkgs(bndpkgs, pkgtypes, pkgnames, mempaths, inunits)
-    !
-    ! -- return
-    return
   end subroutine create_packages
 
   !> @brief Write model namfile options to list file
@@ -1651,7 +1586,6 @@ contains
         call store_warning(warnmsg)
       end if
     end if
-    return
   end subroutine steady_period_check
 
 end module GwfModule

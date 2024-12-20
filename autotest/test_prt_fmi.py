@@ -23,7 +23,7 @@ Particles are released from the top left cell.
 
 Pathlines are compared against a MODPATH 7 model.
 
-Runtime is benchmarked with pytest-benchmark. 
+Runtime is benchmarked with pytest-benchmark.
 """
 
 from pathlib import Path
@@ -45,11 +45,10 @@ from prt_test_utils import (
     get_model_name,
     get_partdata,
     has_default_boundnames,
-    DEFAULT_EXIT_SOLVE_TOL,
 )
 
-simname = "prtfmi01"
-cases = [simname, f"{simname}saws", f"{simname}bprp"]
+simname = "prtfmi"
+cases = [simname, f"{simname}saws", f"{simname}bprp", f"{simname}noext"]
 
 
 def build_prt_sim(name, gwf_ws, prt_ws, mf6):
@@ -90,22 +89,16 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
     )
 
     # create mip package
-    flopy.mf6.ModflowPrtmip(
-        prt, pname="mip", porosity=FlopyReadmeCase.porosity
-    )
+    flopy.mf6.ModflowPrtmip(prt, pname="mip", porosity=FlopyReadmeCase.porosity)
 
     # convert mp7 to prt release points and check against expectation
     partdata = get_partdata(prt.modelgrid, FlopyReadmeCase.releasepts_mp7)
     coords = partdata.to_coords(prt.modelgrid)
     if "bprp" in name:
         # bad cell indices!
-        releasepts = [
-            (i, 0, 1, 1, c[0], c[1], c[2]) for i, c in enumerate(coords)
-        ]
+        releasepts = [(i, 0, 1, 1, c[0], c[1], c[2]) for i, c in enumerate(coords)]
     else:
-        releasepts = [
-            (i, 0, 0, 0, c[0], c[1], c[2]) for i, c in enumerate(coords)
-        ]
+        releasepts = [(i, 0, 0, 0, c[0], c[1], c[2]) for i, c in enumerate(coords)]
         assert np.allclose(FlopyReadmeCase.releasepts_prt, releasepts)
 
     # create prp package
@@ -122,7 +115,7 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
         trackcsv_filerecord=[prp_track_csv_file],
         stop_at_weak_sink="saws" in prt_name,
         boundnames=True,
-        exit_solve_tolerance=DEFAULT_EXIT_SOLVE_TOL,
+        extend_tracking="noext" not in prt_name,
     )
 
     # create output control package
@@ -177,10 +170,7 @@ def build_mp7_sim(name, ws, mp7, gwf):
         headfilename=f"{gwf.name}.hds",
         budgetfilename=f"{gwf.name}.bud",
     )
-    mpbas = flopy.modpath.Modpath7Bas(
-        mp,
-        porosity=FlopyReadmeCase.porosity,
-    )
+    mpbas = flopy.modpath.Modpath7Bas(mp, porosity=FlopyReadmeCase.porosity)
     mpsim = flopy.modpath.Modpath7Sim(
         mp,
         simulationtype="pathline",
@@ -235,16 +225,13 @@ def check_output(idx, test):
     prt_track_csv_file = f"{prt_name}.trk.csv"
     prp_track_file = f"{prt_name}.prp.trk"
     prp_track_csv_file = f"{prt_name}.prp.trk.csv"
-    assert (gwf_ws / gwf_budget_file).is_file()
-    assert (gwf_ws / gwf_head_file).is_file()
-    assert (prt_ws / prt_track_file).is_file()
-    assert (prt_ws / prt_track_csv_file).is_file()
-    assert (prt_ws / prp_track_file).is_file()
-    assert (prt_ws / prp_track_csv_file).is_file()
-
-    # check mp7 output files exist
     mp7_pathline_file = f"{mp7_name}.mppth"
-    assert (mp7_ws / mp7_pathline_file).is_file()
+
+    # extract head, budget, and specific discharge results from GWF model
+    hds = HeadFile(gwf_ws / gwf_head_file).get_data()
+    bud = gwf.output.budget()
+    spdis = bud.get_data(text="DATA-SPDIS")[0]
+    qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
 
     # load mp7 pathline results
     plf = PathlineFile(mp7_ws / mp7_pathline_file)
@@ -259,9 +246,21 @@ def check_output(idx, test):
     # load mf6 pathline results
     mf6_pls = pd.read_csv(prt_ws / prt_track_csv_file, na_filter=False)
 
+    prt_budget_file = prt_ws / f"{prt_name}.bud"
+    prt_bud = flopy.utils.CellBudgetFile(prt_budget_file, precision="double")
+    prt_bud_data = prt_bud.get_data(kstpkper=(0, 0))
+
     # make sure pathline df has "name" (boundname) column and default values
     assert "name" in mf6_pls
     assert has_default_boundnames(mf6_pls)
+
+    assert (gwf_ws / gwf_budget_file).is_file()
+    assert (gwf_ws / gwf_head_file).is_file()
+    assert (prt_ws / prt_track_file).is_file()
+    assert (prt_ws / prt_track_csv_file).is_file()
+    assert (prt_ws / prp_track_file).is_file()
+    assert (prt_ws / prp_track_csv_file).is_file()
+    assert (mp7_ws / mp7_pathline_file).is_file()
 
     # make sure all mf6 pathline data have correct model and PRP index (1)
     assert all_equal(mf6_pls["imdl"], 1)
@@ -275,9 +274,7 @@ def check_output(idx, test):
     )
 
     # check cell-by-cell particle mass budget file
-    prt_budget_file = prt_ws / f"{prt_name}.bud"
-    prt_bud = flopy.utils.CellBudgetFile(prt_budget_file, precision="double")
-    prt_bud_data = prt_bud.get_data(kstpkper=(0, 0))
+
     assert len(prt_bud_data) == 2
     assert prt_bud_data[0].shape == (1, 1, 460)
     assert prt_bud_data[1].shape == (9,)
@@ -290,10 +287,54 @@ def check_output(idx, test):
     ]:
         check_track_data(
             track_bin=prt_ws / prt_track_file,
-            track_hdr=prt_ws
-            / Path(prt_track_file.replace(".trk", ".trk.hdr")),
+            track_hdr=prt_ws / Path(prt_track_file.replace(".trk", ".trk.hdr")),
             track_csv=track_csv,
         )
+
+    if "noext" in name:
+        # maximum tracking time should be simulation stop time
+        assert mf6_pls.t.max() == FlopyReadmeCase.nper * FlopyReadmeCase.perlen
+    else:
+        # convert mf6 pathlines to mp7 format
+        mf6_pls = to_mp7_pathlines(mf6_pls)
+
+        # sort both dataframes by particleid and time
+        mf6_pls.sort_values(by=["particleid", "time"], inplace=True)
+        mp7_pls.sort_values(by=["particleid", "time"], inplace=True)
+
+        # drop columns for which there is no direct correspondence between mf6 and mp7
+        del mf6_pls["sequencenumber"]
+        del mf6_pls["particleidloc"]
+        del mf6_pls["xloc"]
+        del mf6_pls["yloc"]
+        del mf6_pls["zloc"]
+        del mp7_pls["sequencenumber"]
+        del mp7_pls["particleidloc"]
+        del mp7_pls["xloc"]
+        del mp7_pls["yloc"]
+        del mp7_pls["zloc"]
+
+        # compare mf6 / mp7 pathline data
+        assert mf6_pls.shape == mp7_pls.shape
+        assert np.allclose(mf6_pls, mp7_pls, atol=1e-3)
+
+
+def plot_output(idx, test):
+    name = test.name
+    gwf_ws = test.workspace
+    prt_ws = test.workspace / "prt"
+    mp7_ws = test.workspace / "mp7"
+    gwf_name = get_model_name(name, "gwf")
+    prt_name = get_model_name(name, "prt")
+    mp7_name = get_model_name(name, "mp7")
+    gwf_sim = test.sims[0]
+    gwf = gwf_sim.get_model(gwf_name)
+    mg = gwf.modelgrid
+
+    # check mf6 output files exist
+    gwf_head_file = f"{gwf_name}.hds"
+    prt_track_csv_file = f"{prt_name}.trk.csv"
+    mp7_pathline_file = f"{mp7_name}.mppth"
 
     # extract head, budget, and specific discharge results from GWF model
     hds = HeadFile(gwf_ws / gwf_head_file).get_data()
@@ -301,82 +342,74 @@ def check_output(idx, test):
     spdis = bud.get_data(text="DATA-SPDIS")[0]
     qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
 
-    # setup plot
-    plot_data = False
-    if plot_data:
-        fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 10))
-        for a in ax:
-            a.set_aspect("equal")
+    # load mp7 pathline results
+    plf = PathlineFile(mp7_ws / mp7_pathline_file)
+    mp7_pls = pd.DataFrame(
+        plf.get_destination_pathline_data(range(mg.nnodes), to_recarray=True)
+    )
+    # convert zero-based to one-based indexing in mp7 results
+    mp7_pls["particlegroup"] = mp7_pls["particlegroup"] + 1
+    mp7_pls["node"] = mp7_pls["node"] + 1
+    mp7_pls["k"] = mp7_pls["k"] + 1
 
-        # plot mf6 pathlines in map view
-        pmv = flopy.plot.PlotMapView(modelgrid=mg, ax=ax[0])
-        pmv.plot_grid()
-        pmv.plot_array(hds[0], alpha=0.1)
-        pmv.plot_vector(qx, qy, normalize=True, color="white")
-        mf6_plines = mf6_pls.groupby(["iprp", "irpt", "trelease"])
-        for ipl, ((iprp, irpt, trelease), pl) in enumerate(mf6_plines):
-            pl.plot(
-                title="MF6 pathlines",
-                kind="line",
-                x="x",
-                y="y",
-                ax=ax[0],
-                legend=False,
-                color=cm.plasma(ipl / len(mf6_plines)),
-            )
+    # load mf6 pathline results
+    mf6_pls = pd.read_csv(prt_ws / prt_track_csv_file, na_filter=False)
 
-        # plot mp7 pathlines in map view
-        pmv = flopy.plot.PlotMapView(modelgrid=mg, ax=ax[1])
-        pmv.plot_grid()
-        pmv.plot_array(hds[0], alpha=0.1)
-        pmv.plot_vector(qx, qy, normalize=True, color="white")
-        mp7_plines = mp7_pls.groupby(["particleid"])
-        for ipl, (pid, pl) in enumerate(mp7_plines):
-            pl.plot(
-                title="MP7 pathlines",
-                kind="line",
-                x="x",
-                y="y",
-                ax=ax[1],
-                legend=False,
-                color=cm.plasma(ipl / len(mp7_plines)),
-            )
+    prt_budget_file = prt_ws / f"{prt_name}.bud"
+    prt_bud = flopy.utils.CellBudgetFile(prt_budget_file, precision="double")
 
-        # view/save plot
-        plt.show()
-        plt.savefig(gwf_ws / f"test_{simname}.png")
+    # set up plot
+    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 10))
+    for a in ax:
+        a.set_aspect("equal")
 
-    # convert mf6 pathlines to mp7 format
-    mf6_pls = to_mp7_pathlines(mf6_pls)
+    # plot mf6 pathlines in map view
+    pmv = flopy.plot.PlotMapView(modelgrid=mg, ax=ax[0])
+    pmv.plot_grid()
+    pmv.plot_array(hds[0], alpha=0.1)
+    pmv.plot_vector(qx, qy, normalize=True, color="white")
+    mf6_plines = mf6_pls.groupby(["iprp", "irpt", "trelease"])
+    for ipl, ((iprp, irpt, trelease), pl) in enumerate(mf6_plines):
+        pl.plot(
+            title="MF6 pathlines",
+            kind="line",
+            x="x",
+            y="y",
+            ax=ax[0],
+            legend=False,
+            color=cm.plasma(ipl / len(mf6_plines)),
+        )
 
-    # sort both dataframes by particleid and time
-    mf6_pls.sort_values(by=["particleid", "time"], inplace=True)
-    mp7_pls.sort_values(by=["particleid", "time"], inplace=True)
+    # plot mp7 pathlines in map view
+    pmv = flopy.plot.PlotMapView(modelgrid=mg, ax=ax[1])
+    pmv.plot_grid()
+    pmv.plot_array(hds[0], alpha=0.1)
+    pmv.plot_vector(qx, qy, normalize=True, color="white")
+    mp7_plines = mp7_pls.groupby(["particleid"])
+    for ipl, (pid, pl) in enumerate(mp7_plines):
+        pl.plot(
+            title="MP7 pathlines",
+            kind="line",
+            x="x",
+            y="y",
+            ax=ax[1],
+            legend=False,
+            color=cm.plasma(ipl / len(mp7_plines)),
+        )
 
-    # drop columns for which there is no direct correspondence between mf6 and mp7
-    del mf6_pls["sequencenumber"]
-    del mf6_pls["particleidloc"]
-    del mf6_pls["xloc"]
-    del mf6_pls["yloc"]
-    del mf6_pls["zloc"]
-    del mp7_pls["sequencenumber"]
-    del mp7_pls["particleidloc"]
-    del mp7_pls["xloc"]
-    del mp7_pls["yloc"]
-    del mp7_pls["zloc"]
-
-    # compare mf6 / mp7 pathline data
-    assert mf6_pls.shape == mp7_pls.shape
-    assert np.allclose(mf6_pls, mp7_pls, atol=1e-3)
+    # view/save plot
+    plt.show()
+    plt.savefig(prt_ws / f"{name}.png")
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets, benchmark):
+def test_mf6model(idx, name, function_tmpdir, targets, benchmark, plot):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
+        plot=lambda t: plot_output(idx, t) if plot else None,
         targets=targets,
         compare=None,
         xfail=[False, "bprp" in name, False],

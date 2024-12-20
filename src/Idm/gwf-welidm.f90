@@ -9,6 +9,7 @@ module GwfWelInputModule
   public gwf_wel_block_definitions
   public GwfWelParamFoundType
   public gwf_wel_multi_package
+  public gwf_wel_subpackages
 
   type GwfWelParamFoundType
     logical :: auxiliary = .false.
@@ -39,6 +40,12 @@ module GwfWelInputModule
 
   logical :: gwf_wel_multi_package = .true.
 
+  character(len=16), parameter :: &
+    gwf_wel_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     gwfwel_auxiliary = InputParamDefinitionType &
     ( &
@@ -49,6 +56,7 @@ module GwfWelInputModule
     'AUXILIARY', & ! fortran variable
     'STRING', & ! type
     'NAUX', & ! shape
+    'keyword to specify aux variables', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -66,6 +74,7 @@ module GwfWelInputModule
     'AUXMULTNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'name of auxiliary variable for multiplier', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -83,6 +92,7 @@ module GwfWelInputModule
     'BOUNDNAMES', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -100,6 +110,7 @@ module GwfWelInputModule
     'IPRPAK', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print input to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -117,6 +128,7 @@ module GwfWelInputModule
     'IPRFLOW', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print calculated flows to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -134,6 +146,7 @@ module GwfWelInputModule
     'IPAKCB', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'save well flows to budget file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -151,6 +164,7 @@ module GwfWelInputModule
     'FLOWRED', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'cell fractional thickness for reduced pumping', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -168,6 +182,7 @@ module GwfWelInputModule
     'AFRCSV_REC', & ! fortran variable
     'RECORD AUTO_FLOW_REDUCE_CSV FILEOUT AFRCSVFILE', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -185,6 +200,7 @@ module GwfWelInputModule
     'AFRCSV', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'budget keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -202,6 +218,7 @@ module GwfWelInputModule
     'FILEOUT', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'file keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -219,6 +236,7 @@ module GwfWelInputModule
     'AFRCSVFILE', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'file keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -236,6 +254,7 @@ module GwfWelInputModule
     'TS_FILERECORD', & ! fortran variable
     'RECORD TS6 FILEIN TS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -253,6 +272,7 @@ module GwfWelInputModule
     'TS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'head keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -270,6 +290,7 @@ module GwfWelInputModule
     'FILEIN', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'file keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -287,6 +308,7 @@ module GwfWelInputModule
     'TS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'file name of time series information', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -304,6 +326,7 @@ module GwfWelInputModule
     'OBS_FILERECORD', & ! fortran variable
     'RECORD OBS6 FILEIN OBS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -321,6 +344,7 @@ module GwfWelInputModule
     'OBS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'obs keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -338,6 +362,7 @@ module GwfWelInputModule
     'OBS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'obs6 input filename', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -355,6 +380,7 @@ module GwfWelInputModule
     'MOVER', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -372,6 +398,7 @@ module GwfWelInputModule
     'MAXBOUND', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'maximum number of wells', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -389,6 +416,7 @@ module GwfWelInputModule
     'CELLID', & ! fortran variable
     'INTEGER1D', & ! type
     'NCELLDIM', & ! shape
+    'cell identifier', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -406,6 +434,7 @@ module GwfWelInputModule
     'Q', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'well rate', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -423,6 +452,7 @@ module GwfWelInputModule
     'AUXVAR', & ! fortran variable
     'DOUBLE1D', & ! type
     'NAUX', & ! shape
+    'auxiliary variables', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -440,6 +470,7 @@ module GwfWelInputModule
     'BOUNDNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'well name', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -486,6 +517,7 @@ module GwfWelInputModule
     'SPD', & ! fortran variable
     'RECARRAY CELLID Q AUX BOUNDNAME', & ! type
     'MAXBOUND', & ! shape
+    '', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

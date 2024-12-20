@@ -29,22 +29,14 @@ module ListsModule
 
 contains
 
+  !< @brief deallocate
   subroutine lists_da()
-! ******************************************************************************
-! Deallocate the lists
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-! ------------------------------------------------------------------------------
     !
     call basemodellist%Clear()
     call basesolutionlist%Clear()
     call solutiongrouplist%Clear()
     call baseexchangelist%Clear()
     call baseconnectionlist%Clear()
-
-    return
   end subroutine lists_da
 
 end module ListsModule

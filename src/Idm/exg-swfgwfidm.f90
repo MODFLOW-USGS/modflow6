@@ -9,10 +9,12 @@ module ExgSwfgwfInputModule
   public exg_swfgwf_block_definitions
   public ExgSwfgwfParamFoundType
   public exg_swfgwf_multi_package
+  public exg_swfgwf_subpackages
 
   type ExgSwfgwfParamFoundType
     logical :: ipr_input = .false.
     logical :: ipr_flow = .false.
+    logical :: ifixedcond = .false.
     logical :: obs_filerecord = .false.
     logical :: obs6 = .false.
     logical :: filein = .false.
@@ -20,10 +22,17 @@ module ExgSwfgwfInputModule
     logical :: nexg = .false.
     logical :: cellidm1 = .false.
     logical :: cellidm2 = .false.
-    logical :: cond = .false.
+    logical :: bedleak = .false.
+    logical :: cfact = .false.
   end type ExgSwfgwfParamFoundType
 
   logical :: exg_swfgwf_multi_package = .true.
+
+  character(len=16), parameter :: &
+    exg_swfgwf_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     exgswfgwf_ipr_input = InputParamDefinitionType &
@@ -35,6 +44,7 @@ module ExgSwfgwfInputModule
     'IPR_INPUT', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to print input to list file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -52,6 +62,25 @@ module ExgSwfgwfInputModule
     'IPR_FLOW', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to print swfgwf flows to list file', & ! longname
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    exgswfgwf_ifixedcond = InputParamDefinitionType &
+    ( &
+    'EXG', & ! component
+    'SWFGWF', & ! subcomponent
+    'OPTIONS', & ! block
+    'FIXED_CONDUCTANCE', & ! tag name
+    'IFIXEDCOND', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'keyword to indicate conductance is fixed', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -69,6 +98,7 @@ module ExgSwfgwfInputModule
     'OBS_FILERECORD', & ! fortran variable
     'RECORD OBS6 FILEIN OBS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -86,6 +116,7 @@ module ExgSwfgwfInputModule
     'OBS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'obs keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -103,6 +134,7 @@ module ExgSwfgwfInputModule
     'FILEIN', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'file keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -120,6 +152,7 @@ module ExgSwfgwfInputModule
     'OBS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'obs6 input filename', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -137,6 +170,7 @@ module ExgSwfgwfInputModule
     'NEXG', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of exchanges', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -154,6 +188,7 @@ module ExgSwfgwfInputModule
     'CELLIDM1', & ! fortran variable
     'INTEGER1D', & ! type
     'NCELLDIM', & ! shape
+    'cellid of cell in surface water model', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -171,6 +206,7 @@ module ExgSwfgwfInputModule
     'CELLIDM2', & ! fortran variable
     'INTEGER1D', & ! type
     'NCELLDIM', & ! shape
+    'cellid of cell in groundwater model', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -179,15 +215,34 @@ module ExgSwfgwfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    exgswfgwf_cond = InputParamDefinitionType &
+    exgswfgwf_bedleak = InputParamDefinitionType &
     ( &
     'EXG', & ! component
     'SWFGWF', & ! subcomponent
     'EXCHANGEDATA', & ! block
-    'COND', & ! tag name
-    'COND', & ! fortran variable
+    'BEDLEAK', & ! tag name
+    'BEDLEAK', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'bed leakance', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    exgswfgwf_cfact = InputParamDefinitionType &
+    ( &
+    'EXG', & ! component
+    'SWFGWF', & ! subcomponent
+    'EXCHANGEDATA', & ! block
+    'CFACT', & ! tag name
+    'CFACT', & ! fortran variable
+    'DOUBLE', & ! type
+    '', & ! shape
+    'factor used for conductance calculation', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -200,6 +255,7 @@ module ExgSwfgwfInputModule
     [ &
     exgswfgwf_ipr_input, &
     exgswfgwf_ipr_flow, &
+    exgswfgwf_ifixedcond, &
     exgswfgwf_obs_filerecord, &
     exgswfgwf_obs6, &
     exgswfgwf_filein, &
@@ -207,7 +263,8 @@ module ExgSwfgwfInputModule
     exgswfgwf_nexg, &
     exgswfgwf_cellidm1, &
     exgswfgwf_cellidm2, &
-    exgswfgwf_cond &
+    exgswfgwf_bedleak, &
+    exgswfgwf_cfact &
     ]
 
   type(InputParamDefinitionType), parameter :: &
@@ -218,8 +275,9 @@ module ExgSwfgwfInputModule
     'EXCHANGEDATA', & ! block
     'EXCHANGEDATA', & ! tag name
     'EXCHANGEDATA', & ! fortran variable
-    'RECARRAY CELLIDM1 CELLIDM2 COND', & ! type
+    'RECARRAY CELLIDM1 CELLIDM2 BEDLEAK CFACT', & ! type
     'NEXG', & ! shape
+    'exchange data', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

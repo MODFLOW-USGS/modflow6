@@ -14,7 +14,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["no-vsc-sfr01", "vsc-sfr01"]
@@ -126,7 +125,7 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
     sim.register_ims_package(ims, [gwfname])
 
@@ -167,7 +166,7 @@ def build_models(idx, test):
 
     # Instantiate viscosity package
     if viscosity_on[idx]:
-        vsc_filerecord = "{}.vsc.bin".format(gwfname)
+        vsc_filerecord = f"{gwfname}.vsc.bin"
         vsc_pd = [(0, 0.0, 20.0, gwtname, "TEMPERATURE")]
         flopy.mf6.ModflowGwfvsc(
             gwf,
@@ -180,7 +179,7 @@ def build_models(idx, test):
             nviscspecies=len(vsc_pd),
             packagedata=vsc_pd,
             pname="vsc",
-            filename="{}.vsc".format(gwfname),
+            filename=f"{gwfname}.vsc",
         )
 
     # Instantiate output control package
@@ -214,7 +213,7 @@ def build_models(idx, test):
         auxiliary=["TEMPERATURE"],
         aux=aux,
         pname="RCHA-1",
-        filename="{}.rcha".format(gwfname),
+        filename=f"{gwfname}.rcha",
     )
 
     # Instantiate evapotranspiration package
@@ -228,7 +227,7 @@ def build_models(idx, test):
         for j in np.arange(ncol):
             evtr = evtr_hi - (evtr_hi - evtr_lo) / ncol * j
             extdp = extdp_hi - (extdp_hi - extdp_lo) / ncol * j
-            #                 cellid,   surface, rate, depth, [pxdp], [petm], [petm0], [aux]
+            #       cellid,   surface, rate, depth, [pxdp], [petm], [petm0], [aux]
             evtspd.append([(0, i, j), top[i, j], evtr, extdp, 1.0, 0.0])
     surf_rate_specified = True
     flopy.mf6.ModflowGwfevt(
@@ -240,7 +239,7 @@ def build_models(idx, test):
         stress_period_data=evtspd,
         auxiliary="TEMPERATURE",
         pname="EVT-1",
-        filename="{}.evt".format(gwfname),
+        filename=f"{gwfname}.evt",
     )
 
     # Instantiate streamflow routing package
@@ -318,7 +317,7 @@ def build_models(idx, test):
         connectiondata=connectiondata,
         perioddata=sfr_perioddata,
         pname="SFR-1",
-        filename="{}.sfr".format(gwfname),
+        filename=f"{gwfname}.sfr",
     )
 
     # Setup the GWT model for simulating heat transport
@@ -339,7 +338,7 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwtname),
+        filename=f"{gwtname}.ims",
     )
     sim.register_ims_package(imsgwt, [gwtname])
 
@@ -364,7 +363,7 @@ def build_models(idx, test):
         bulk_density=rhob,
         distcoef=K_d,
         pname="MST-1",
-        filename="{}.mst".format(gwtname),
+        filename=f"{gwtname}.mst",
     )
 
     # Instantiate Transport Initial Conditions package
@@ -405,16 +404,16 @@ def build_models(idx, test):
         flow_package_auxiliary_name="TEMPERATURE",
         flow_package_name="SFR-1",
         pname="SFT-1",
-        filename="{}.sft".format(gwtname),
+        filename=f"{gwtname}.sft",
     )
 
     # Instantiate Output Control package for transport
     flopy.mf6.ModflowGwtoc(
         gwt,
-        concentration_filerecord="{}.ucn".format(gwtname),
+        concentration_filerecord=f"{gwtname}.ucn",
         saverecord=[("CONCENTRATION", "ALL")],
         printrecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
-        filename="{}.oc".format(gwtname),
+        filename=f"{gwtname}.oc",
     )
 
     # Instantiate Gwf-Gwt Exchange package
@@ -423,7 +422,7 @@ def build_models(idx, test):
         exgtype="GWF6-GWT6",
         exgmnamea=gwfname,
         exgmnameb=gwtname,
-        filename="{}.gwfgwt".format(gwtname),
+        filename=f"{gwtname}.gwfgwt",
     )
 
     return sim, None
@@ -514,9 +513,7 @@ def check_output(idx, test):
             )
 
             # lower reaches
-            assert abs(stored_ans_dn[-(i + 1)]) < abs(
-                with_vsc_bud_last[-(i + 1), 2]
-            ), (
+            assert abs(stored_ans_dn[-(i + 1)]) < abs(with_vsc_bud_last[-(i + 1), 2]), (
                 "GW/SW not as expected in lower reaches of viscosity test "
                 "problem that uses SFR.  This test activates the VSC package that "
                 "should elicit a known relative change in the GW/SW exchange"

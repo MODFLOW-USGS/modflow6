@@ -18,7 +18,7 @@ module TspSsmModule
   use TspFmiModule, only: TspFmiType
   use GweInputDataModule, only: GweInputDataType
   use TableModule, only: TableType, table_cr
-  use GwtSpcModule, only: GwtSpcType
+  use TspSpcModule, only: TspSpcType
   use MatrixBaseModule
 
   implicit none
@@ -38,12 +38,12 @@ module TspSsmModule
 
     integer(I4B), pointer :: nbound !< total number of flow boundaries in this time step
     integer(I4B), dimension(:), pointer, contiguous :: isrctype => null() !< source type 0 is unspecified, 1 is aux, 2 is auxmixed, 3 is ssmi, 4 is ssmimixed
-    integer(I4B), dimension(:), pointer, contiguous :: iauxpak => null() !< aux col for concentration
+    integer(I4B), dimension(:), pointer, contiguous :: iauxpak => null() !< aux col for concentration/temperature
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
     real(DP), dimension(:), pointer, contiguous :: cnew => null() !< pointer to gwt%x
     type(TspFmiType), pointer :: fmi => null() !< pointer to fmi object
     type(TableType), pointer :: outputtab => null() !< output table object
-    type(GwtSpcType), dimension(:), pointer :: ssmivec => null() !< array of stress package concentration objects
+    type(TspSpcType), dimension(:), pointer :: ssmivec => null() !< array of stress package concentration or temperature objects
     real(DP), pointer :: eqnsclfac => null() !< governing equation scale factor; =1. for solute; =rhow*cpw for energy
     character(len=LENVARNAME) :: depvartype = ''
 
@@ -111,9 +111,6 @@ contains
     ! -- Store pointer to labels associated with the current model so that the
     !    package has access to the corresponding dependent variable type
     ssmobj%depvartype = depvartype
-    !
-    ! -- Return
-    return
   end subroutine ssm_cr
 
   !> @ brief Define SSM Package
@@ -127,9 +124,6 @@ contains
     use MemoryManagerModule, only: mem_setptr
     ! -- dummy
     class(TspSsmType) :: this !< TspSsmType object
-    !
-    ! -- Return
-    return
   end subroutine ssm_df
 
   !> @ brief Allocate and read SSM Package
@@ -181,24 +175,21 @@ contains
     !
     ! -- setup the output table
     call this%pak_setup_outputtab()
-    !
-    ! -- Return
-    return
   end subroutine ssm_ar
 
   !> @ brief Read and prepare this SSM Package
   !!
   !! This routine is called from gwt_rp().  It is called at the beginning of
   !! each stress period.  If any SPC input files are used to provide source
-  !! and sink concentrations, then period blocks for the current stress period
-  !! are read.
+  !! and sink concentrations (or temperatures), then period blocks for the
+  !! current stress period are read.
   !<
   subroutine ssm_rp(this)
     ! -- dummy
     class(TspSsmType) :: this !< TspSsmType object
     ! -- local
     integer(I4B) :: ip
-    type(GwtSpcType), pointer :: ssmiptr
+    type(TspSpcType), pointer :: ssmiptr
     ! -- formats
     !
     ! -- Call the rp method on any ssm input files
@@ -209,9 +200,6 @@ contains
         call ssmiptr%spc_rp()
       end if
     end do
-    !
-    ! -- Return
-    return
   end subroutine ssm_rp
 
   !> @ brief Advance the SSM Package
@@ -219,15 +207,16 @@ contains
   !! This routine is called from gwt_ad().  It is called at the beginning of
   !! each time step.  The total number of flow boundaries is counted and stored
   !! in this%nbound.  Also, if any SPC input files are used to provide source
-  !! and sink concentrations and time series are referenced in those files,
-  !! then ssm concenrations must be interpolated for the time step.
+  !! and sink concentrations (or temperatures) and time series are referenced
+  !! in those files, then ssm concenrations must be interpolated for the time
+  !! step.
   !<
   subroutine ssm_ad(this)
     ! -- dummy
     class(TspSsmType) :: this !< TspSsmType object
     ! -- local
     integer(I4B) :: ip
-    type(GwtSpcType), pointer :: ssmiptr
+    type(TspSpcType), pointer :: ssmiptr
     integer(I4B) :: i
     integer(I4B) :: node
     !
@@ -255,9 +244,6 @@ contains
                             this%fmi%gwfpackages(ip)%budtxt)
       end if
     end do
-    !
-    ! -- Return
-    return
   end subroutine ssm_ad
 
   !> @ brief Calculate the SSM mass flow rate and hcof and rhs values
@@ -276,7 +262,7 @@ contains
     real(DP), intent(out), optional :: rrate !< calculated mass flow rate
     real(DP), intent(out), optional :: rhsval !< calculated rhs value
     real(DP), intent(out), optional :: hcofval !< calculated hcof value
-    real(DP), intent(out), optional :: cssm !< calculated source concentration depending on flow direction
+    real(DP), intent(out), optional :: cssm !< calculated source concentration/temperature depending on flow direction
     real(DP), intent(out), optional :: qssm !< water flow rate into model cell from boundary package
     ! -- local
     logical(LGP) :: lauxmixed
@@ -307,10 +293,10 @@ contains
       !    of hcof, rhs, and rate
       if (.not. lauxmixed) then
         !
-        ! -- If qbnd is positive, then concentration represents the inflow
-        !    concentration.  If qbnd is negative, then the outflow concentration
-        !    (or temperature) is set equal to the simulated cell's concentration
-        !    (or temperature).
+        ! -- If qbnd is positive, then concentration (or temperature) represents
+        !    the inflow concentration (or temperature).  If qbnd is negative,
+        !    then the outflow concentration (or temperature) is set equal to the
+        !    simulated cell's concentration (or temperature).
         if (qbnd >= DZERO) then
           omega = DZERO ! rhs
         else
@@ -323,10 +309,11 @@ contains
       else
         !
         ! -- lauxmixed value indicates that this is a mixed sink type where
-        !    the concentration value represents the injected concentration (or
-        !    temperature) if qbnd is positive. If qbnd is negative, then the
-        !    withdrawn water is equal to the minimum of the aux concentration
-        !    (or temperature) and the cell concentration (or temperature).
+        !    the concentration (or temperature) value represents the injected
+        !    concentration (or temperature) if qbnd is positive. If qbnd is
+        !    negative, then the withdrawn water is equal to the minimum of the
+        !    aux concentration (or temperature) and the cell concentration
+        !    (or temperature).
         if (qbnd >= DZERO) then
           omega = DZERO ! rhs (ctmp is aux value)
         else
@@ -355,9 +342,6 @@ contains
     if (present(rrate)) rrate = hcoftmp * ctmp - rhstmp
     if (present(cssm)) cssm = ctmp
     if (present(qssm)) qssm = qbnd
-    !
-    ! -- Return
-    return
   end subroutine ssm_term
 
   !> @ brief Provide bound concentration (or temperature) and mixed flag
@@ -376,7 +360,7 @@ contains
     integer(I4B), intent(in) :: ipackage !< package number
     integer(I4B), intent(in) :: ientry !< bound number
     integer(I4B), intent(in) :: nbound_flow !< size of flow package bound list
-    real(DP), intent(out) :: conc !< user-specified concentration for this bound
+    real(DP), intent(out) :: conc !< user-specified concentration/temperature for this bound
     logical(LGP), intent(out) :: lauxmixed !< user-specified flag for marking this as a mixed boundary
     ! -- local
     integer(I4B) :: isrctype
@@ -395,9 +379,6 @@ contains
       conc = this%ssmivec(ipackage)%get_value(ientry, nbound_flow)
       if (isrctype == 4) lauxmixed = .true.
     end select
-    !
-    ! -- Return
-    return
   end subroutine get_ssm_conc
 
   !> @ brief Fill coefficients
@@ -439,9 +420,6 @@ contains
       end do
       !
     end do
-    !
-    ! -- Return
-    return
   end subroutine ssm_fc
 
   !> @ brief Calculate flow
@@ -478,9 +456,6 @@ contains
       end do
       !
     end do
-    !
-    ! -- Return
-    return
   end subroutine ssm_cq
 
   !> @ brief Calculate the global SSM budget terms
@@ -534,9 +509,6 @@ contains
                                  this%fmi%gwfpackages(ip)%budtxt, &
                                  isuppress_output, rowlabel=rowlabel)
     end do
-    !
-    ! -- Return
-    return
   end subroutine ssm_bd
 
   !> @ brief Output flows
@@ -565,7 +537,7 @@ contains
     real(DP) :: qssm
     real(DP) :: cssm
     integer(I4B) :: naux
-    real(DP), dimension(0, 0) :: auxvar
+    real(DP), dimension(0) :: auxrow
     character(len=LENAUXNAME), dimension(0) :: auxname
     ! -- for observations
     character(len=LENBOUNDNAME) :: bname
@@ -573,7 +545,8 @@ contains
     character(len=*), parameter :: fmttkk = &
       &"(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
     !
-    ! -- set maxrows
+    ! -- initialize
+    naux = 0
     maxrows = 0
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
       call this%outputtab%set_kstpkper(kstp, kper)
@@ -608,7 +581,6 @@ contains
     !
     ! -- If cell-by-cell flows will be saved as a list, write header.
     if (ibinun /= 0) then
-      naux = 0
       call this%dis%record_srcdst_list_header(text, this%name_model, &
                                               this%name_model, this%name_model, &
                                               this%packName, naux, auxname, &
@@ -652,7 +624,7 @@ contains
           if (ibinun /= 0) then
             n2 = i
             call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate, &
-                                                naux, auxvar(:, i), &
+                                                naux, auxrow, &
                                                 olconv2=.FALSE.)
           end if
           !
@@ -665,9 +637,6 @@ contains
         write (this%iout, '(1x)')
       end if
     end if
-    !
-    ! -- Return
-    return
   end subroutine ssm_ot_flow
 
   !> @ brief Deallocate
@@ -681,7 +650,7 @@ contains
     class(TspSsmType) :: this !< TspSsmType object
     ! -- local
     integer(I4B) :: ip
-    type(GwtSpcType), pointer :: ssmiptr
+    type(TspSpcType), pointer :: ssmiptr
     !
     ! -- Deallocate the ssmi objects if package was active
     if (this%inunit > 0) then
@@ -714,9 +683,6 @@ contains
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
-    !
-    ! -- Return
-    return
   end subroutine ssm_da
 
   !> @ brief Allocate scalars
@@ -737,9 +703,6 @@ contains
     !
     ! -- Initialize
     this%nbound = 0
-    !
-    ! -- Return
-    return
   end subroutine allocate_scalars
 
   !> @ brief Allocate arrays
@@ -768,9 +731,6 @@ contains
     !
     ! -- Allocate the ssmivec array
     allocate (this%ssmivec(nflowpack))
-    !
-    ! -- Return
-    return
   end subroutine allocate_arrays
 
   !> @ brief Read package options
@@ -818,9 +778,6 @@ contains
       end do
       write (this%iout, '(1x,a)') 'END OF SSM OPTIONS'
     end if
-    !
-    ! -- Return
-    return
   end subroutine read_options
 
   !> @ brief Read package data
@@ -836,9 +793,6 @@ contains
     !
     ! -- read and process optional FILEINPUT block
     call this%read_sources_fileinput()
-    !
-    ! -- Return
-    return
   end subroutine read_data
 
   !> @ brief Read SOURCES block
@@ -936,9 +890,6 @@ contains
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
     end if
-    !
-    ! -- Return
-    return
   end subroutine read_sources_aux
 
   !> @ brief Read FILEINPUT block
@@ -1051,9 +1002,6 @@ contains
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
     end if
-    !
-    ! -- Return
-    return
   end subroutine read_sources_fileinput
 
   !> @ brief Set iauxpak array value for package ip
@@ -1095,9 +1043,6 @@ contains
     this%iauxpak(ip) = iaux
     write (this%iout, '(4x, a, i0, a, a)') 'USING AUX COLUMN ', &
       iaux, ' IN PACKAGE ', trim(packname)
-    !
-    ! -- Return
-    return
   end subroutine set_iauxpak
 
   !> @ brief Set ssmivec array value for package ip
@@ -1115,7 +1060,7 @@ contains
     character(len=*), intent(in) :: packname !< name of package
     ! -- local
     character(len=LINELENGTH) :: filename
-    type(GwtSpcType), pointer :: ssmiptr
+    type(TspSpcType), pointer :: ssmiptr
     integer(I4B) :: inunit
     !
     ! -- read file name
@@ -1126,14 +1071,11 @@ contains
     ! -- Create the SPC file object
     ssmiptr => this%ssmivec(ip)
     call ssmiptr%initialize(this%dis, ip, inunit, this%iout, this%name_model, &
-                            trim(packname))
+                            trim(packname), this%depvartype)
     !
     write (this%iout, '(4x, a, a, a, a, a)') 'USING SPC INPUT FILE ', &
       trim(filename), ' TO SET ', trim(this%depvartype), &
       'S FOR PACKAGE ', trim(packname)
-    !
-    ! -- Return
-    return
   end subroutine set_ssmivec
 
   !> @ brief Setup the output table
@@ -1179,9 +1121,6 @@ contains
       !  call this%outputtab%initialize_column(text, 20, alignment=TABLEFT)
       !end if
     end if
-    !
-    ! -- Return
-    return
   end subroutine pak_setup_outputtab
 
 end module TspSsmModule

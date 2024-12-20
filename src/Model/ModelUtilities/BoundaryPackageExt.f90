@@ -123,9 +123,6 @@ contains
       call this%obs%obs_df(this%iout, this%packName, this%filtyp, this%dis)
       call this%bnd_df_obs()
     end if
-    !
-    ! -- return
-    return
   end subroutine bndext_df
 
   subroutine bndext_rp(this)
@@ -154,9 +151,6 @@ contains
         this%boundname(n) = this%boundname_cst(n)
       end do
     end if
-    !
-    ! -- return
-    return
   end subroutine bndext_rp
 
   !> @ brief Deallocate package memory
@@ -181,9 +175,6 @@ contains
     !
     ! -- deallocate
     call this%BndType%bnd_da()
-    !
-    ! -- return
-    return
   end subroutine bndext_da
 
   !> @ brief Allocate package scalars
@@ -212,9 +203,6 @@ contains
     !
     ! -- set pointers to period input data scalars
     call mem_setptr(this%iper, 'IPER', input_mempath)
-    !
-    ! -- return
-    return
   end subroutine bndext_allocate_scalars
 
   !> @ brief Allocate package arrays
@@ -256,9 +244,6 @@ contains
       call mem_checkin(this%auxvar, 'AUXVAR_IDM', this%memoryPath, &
                        'AUXVAR', this%input_mempath)
     end if
-    !
-    ! -- return
-    return
   end subroutine bndext_allocate_arrays
 
   !> @ brief Source package options from input context
@@ -356,9 +341,6 @@ contains
     if (count_errors() > 0) then
       call store_error_filename(this%input_fname)
     end if
-    !
-    ! -- return
-    return
   end subroutine source_options
 
   !> @ brief Log package options
@@ -416,9 +398,6 @@ contains
     ! -- close logging block
     write (this%iout, '(1x,a)') &
       'END OF '//trim(adjustl(this%text))//' BASE OPTIONS'
-    !
-    ! -- return
-    return
   end subroutine log_options
 
   !> @ brief Source package dimensions from input context
@@ -454,9 +433,6 @@ contains
     ! -- Call define_listlabel to construct the list label that is written
     !    when PRINT_INPUT option is used.
     call this%define_listlabel()
-    !
-    ! -- return
-    return
   end subroutine source_dimensions
 
   !> @ brief Update package nodelist
@@ -520,9 +496,6 @@ contains
       call store_error(errmsg)
       call store_error_filename(this%input_fname)
     end if
-    !
-    ! -- return
-    return
   end subroutine nodelist_update
 
   !> @ brief Check for valid cellid
@@ -580,9 +553,6 @@ contains
       !
     case default
     end select
-    !
-    ! -- return
-    return
   end subroutine check_cellid
 
   !> @ brief Log package list input
@@ -612,7 +582,6 @@ contains
     type(TableType), pointer :: inputtab => null()
     ! -- formats
     character(len=LINELENGTH) :: fmtlstbn
-! ------------------------------------------------------------------------------
     !
     ! -- Determine sizes
     ldim = this%ncolbnd
@@ -746,9 +715,6 @@ contains
     deallocate (inputtab)
     nullify (inputtab)
     deallocate (words)
-    !
-    ! -- return
-    return
   end subroutine write_list
 
   !> @ brief Return a bound value
@@ -771,9 +737,6 @@ contains
     ! -- override this return value by redefining this
     !    routine in the derived package.
     bndval = DNODATA
-    !
-    ! -- return
-    return
   end function bound_value
 
 end module BndExtModule

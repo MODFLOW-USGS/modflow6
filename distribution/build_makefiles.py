@@ -3,20 +3,19 @@ import sys
 from os import environ
 from pathlib import Path
 
-import pymake
 import pytest
 from flaky import flaky
 from modflow_devtools.markers import no_parallel, requires_exe
 from modflow_devtools.misc import set_dir
 
+import pymake
 from utils import get_modified_time, get_project_root_path
 
-_project_root_path = get_project_root_path()
-_is_windows = sys.platform.lower() == "win32"
-_ext = ".exe" if _is_windows else ""
-
+PROJ_ROOT_PATH = get_project_root_path()
+IS_WINDOWS = sys.platform.lower() == "win32"
+EXE_EXT = ".exe" if IS_WINDOWS else ""
 FC = environ.get("FC")
-_fc_reason = "make must be used with gfortran"
+FC_REASON = "make must be used with gfortran"
 
 
 def run_makefile(target):
@@ -43,13 +42,13 @@ def run_makefile(target):
 
 def build_mf6_makefile():
     target = "mf6"
-    excludefiles = str(_project_root_path / "pymake" / "excludefiles.txt")
+    excludefiles = str(PROJ_ROOT_PATH / "pymake" / "excludefiles.txt")
     print(f"Creating makefile for {target}")
-    with set_dir(_project_root_path / "make"):
+    with set_dir(PROJ_ROOT_PATH / "make"):
         pymake.main(
-            srcdir=str(_project_root_path / "src"),
+            srcdir=str(PROJ_ROOT_PATH / "src"),
             target=target,
-            appdir=str(_project_root_path / "bin"),
+            appdir=str(PROJ_ROOT_PATH / "bin"),
             include_subdirs=True,
             excludefiles=excludefiles,
             inplace=True,
@@ -61,13 +60,13 @@ def build_mf6_makefile():
 
 def build_zbud6_makefile():
     target = "zbud6"
-    util_path = _project_root_path / "utils" / "zonebudget"
+    util_path = PROJ_ROOT_PATH / "utils" / "zonebudget"
     print(f"Creating makefile for {target}")
     with set_dir(util_path / "make"):
         returncode = pymake.main(
             srcdir=str(util_path / "src"),
             target=target,
-            appdir=str(_project_root_path / "bin"),
+            appdir=str(PROJ_ROOT_PATH / "bin"),
             extrafiles=str(util_path / "pymake" / "extrafiles.txt"),
             inplace=True,
             include_subdirs=True,
@@ -81,7 +80,7 @@ def build_zbud6_makefile():
 
 def build_mf5to6_makefile():
     target = "mf5to6"
-    util_path = _project_root_path / "utils" / "mf5to6"
+    util_path = PROJ_ROOT_PATH / "utils" / "mf5to6"
     print(f"Creating makefile for {target}")
     with set_dir(util_path / "make"):
         extrafiles = str(util_path / "pymake" / "extrafiles.txt")
@@ -90,7 +89,7 @@ def build_mf5to6_makefile():
         returncode = pymake.main(
             srcdir=str(util_path / "src"),
             target=target,
-            appdir=str(_project_root_path / "bin"),
+            appdir=str(PROJ_ROOT_PATH / "bin"),
             include_subdirs=True,
             extrafiles=extrafiles,
             inplace=True,
@@ -105,11 +104,11 @@ def build_mf5to6_makefile():
 
 @flaky
 @no_parallel
-@pytest.mark.skipif(FC == "ifort", reason=_fc_reason)
+@pytest.mark.skipif(FC == "ifort", reason=FC_REASON)
 def test_build_mf6_makefile():
     makefile_paths = [
-        _project_root_path / "make" / "makefile",
-        _project_root_path / "make" / "makedefaults",
+        PROJ_ROOT_PATH / "make" / "makefile",
+        PROJ_ROOT_PATH / "make" / "makedefaults",
     ]
     makefile_mtimes = [p.stat().st_mtime for p in makefile_paths]
 
@@ -126,9 +125,9 @@ def test_build_mf6_makefile():
 
 @flaky
 @no_parallel
-@pytest.mark.skipif(FC == "ifort", reason=_fc_reason)
+@pytest.mark.skipif(FC == "ifort", reason=FC_REASON)
 def test_build_zbud6_makefile():
-    util_path = _project_root_path / "utils" / "zonebudget"
+    util_path = PROJ_ROOT_PATH / "utils" / "zonebudget"
     makefile_paths = [
         util_path / "make" / "makefile",
         util_path / "make" / "makedefaults",
@@ -148,9 +147,9 @@ def test_build_zbud6_makefile():
 
 @flaky
 @no_parallel
-@pytest.mark.skipif(FC == "ifort", reason=_fc_reason)
+@pytest.mark.skipif(FC == "ifort", reason=FC_REASON)
 def test_build_mf5to6_makefile():
-    util_path = _project_root_path / "utils" / "mf5to6"
+    util_path = PROJ_ROOT_PATH / "utils" / "mf5to6"
     makefile_paths = [
         util_path / "make" / "makefile",
         util_path / "make" / "makedefaults",
@@ -171,13 +170,13 @@ def test_build_mf5to6_makefile():
 @flaky
 @no_parallel
 @requires_exe("make")
-@pytest.mark.skipif(FC == "ifort", reason=_fc_reason)
+@pytest.mark.skipif(FC == "ifort", reason=FC_REASON)
 def test_build_mf6_with_make():
-    target = _project_root_path / "bin" / f"mf6{_ext}"
+    target = PROJ_ROOT_PATH / "bin" / f"mf6{EXE_EXT}"
     mtime = get_modified_time(target)
 
     try:
-        with set_dir(_project_root_path / "make"):
+        with set_dir(PROJ_ROOT_PATH / "make"):
             run_makefile(target)
 
         # check executable was modified
@@ -191,10 +190,10 @@ def test_build_mf6_with_make():
 @flaky
 @no_parallel
 @requires_exe("make")
-@pytest.mark.skipif(FC == "ifort", reason=_fc_reason)
+@pytest.mark.skipif(FC == "ifort", reason=FC_REASON)
 def test_build_zbud6_with_make():
-    target = _project_root_path / "bin" / f"zbud6{_ext}"
-    util_path = _project_root_path / "utils" / "zonebudget"
+    target = PROJ_ROOT_PATH / "bin" / f"zbud6{EXE_EXT}"
+    util_path = PROJ_ROOT_PATH / "utils" / "zonebudget"
     mtime = get_modified_time(target)
 
     try:
@@ -211,10 +210,10 @@ def test_build_zbud6_with_make():
 @flaky
 @no_parallel
 @requires_exe("make")
-@pytest.mark.skipif(FC == "ifort", reason=_fc_reason)
+@pytest.mark.skipif(FC == "ifort", reason=FC_REASON)
 def test_build_mf5to6_with_make():
-    target = _project_root_path / "bin" / f"mf5to6{_ext}"
-    util_path = _project_root_path / "utils" / "mf5to6"
+    target = PROJ_ROOT_PATH / "bin" / f"mf5to6{EXE_EXT}"
+    util_path = PROJ_ROOT_PATH / "utils" / "mf5to6"
     mtime = get_modified_time(target)
 
     try:

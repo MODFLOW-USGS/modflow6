@@ -3,36 +3,36 @@ Test the interface model approach for coupling two DIS
 models where one is translated and rotated in space:
 
      'model A'              'model B'
-                               06     
-                               07                     
-                      exg      08                     
+                               06
+                               07
+                      exg      08
                                09
     01 02 03 04 05             10
-   
- where exg couples 05 with 06 and has XT3D enabled, and model B 
+
+ where exg couples 05 with 06 and has XT3D enabled, and model B
  is translated and rotated
- 
+
  The physical setup therefore is
 
       'model A'              'modelB'
    01 02 03 04 05   exg   06 07 08 09 10
-   
+
  where the interface model grid (2x) is
- 
+
    04 05 06 07
 
-                 
+
  and x -->
 
 """
+
 import os
 
 import flopy
 import numpy as np
 import pytest
-from modflowapi import ModflowApi
-
 from framework import TestFramework
+from modflow_devtools.markers import requires_pkg
 
 cases = ["libgwf_ifmod03"]
 
@@ -86,9 +86,7 @@ def get_model(dir, name):
         memory_print_option="all",
     )
 
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     ims = flopy.mf6.ModflowIms(
         sim,
@@ -180,16 +178,7 @@ def get_model(dir, name):
     angldegx = 0.0
     cdist = delr
     gwfgwf_data = [
-        [
-            (0, 0, ncol - 1),
-            (0, 0, 0),
-            1,
-            delr / 2.0,
-            delr / 2.0,
-            delc,
-            angldegx,
-            cdist,
-        ]
+        [(0, 0, ncol - 1), (0, 0, 0), 1, delr / 2.0, delr / 2.0, delc, angldegx, cdist]
     ]
     exg1 = flopy.mf6.ModflowGwfgwf(
         sim,
@@ -220,6 +209,8 @@ def build_models(idx, test):
 
 
 def api_func(exe, idx, model_ws=None):
+    from modflowapi import ModflowApi
+
     if model_ws is None:
         model_ws = "."
 
@@ -228,7 +219,7 @@ def api_func(exe, idx, model_ws=None):
     try:
         mf6 = ModflowApi(exe, working_directory=model_ws)
     except Exception as e:
-        print("Failed to load " + exe)
+        print("Failed to load " + str(exe))
         print("with message: " + str(e))
         return False, open(output_file_path).readlines()
 
@@ -287,6 +278,7 @@ def check_interface_models(mf6):
     assert abs(ymax - ymin) < 1e-6
 
 
+@requires_pkg("modflowapi")
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

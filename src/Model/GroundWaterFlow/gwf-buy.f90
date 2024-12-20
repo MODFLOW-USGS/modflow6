@@ -22,31 +22,31 @@ module GwfBuyModule
   public :: buy_cr
 
   type :: ConcentrationPointer
-    real(DP), dimension(:), pointer :: conc => null() ! pointer to concentration array
-    integer(I4B), dimension(:), pointer :: icbund => null() ! store pointer to gwt ibound array
+    real(DP), dimension(:), pointer :: conc => null() !< pointer to concentration array
+    integer(I4B), dimension(:), pointer :: icbund => null() !< store pointer to gwt ibound array
   end type ConcentrationPointer
 
   type, extends(NumericalPackageType) :: GwfBuyType
-    type(GwfNpfType), pointer :: npf => null() ! npf object
-    integer(I4B), pointer :: ioutdense => null() ! unit number for saving density
-    integer(I4B), pointer :: iform => null() ! formulation: 0 freshwater head, 1 hh rhs, 2 hydraulic head
-    integer(I4B), pointer :: ireadelev => null() ! if 1 then elev has been allocated and filled
-    integer(I4B), pointer :: ireadconcbuy => null() ! if 1 then dense has been read from this buy input file
-    integer(I4B), pointer :: iconcset => null() ! if 1 then conc is pointed to a gwt model%x
-    real(DP), pointer :: denseref => null() ! reference fluid density
-    real(DP), dimension(:), pointer, contiguous :: dense => null() ! density
-    real(DP), dimension(:), pointer, contiguous :: concbuy => null() ! concentration array if specified in buy package
-    real(DP), dimension(:), pointer, contiguous :: elev => null() ! cell center elevation (optional; if not specified, then use (top+bot)/2)
-    integer(I4B), dimension(:), pointer :: ibound => null() ! store pointer to ibound
+    type(GwfNpfType), pointer :: npf => null() !< npf object
+    integer(I4B), pointer :: ioutdense => null() !< unit number for saving density
+    integer(I4B), pointer :: iform => null() !< formulation: 0 freshwater head, 1 hh rhs, 2 hydraulic head
+    integer(I4B), pointer :: ireadelev => null() !< if 1 then elev has been allocated and filled
+    integer(I4B), pointer :: ireadconcbuy => null() !< if 1 then dense has been read from this buy input file
+    integer(I4B), pointer :: iconcset => null() !< if 1 then conc is pointed to a gwt model%x
+    real(DP), pointer :: denseref => null() !< reference fluid density
+    real(DP), dimension(:), pointer, contiguous :: dense => null() !< density
+    real(DP), dimension(:), pointer, contiguous :: concbuy => null() !< concentration array if specified in buy package
+    real(DP), dimension(:), pointer, contiguous :: elev => null() !< cell center elevation (optional; if not specified, then use (top+bot)/2)
+    integer(I4B), dimension(:), pointer :: ibound => null() !< store pointer to ibound
 
-    integer(I4B), pointer :: nrhospecies => null() ! number of species used in equation of state to calculate density
-    real(DP), dimension(:), pointer, contiguous :: drhodc => null() ! change in density with change in concentration
-    real(DP), dimension(:), pointer, contiguous :: crhoref => null() ! reference concentration used in equation of state
-    real(DP), dimension(:), pointer, contiguous :: ctemp => null() ! temporary array of size (nrhospec) to pass to calcdens
-    character(len=LENMODELNAME), dimension(:), allocatable :: cmodelname ! names of gwt models used in equation of state
-    character(len=LENAUXNAME), dimension(:), allocatable :: cauxspeciesname ! names of gwt models used in equation of state
+    integer(I4B), pointer :: nrhospecies => null() !< number of species used in equation of state to calculate density
+    real(DP), dimension(:), pointer, contiguous :: drhodc => null() !< change in density with change in concentration
+    real(DP), dimension(:), pointer, contiguous :: crhoref => null() !< reference concentration used in equation of state
+    real(DP), dimension(:), pointer, contiguous :: ctemp => null() !< temporary array of size (nrhospec) to pass to calcdens
+    character(len=LENMODELNAME), dimension(:), allocatable :: cmodelname !< names of gwt models used in equation of state
+    character(len=LENAUXNAME), dimension(:), allocatable :: cauxspeciesname !< names of gwt models used in equation of state
 
-    type(ConcentrationPointer), allocatable, dimension(:) :: modelconc ! concentration pointer for each transport model
+    type(ConcentrationPointer), allocatable, dimension(:) :: modelconc !< concentration pointer for each transport model
 
   contains
     procedure :: buy_df
@@ -95,9 +95,6 @@ contains
     do i = 1, nrhospec
       dense = dense + drhodc(i) * (conc(i) - crhoref(i))
     end do
-    !
-    ! -- Return
-    return
   end function calcdens
 
   !> @brief Create a new BUY object
@@ -124,9 +121,6 @@ contains
     !
     ! -- Initialize block parser
     call buyobj%parser%Initialize(buyobj%inunit, buyobj%iout)
-    !
-    ! -- Return
-    return
   end subroutine buy_cr
 
   !> @brief Read options and package data, or set from argument
@@ -174,9 +168,6 @@ contains
       ! set from input data instead
       call this%set_packagedata(buy_input)
     end if
-    !
-    ! -- Return
-    return
   end subroutine buy_df
 
   !> @brief Allocate and Read
@@ -200,9 +191,6 @@ contains
     !
     ! -- Calculate cell elevations
     call this%buy_calcelev()
-    !
-    ! -- Return
-    return
   end subroutine buy_ar
 
   !> @brief Buoyancy ar_bnd routine to activate density in packages
@@ -250,9 +238,6 @@ contains
       !
       ! -- nothing
     end select
-    !
-    ! -- Return
-    return
   end subroutine buy_ar_bnd
 
   !> @brief Check for new buy period data
@@ -284,9 +269,6 @@ contains
         call this%parser%StoreErrorUnit()
       end if
     end if
-    !
-    ! -- Return
-    return
   end subroutine buy_rp
 
   !> @brief Advance
@@ -297,9 +279,6 @@ contains
     !
     ! -- update density using the last concentration
     call this%buy_calcdens()
-    !
-    ! -- Return
-    return
   end subroutine buy_ad
 
   !> @brief Fill coefficients
@@ -315,9 +294,6 @@ contains
         call this%buy_calcelev()
       end if
     end if
-    !
-    ! -- Return
-    return
   end subroutine buy_cf
 
   !> @brief Fill coefficients
@@ -412,9 +388,6 @@ contains
     !
     ! -- deallocate
     deallocate (locconc)
-    !
-    ! -- Return
-    return
   end subroutine buy_cf_bnd
 
   !> @brief Return the density of the boundary package using one of several
@@ -456,9 +429,6 @@ contains
       ! -- neither of the above, so assign as denseref
       densebnd = denseref
     end if
-    !
-    ! -- Return
-    return
   end function get_bnd_density
 
   !> @brief Fill ghb coefficients
@@ -519,9 +489,6 @@ contains
         !
       end do
     end select
-    !
-    ! -- Return
-    return
   end subroutine buy_cf_ghb
 
   !> @brief Calculate density hcof and rhs terms for ghb conditions
@@ -568,9 +535,6 @@ contains
       ! -- this term goes on LHS for iform == 2
       rhsterm = rhsterm + DHALF * cond * t2 * hnode
     end if
-    !
-    ! -- Return
-    return
   end subroutine calc_ghb_hcof_rhs_terms
 
   !> @brief Fill riv coefficients
@@ -642,9 +606,6 @@ contains
         packobj%rhs(n) = packobj%rhs(n) - rhsterm
       end do
     end select
-    !
-    ! -- Return
-    return
   end subroutine buy_cf_riv
 
   !> @brief Fill drn coefficients
@@ -684,9 +645,6 @@ contains
         end if
       end do
     end select
-    !
-    ! -- Return
-    return
   end subroutine buy_cf_drn
 
   !> @brief Pass density information into lak package; density terms are
@@ -740,9 +698,6 @@ contains
         !
       end do
     end select
-    !
-    ! -- Return
-    return
   end subroutine buy_cf_lak
 
   !> @brief Pass density information into sfr package; density terms are
@@ -796,9 +751,6 @@ contains
         !
       end do
     end select
-    !
-    ! -- Return
-    return
   end subroutine buy_cf_sfr
 
   !> @brief Pass density information into maw package; density terms are
@@ -852,9 +804,6 @@ contains
         !
       end do
     end select
-    !
-    ! -- Return
-    return
   end subroutine buy_cf_maw
 
   !> @brief Fill coefficients
@@ -895,9 +844,6 @@ contains
         call matrix_sln%add_value_pos(idxglo(ipos), amatnm)
       end do
     end do
-    !
-    ! -- Return
-    return
   end subroutine buy_fc
 
   !> @brief Save density array to binary file
@@ -935,9 +881,6 @@ contains
                                    nwidthp, editdesc, dinact)
       end if
     end if
-    !
-    ! -- Return
-    return
   end subroutine buy_ot_dv
 
   !> @brief Add buy term to flowja
@@ -970,9 +913,6 @@ contains
                                           deltaQ
       end do
     end do
-    !
-    ! -- Return
-    return
   end subroutine buy_cq
 
   !> @brief Deallocate
@@ -1006,9 +946,6 @@ contains
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
-    !
-    ! -- Return
-    return
   end subroutine buy_da
 
   !> @brief Read the dimensions for this package
@@ -1055,9 +992,6 @@ contains
       call store_error('NRHOSPECIES must be greater than zero.')
       call this%parser%StoreErrorUnit()
     end if
-    !
-    ! -- Return
-    return
   end subroutine read_dimensions
 
   !> @brief Read PACKAGEDATA block
@@ -1144,9 +1078,6 @@ contains
     !
     ! -- deallocate
     deallocate (itemp)
-    !
-    ! -- Return
-    return
   end subroutine read_packagedata
 
   !> @brief Sets package data instead of reading from file
@@ -1164,9 +1095,6 @@ contains
       this%cmodelname(ispec) = input_data%cmodelname(ispec)
       this%cauxspeciesname(ispec) = input_data%cauxspeciesname(ispec)
     end do
-    !
-    ! -- Return
-    return
   end subroutine set_packagedata
 
   !> @brief Calculate buyancy term for this connection
@@ -1249,9 +1177,6 @@ contains
     !
     ! -- Calculate buoyancy term
     buy = cond * (avgdense - this%denseref) / this%denseref * (elevm - elevn)
-    !
-    ! -- Return
-    return
   end subroutine calcbuy
 
   !> @brief Calculate hydraulic head term for this connection
@@ -1345,9 +1270,6 @@ contains
       amatnn = amatnn - cond * (DONE - wt) * (rhonormm - rhonormn)
       amatnm = amatnm + cond * wt * (rhonormm - rhonormn)
     end if
-    !
-    ! -- Return
-    return
   end subroutine calchhterms
 
   !> @brief calculate fluid density from concentration
@@ -1372,9 +1294,6 @@ contains
       this%dense(n) = calcdens(this%denseref, this%drhodc, this%crhoref, &
                                this%ctemp)
     end do
-    !
-    ! -- Return
-    return
   end subroutine buy_calcdens
 
   !> @brief Calculate cell elevations to use in density flow equations
@@ -1393,9 +1312,6 @@ contains
       frac = this%npf%sat(n)
       this%elev(n) = bt + DHALF * frac * (tp - bt)
     end do
-    !
-    ! -- Return
-    return
   end subroutine buy_calcelev
 
   !> @brief Allocate scalars used by the package
@@ -1432,9 +1348,6 @@ contains
     ! -- Initialize default to LHS implementation of hydraulic head formulation
     this%iform = 2
     this%iasym = 1
-    !
-    ! -- Return
-    return
   end subroutine allocate_scalars
 
   !> @brief Allocate arrays used by the package
@@ -1471,9 +1384,6 @@ contains
       this%cmodelname(i) = ''
       this%cauxspeciesname(i) = ''
     end do
-    !
-    ! -- Return
-    return
   end subroutine allocate_arrays
 
   !> @brief Read package options
@@ -1545,9 +1455,6 @@ contains
       end do
       write (this%iout, '(1x,a)') 'End of BUY OPTIONS block'
     end if
-    !
-    ! -- Return
-    return
   end subroutine read_options
 
   !> @brief Sets options as opposed to reading them from a file
@@ -1565,9 +1472,6 @@ contains
     if (this%iform == 0 .or. this%iform == 1) then
       this%iasym = 0
     end if
-    !
-    ! -- Return
-    return
   end subroutine set_options
 
   !> @brief Pass in a gwt model name, concentration array and ibound, and store
@@ -1596,9 +1500,6 @@ contains
         exit
       end if
     end do
-    !
-    ! -- Return
-    return
   end subroutine set_concentration_pointer
 
 end module GwfBuyModule

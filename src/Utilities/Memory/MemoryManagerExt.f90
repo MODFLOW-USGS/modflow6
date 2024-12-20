@@ -3,12 +3,13 @@ module MemoryManagerExtModule
   use KindModule, only: DP, LGP, I4B, I8B
   use SimModule, only: store_error
   use MemoryTypeModule, only: MemoryType
-  use MemoryManagerModule, only: memorylist, get_from_memorylist
+  use MemoryManagerModule, only: memorystore, get_from_memorystore
+  use MemoryContainerIteratorModule, only: MemoryContainerIteratorType
 
   implicit none
   private
   public :: mem_set_value
-  public :: memorylist_remove
+  public :: memorystore_remove
 
   interface mem_set_value
     module procedure mem_set_value_logical, mem_set_value_int, &
@@ -22,7 +23,7 @@ module MemoryManagerExtModule
 
 contains
 
-  subroutine memorylist_remove(component, subcomponent, context)
+  subroutine memorystore_remove(component, subcomponent, context)
     use MemoryHelperModule, only: create_mem_path
     use ConstantsModule, only: LENMEMPATH
     character(len=*), intent(in) :: component !< name of the solution, model, or exchange
@@ -30,7 +31,7 @@ contains
     character(len=*), intent(in), optional :: context !< name of the context (optional)
     character(len=LENMEMPATH) :: memory_path !< the memory path
     type(MemoryType), pointer :: mt
-    integer(I4B) :: ipos
+    type(MemoryContainerIteratorType), allocatable :: itr
     logical(LGP) :: removed
 
     memory_path = create_mem_path(component, subcomponent, context)
@@ -38,16 +39,19 @@ contains
 
     do while (removed)
       removed = .false.
-      do ipos = 1, memorylist%count()
-        mt => memorylist%Get(ipos)
+      itr = memorystore%iterator()
+      do while (itr%has_next())
+        call itr%next()
+        mt => itr%value()
         if (mt%path == memory_path .and. mt%mt_associated()) then
           call mt%mt_deallocate()
           removed = .true.
+          deallocate (itr)
           exit
         end if
       end do
     end do
-  end subroutine memorylist_remove
+  end subroutine memorystore_remove
 
   !> @brief Set pointer to value of memory list logical variable
   !<
@@ -59,8 +63,9 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: checkfail = .false.
 
-    call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'INTEGER') then
+    call get_from_memorystore(varname, memory_path, mt, found, checkfail)
+    if (.not. found) return
+    if (mt%memtype(1:index(mt%memtype, ' ')) == 'INTEGER') then
       if (mt%intsclr == 0) then
         p_mem = .false.
       else
@@ -79,8 +84,9 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: checkfail = .false.
 
-    call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'INTEGER') then
+    call get_from_memorystore(varname, memory_path, mt, found, checkfail)
+    if (.not. found) return
+    if (mt%memtype(1:index(mt%memtype, ' ')) == 'INTEGER') then
       p_mem = mt%intsclr
     end if
   end subroutine mem_set_value_int
@@ -94,10 +100,11 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: checkfail = .false.
 
-    call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found) then
-      p_mem = setval
-    end if
+    call get_from_memorystore(varname, memory_path, mt, found, checkfail)
+    if (.not. found) return
+
+    p_mem = setval
+
   end subroutine mem_set_value_int_setval
 
   subroutine mem_set_value_str_mapped_int(p_mem, varname, memory_path, str_list, &
@@ -111,8 +118,9 @@ contains
     logical(LGP) :: checkfail = .false.
     integer(I4B) :: i
 
-    call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'STRING') then
+    call get_from_memorystore(varname, memory_path, mt, found, checkfail)
+    if (.not. found) return
+    if (mt%memtype(1:index(mt%memtype, ' ')) == 'STRING') then
       do i = 1, size(str_list)
         if (mt%strsclr == str_list(i)) then
           p_mem = i
@@ -132,8 +140,9 @@ contains
     logical(LGP) :: checkfail = .false.
     integer(I4B) :: n
 
-    call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'INTEGER') then
+    call get_from_memorystore(varname, memory_path, mt, found, checkfail)
+    if (.not. found) return
+    if (mt%memtype(1:index(mt%memtype, ' ')) == 'INTEGER') then
       if (size(mt%aint1d) /= size(p_mem)) then
         call store_error('mem_set_value() size mismatch int1d, varname='//&
                          &trim(varname), terminate=.TRUE.)
@@ -157,8 +166,9 @@ contains
     logical(LGP) :: checkfail = .false.
     integer(I4B) :: n
 
-    call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'INTEGER') then
+    call get_from_memorystore(varname, memory_path, mt, found, checkfail)
+    if (.not. found) return
+    if (mt%memtype(1:index(mt%memtype, ' ')) == 'INTEGER') then
       if (associated(map)) then
         do n = 1, size(p_mem)
           p_mem(n) = mt%aint1d(map(n))
@@ -186,8 +196,9 @@ contains
     logical(LGP) :: checkfail = .false.
     integer(I4B) :: i, j
 
-    call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'INTEGER') then
+    call get_from_memorystore(varname, memory_path, mt, found, checkfail)
+    if (.not. found) return
+    if (mt%memtype(1:index(mt%memtype, ' ')) == 'INTEGER') then
       if (size(mt%aint2d, dim=1) /= size(p_mem, dim=1) .or. &
           size(mt%aint2d, dim=2) /= size(p_mem, dim=2)) then
         call store_error('mem_set_value() size mismatch int2d, varname='//&
@@ -212,8 +223,9 @@ contains
     logical(LGP) :: checkfail = .false.
     integer(I4B) :: i, j, k
 
-    call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'INTEGER') then
+    call get_from_memorystore(varname, memory_path, mt, found, checkfail)
+    if (.not. found) return
+    if (mt%memtype(1:index(mt%memtype, ' ')) == 'INTEGER') then
       if (size(mt%aint3d, dim=1) /= size(p_mem, dim=1) .or. &
           size(mt%aint3d, dim=2) /= size(p_mem, dim=2) .or. &
           size(mt%aint3d, dim=3) /= size(p_mem, dim=3)) then
@@ -240,8 +252,9 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: checkfail = .false.
 
-    call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'DOUBLE') then
+    call get_from_memorystore(varname, memory_path, mt, found, checkfail)
+    if (.not. found) return
+    if (mt%memtype(1:index(mt%memtype, ' ')) == 'DOUBLE') then
       p_mem = mt%dblsclr
     end if
   end subroutine mem_set_value_dbl
@@ -257,8 +270,9 @@ contains
     logical(LGP) :: checkfail = .false.
     integer(I4B) :: n
 
-    call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'DOUBLE') then
+    call get_from_memorystore(varname, memory_path, mt, found, checkfail)
+    if (.not. found) return
+    if (mt%memtype(1:index(mt%memtype, ' ')) == 'DOUBLE') then
       if (size(mt%adbl1d) /= size(p_mem)) then
         call store_error('mem_set_value() size mismatch dbl1d, varname='//&
                          &trim(varname), terminate=.TRUE.)
@@ -282,8 +296,9 @@ contains
     logical(LGP) :: checkfail = .false.
     integer(I4B) :: n
 
-    call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'DOUBLE') then
+    call get_from_memorystore(varname, memory_path, mt, found, checkfail)
+    if (.not. found) return
+    if (mt%memtype(1:index(mt%memtype, ' ')) == 'DOUBLE') then
       if (associated(map)) then
         do n = 1, size(p_mem)
           p_mem(n) = mt%adbl1d(map(n))
@@ -311,8 +326,9 @@ contains
     logical(LGP) :: checkfail = .false.
     integer(I4B) :: i, j
 
-    call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'DOUBLE') then
+    call get_from_memorystore(varname, memory_path, mt, found, checkfail)
+    if (.not. found) return
+    if (mt%memtype(1:index(mt%memtype, ' ')) == 'DOUBLE') then
       if (size(mt%adbl2d, dim=1) /= size(p_mem, dim=1) .or. &
           size(mt%adbl2d, dim=2) /= size(p_mem, dim=2)) then
         call store_error('mem_set_value() size mismatch dbl2d, varname='//&
@@ -337,8 +353,9 @@ contains
     logical(LGP) :: checkfail = .false.
     integer(I4B) :: i, j, k
 
-    call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'DOUBLE') then
+    call get_from_memorystore(varname, memory_path, mt, found, checkfail)
+    if (.not. found) return
+    if (mt%memtype(1:index(mt%memtype, ' ')) == 'DOUBLE') then
       if (size(mt%adbl3d, dim=1) /= size(p_mem, dim=1) .or. &
           size(mt%adbl3d, dim=2) /= size(p_mem, dim=2) .or. &
           size(mt%adbl3d, dim=3) /= size(p_mem, dim=3)) then
@@ -363,8 +380,9 @@ contains
     type(MemoryType), pointer :: mt
     logical(LGP) :: checkfail = .false.
 
-    call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'STRING') then
+    call get_from_memorystore(varname, memory_path, mt, found, checkfail)
+    if (.not. found) return
+    if (mt%memtype(1:index(mt%memtype, ' ')) == 'STRING') then
       p_mem = mt%strsclr
     end if
   end subroutine mem_set_value_str
@@ -380,8 +398,9 @@ contains
     logical(LGP) :: checkfail = .false.
     integer(I4B) :: n
 
-    call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'STRING') then
+    call get_from_memorystore(varname, memory_path, mt, found, checkfail)
+    if (.not. found) return
+    if (mt%memtype(1:index(mt%memtype, ' ')) == 'STRING') then
       do n = 1, size(mt%acharstr1d)
         p_mem(n) = mt%acharstr1d(n)
       end do

@@ -1,8 +1,9 @@
 """Test TDIS package."""
+
 import flopy
 import numpy as np
 import pytest
-from xmipy import XmiWrapper
+from modflow_devtools.markers import requires_pkg
 
 
 @pytest.fixture
@@ -25,9 +26,12 @@ def simple_sim(tmp_path):
     return sim
 
 
+@requires_pkg("xmipy")
 @pytest.mark.parametrize("tsmult", [1.0, 1.2])
 def test_tdis_tsmult(tsmult, simple_sim, targets):
     """Check totim values to ensure they avoid accumulation errors."""
+    from xmipy import XmiWrapper
+
     sim = simple_sim
 
     # Add TDIS package using time variables

@@ -8,7 +8,8 @@ information on the mf6 variables that are stored in the memory manager.
 """
 
 import os
-from fortran_parser import source_dir_to_dict, get_inheritance_dict
+
+from fortran_parser import get_inheritance_dict, source_dir_to_dict
 
 # Set up and check paths
 source_dir = "../../../src"
@@ -70,7 +71,7 @@ def line_list_to_var_list(line_list, fname):
             npercents = fortran_varname.count("%")
             fortran_varname = fortran_varname.replace("this%", "")
             if current_class is not None:
-                class_varname = "{}.{}".format(current_class, fortran_varname)
+                class_varname = f"{current_class}.{fortran_varname}"
             else:
                 class_varname = fortran_varname
 
@@ -88,8 +89,14 @@ def line_list_to_var_list(line_list, fname):
             # check for uniqueness and write to md and tex
             if class_varname not in class_varname_list:
                 class_varname_list.append(class_varname)
-                l = [source_name, current_module, current_class,
-                     fortran_varname, varname, dims]
+                l = [
+                    source_name,
+                    current_module,
+                    current_class,
+                    fortran_varname,
+                    varname,
+                    dims,
+                ]
                 memvar_list.append(l)
 
     return memvar_list
@@ -98,17 +105,15 @@ def line_list_to_var_list(line_list, fname):
 def write_md(memvar_list, fmd):
     "write markdown table records for list of memory managed variables"
     for l in memvar_list:
-        source_name, current_module, typename, fortran_varname, varname, dims = l
-        write_md_record(
-            fmd, source_name, current_module, typename, varname, dims
-        )
+        (source_name, current_module, typename, fortran_varname, varname, dims) = l
+        write_md_record(fmd, source_name, current_module, typename, varname, dims)
     return
 
 
 def write_tex(memvar_list, ftex):
     "write latex table records for list of memory managed variables"
     for l in memvar_list:
-        source_name, current_module, typename, fortran_varname, varname, dims = l
+        (source_name, current_module, typename, fortran_varname, varname, dims) = l
         write_tex_record(ftex, typename, varname, dims)
     return
 
@@ -116,20 +121,15 @@ def write_tex(memvar_list, ftex):
 def write_md_header(f):
     s = "# MODFLOW 6 MEMORY MANAGER VARIABLES\n\n"
     fmd.write(s)
-    s = "| {} | {} | {} | {} | {} |\n".format(
-        "source file", "module", "type.variable name", "variable name",
-        "dimensions"
-    )
+    s = "| source file | module | type.variable name | variable name | dimensions |\n"
     fmd.write(s)
-    s = "| {} | {} | {} | {} | {} |\n".format(":---:", ":---:", ":---:",
-                                              ":---:", ":---:")
+    s = "| :---: | :---: | :---: | :---: | :---: |\n"
     fmd.write(s)
     return
 
 
 def write_md_record(f, fname, modulename, classname, varname, varshape):
-    s = "| {} | {} | {} | {} | {} |\n".format(fname, modulename, classname,
-                                              varname, varshape)
+    s = f"| {fname} | {modulename} | {classname} | {varname} | {varshape} |\n"
     f.write(s)
     return
 
@@ -140,9 +140,7 @@ def write_tex_header(f):
         "\\caption{List of variables stored in memory manager } \\tabularnewline \n\n"
     )
     f.write("\\hline\n\\hline\n")
-    f.write(
-        "\\textbf{Class.Variable} & \\textbf{Name} & \\textbf{Dimensions} \\\\\n"
-    )
+    f.write("\\textbf{Class.Variable} & \\textbf{Name} & \\textbf{Dimensions} \\\\\n")
     f.write("\\hline\n\\endfirsthead\n\n\n")
 
     f.write("\captionsetup{textformat=simple}\n")
@@ -152,16 +150,12 @@ def write_tex_header(f):
     )
 
     f.write("\n\\hline\n\\hline\n")
-    f.write(
-        "\\textbf{Class.Variable} & \\textbf{Name} & \\textbf{Dimensions} \\\\\n"
-    )
+    f.write("\\textbf{Class.Variable} & \\textbf{Name} & \\textbf{Dimensions} \\\\\n")
     f.write("\\hline\n\\endhead\n\n\\hline\n\\endfoot\n\n\n")
 
 
 def write_tex_footer(f):
-    f.write(
-        "\n\n\\hline\n\\end{longtable}\n\\label{table:blocks}\n\\normalsize\n"
-    )
+    f.write("\n\n\\hline\n\\end{longtable}\n\\label{table:blocks}\n\\normalsize\n")
     f.close()
     return
 
@@ -173,7 +167,7 @@ def write_tex_record(f, classname, varname, dimension):
         classname = classname.replace("_", "\_")
         classname = classname.replace("%", "-")
     varname = varname.replace("_", "\_")
-    s = "{} & {} & {} \\\\ \n".format(classname, varname, dimension)
+    s = f"{classname} & {varname} & {dimension} \\\\ \n"
     f.write(s)
     return
 
@@ -200,7 +194,7 @@ for root, dirs, files in os.walk(source_dir):
             full_lines = d[f]
             memvar_list = line_list_to_var_list(full_lines, fwpath)
             if len(memvar_list) > 0:
-                print("{} -- {}".format(i, f))
+                print(f"{i} -- {f}")
                 i += 1
             write_md(memvar_list, fmd)
             if latex_file is not None:

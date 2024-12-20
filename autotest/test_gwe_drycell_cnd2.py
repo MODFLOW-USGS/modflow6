@@ -40,16 +40,15 @@ neighbors.  Referring to this test as a flowing through problem.
      |       |
      |       |
      +-------+
-"""
+"""  # noqa
 
 # Imports
 
 import os
 
+import flopy
 import numpy as np
 import pytest
-import flopy
-
 from framework import TestFramework
 
 # Base simulation and model name and workspace
@@ -108,7 +107,8 @@ idomain = 1  # All cells included in the simulation
 iconvert = 1  # All cells are convertible
 
 bot_r1 = np.zeros(ncol).tolist()
-# This is the head solution for row 1, so round up to ensure neighboring cells remain dry
+# This is the head solution for row 1, so round up to
+# ensure neighboring cells remain dry
 r2 = [
     6.99850,
     6.78111,
@@ -173,7 +173,8 @@ ghb_conc = 4.0
 ghb_temp = 4.0
 ghb_conc_warmup = 30.0
 ghb_temp_warmup = 30.0
-# left boundary:  cellid, elv, cond, conc, temp; right bnd: cellid, elv, cond, conc, temp
+# left boundary:  cellid, elv, cond, conc, temp
+# right boundary: cellid, elv, cond, conc, temp
 ghbspd = {
     # Steady state stress period
     0: [
@@ -193,7 +194,7 @@ def build_models(idx, test):
     ws = test.workspace
     name = cases[idx]
 
-    print("Building MF6 model...()".format(name))
+    print(f"Building MF6 model...{name}")
 
     # generate names for each model
     gwfname = "gwf-" + name
@@ -205,16 +206,14 @@ def build_models(idx, test):
     )
 
     # Instantiating MODFLOW 6 time discretization
-    flopy.mf6.ModflowTdis(
-        sim, nper=nper, perioddata=tdis_rc, time_units=time_units
-    )
+    flopy.mf6.ModflowTdis(sim, nper=nper, perioddata=tdis_rc, time_units=time_units)
 
     # Instantiating MODFLOW 6 groundwater flow model
     gwf = flopy.mf6.ModflowGwf(
         sim,
         modelname=gwfname,
         save_flows=True,
-        model_nam_file="{}.nam".format(gwfname),
+        model_nam_file=f"{gwfname}.nam",
     )
 
     # Instantiating MODFLOW 6 solver for flow model
@@ -231,7 +230,7 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
     sim.register_ims_package(imsgwf, [gwfname])
 
@@ -248,7 +247,7 @@ def build_models(idx, test):
         botm=botm,
         idomain=np.ones((nlay, nrow, ncol), dtype=int),
         pname="DIS-1",
-        filename="{}.dis".format(gwfname),
+        filename=f"{gwfname}.dis",
     )
 
     # Instantiating MODFLOW 6 storage package
@@ -260,7 +259,7 @@ def build_models(idx, test):
         steady_state=steady,
         transient=transient,
         pname="STO",
-        filename="{}.sto".format(gwfname),
+        filename=f"{gwfname}.sto",
     )
 
     # Instantiating MODFLOW 6 node-property flow package
@@ -272,11 +271,11 @@ def build_models(idx, test):
         k33=k33,
         save_specific_discharge=True,
         pname="NPF-1",
-        filename="{}.npf".format(gwfname),
+        filename=f"{gwfname}.npf",
     )
 
     # Instantiating MODFLOW 6 initial conditions package for flow model
-    flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(gwfname))
+    flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{gwfname}.ic")
 
     # Instantiate left and right general-head boundaries for driving flow
     flopy.mf6.ModflowGwfghb(
@@ -286,15 +285,15 @@ def build_models(idx, test):
         auxiliary=["CONCENTRATION", "TEMPERATURE"],
         save_flows=True,
         pname="GHB-1",
-        filename="{}.ghb".format(gwfname),
+        filename=f"{gwfname}.ghb",
     )
 
     # Instantiating MODFLOW 6 output control package for flow model
     flopy.mf6.ModflowGwfoc(
         gwf,
         pname="OC-1",
-        head_filerecord="{}.hds".format(gwfname),
-        budget_filerecord="{}.cbc".format(gwfname),
+        head_filerecord=f"{gwfname}.hds",
+        budget_filerecord=f"{gwfname}.cbc",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
@@ -307,7 +306,7 @@ def build_models(idx, test):
         sim,
         model_type="gwt6",
         modelname=gwtname,
-        model_nam_file="{}.nam".format(gwtname),
+        model_nam_file=f"{gwtname}.nam",
     )
     gwt.name_file.save_flows = True
     imsgwt = flopy.mf6.ModflowIms(
@@ -323,7 +322,7 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwtname),
+        filename=f"{gwtname}.ims",
     )
     sim.register_ims_package(imsgwt, [gwt.name])
 
@@ -340,17 +339,15 @@ def build_models(idx, test):
         botm=botm,
         idomain=1,
         pname="DIS-2",
-        filename="{}.dis".format(gwtname),
+        filename=f"{gwtname}.dis",
     )
 
     # Instantiating MODFLOW 6 transport initial concentrations
-    flopy.mf6.ModflowGwtic(
-        gwt, strt=strt_conc, pname="IC-2", filename="{}.ic".format(gwtname)
-    )
+    flopy.mf6.ModflowGwtic(gwt, strt=strt_conc, pname="IC-2", filename=f"{gwtname}.ic")
 
     # Instantiating MODFLOW 6 transport advection package
     flopy.mf6.ModflowGwtadv(
-        gwt, scheme=scheme, pname="ADV-2", filename="{}.adv".format(gwtname)
+        gwt, scheme=scheme, pname="ADV-2", filename=f"{gwtname}.adv"
     )
 
     # Instantiating MODFLOW 6 transport dispersion package
@@ -363,10 +360,11 @@ def build_models(idx, test):
             atv=dispersivity,
             diffc=Dm,
             pname="DSP-2",
-            filename="{}.dsp".format(gwtname),
+            filename=f"{gwtname}.dsp",
         )
 
-    # Instantiating MODFLOW 6 transport mass storage package (formerly "reaction" package in MT3DMS)
+    # Instantiating MODFLOW 6 transport mass storage package
+    # (formerly "reaction" package in MT3DMS)
     flopy.mf6.ModflowGwtmst(
         gwt,
         porosity=prsity,
@@ -378,7 +376,7 @@ def build_models(idx, test):
         distcoef=Kd,
         save_flows=True,
         pname="MST-2",
-        filename="{}.mst".format(gwtname),
+        filename=f"{gwtname}.mst",
     )
 
     # Instantiating MODFLOW 6 transport source-sink mixing package
@@ -390,18 +388,16 @@ def build_models(idx, test):
     sources = [[itm, srctype, auxname] for itm in pname]
 
     flopy.mf6.ModflowGwtssm(
-        gwt, sources=sources, pname="SSM-2", filename="{}.ssm".format(gwtname)
+        gwt, sources=sources, pname="SSM-2", filename=f"{gwtname}.ssm"
     )
 
     # Instantiate MODFLOW 6 solute transport output control package
     flopy.mf6.ModflowGwtoc(
         gwt,
         pname="OC-2",
-        budget_filerecord="{}.cbc".format(gwtname),
-        concentration_filerecord="{}.ucn".format(gwtname),
-        concentrationprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        budget_filerecord=f"{gwtname}.cbc",
+        concentration_filerecord=f"{gwtname}.ucn",
+        concentrationprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("CONCENTRATION", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("CONCENTRATION", "ALL"), ("BUDGET", "ALL")],
     )
@@ -413,7 +409,7 @@ def build_models(idx, test):
         exgmnamea=gwfname,
         exgmnameb=gwtname,
         pname="GWFGWT",
-        filename="{}.gwfgwt".format(gwtname),
+        filename=f"{gwtname}.gwfgwt",
     )
 
     # ---------------------------------------------------------
@@ -423,7 +419,7 @@ def build_models(idx, test):
         sim,
         model_type="gwe6",
         modelname=gwename,
-        model_nam_file="{}.nam".format(gwename),
+        model_nam_file=f"{gwename}.nam",
     )
     gwe.name_file.save_flows = True
     imsgwe = flopy.mf6.ModflowIms(
@@ -439,7 +435,7 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwename),
+        filename=f"{gwename}.ims",
     )
     sim.register_ims_package(imsgwe, [gwe.name])
 
@@ -456,17 +452,15 @@ def build_models(idx, test):
         botm=botm,
         idomain=1,
         pname="DIS-3",
-        filename="{}.dis".format(gwename),
+        filename=f"{gwename}.dis",
     )
 
     # Instantiating MODFLOW 6 transport initial concentrations
-    flopy.mf6.ModflowGweic(
-        gwe, strt=strt_temp, pname="IC-3", filename="{}.ic".format(gwename)
-    )
+    flopy.mf6.ModflowGweic(gwe, strt=strt_temp, pname="IC-3", filename=f"{gwename}.ic")
 
     # Instantiating MODFLOW 6 transport advection package
     flopy.mf6.ModflowGweadv(
-        gwe, scheme=scheme, pname="ADV-3", filename="{}.adv".format(gwename)
+        gwe, scheme=scheme, pname="ADV-3", filename=f"{gwename}.adv"
     )
 
     # Instantiating MODFLOW 6 transport dispersion package
@@ -479,19 +473,22 @@ def build_models(idx, test):
             ktw=ktw,
             kts=kts,
             pname="CND-3",
-            filename="{}.cnd".format(gwename),
+            filename=f"{gwename}.cnd",
         )
 
-    # Instantiating MODFLOW 6 transport mass storage package (formerly "reaction" package in MT3DMS)
+    # Instantiating MODFLOW 6 transport mass storage package
+    # (formerly "reaction" package in MT3DMS)
     flopy.mf6.ModflowGweest(
         gwe,
         save_flows=True,
         porosity=prsity,
-        cps=cps,
-        rhos=rhos,
-        packagedata=[cpw, rhow, lhv],
+        heat_capacity_water=cpw,
+        density_water=rhow,
+        latent_heat_vaporization=lhv,
+        heat_capacity_solid=cps,
+        density_solid=rhos,
         pname="EST-3",
-        filename="{}.est".format(gwename),
+        filename=f"{gwename}.est",
     )
 
     # Instantiating MODFLOW 6 transport source-sink mixing package
@@ -502,18 +499,16 @@ def build_models(idx, test):
     sources = [[itm, srctype, auxname] for itm in pname]
 
     flopy.mf6.ModflowGwessm(
-        gwe, sources=sources, pname="SSM-3", filename="{}.ssm".format(gwename)
+        gwe, sources=sources, pname="SSM-3", filename=f"{gwename}.ssm"
     )
 
     # Instantiate MODFLOW 6 heat transport output control package
     flopy.mf6.ModflowGweoc(
         gwe,
         pname="OC-3",
-        budget_filerecord="{}.cbc".format(gwename),
-        temperature_filerecord="{}.ucn".format(gwename),
-        temperatureprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        budget_filerecord=f"{gwename}.cbc",
+        temperature_filerecord=f"{gwename}.ucn",
+        temperatureprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("TEMPERATURE", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("TEMPERATURE", "ALL"), ("BUDGET", "ALL")],
     )
@@ -525,7 +520,7 @@ def build_models(idx, test):
         exgmnamea=gwfname,
         exgmnameb=gwename,
         pname="GWFGWE",
-        filename="{}.gwfgwe".format(gwename),
+        filename=f"{gwename}.gwfgwe",
     )
 
     return sim, None
@@ -553,9 +548,7 @@ def check_output(idx, test):
     fpth = os.path.join(test.workspace, f"{gwtname}.ucn")
     try:
         # load temperatures
-        cobj = flopy.utils.HeadFile(
-            fpth, precision="double", text="CONCENTRATION"
-        )
+        cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
         conc1 = cobj.get_alldata()
     except:
         assert False, f'could not load concentration data from "{fpth}"'
@@ -564,9 +557,7 @@ def check_output(idx, test):
     fpth = os.path.join(test.workspace, f"{gwename}.ucn")
     try:
         # load temperatures
-        tobj = flopy.utils.HeadFile(
-            fpth, precision="double", text="TEMPERATURE"
-        )
+        tobj = flopy.utils.HeadFile(fpth, precision="double", text="TEMPERATURE")
         temp1 = tobj.get_alldata()
     except:
         assert False, f'could not load temperature data from "{fpth}"'
@@ -579,9 +570,10 @@ def check_output(idx, test):
     assert np.all(hds[0, 0, 1, :] < 0), "row 2 is not dry"
 
     # Starting temperatures after steady flow period should be 4.0 degrees
-    np.all(
-        np.isclose(temp1[0], strt_temp, atol=1e-10)
-    ), "Steady state temperatures not as expected"
+    (
+        np.all(np.isclose(temp1[0], strt_temp, atol=1e-10)),
+        "Steady state temperatures not as expected",
+    )
     # Same with concentrations in non-dry cells
     assert np.all(
         np.isclose(conc1[0, :, 0], strt_conc[:, 0])
@@ -592,12 +584,12 @@ def check_output(idx, test):
     ), "Concentrations should be set to 'inactive' (-1.e+30) in row 2"
 
     # Starting in the transient stress period, the water entering in the
-    # 'trough' row is warmed to 30.0 C.  First check that this is the case
+    # 'through' row is warmed to 30.0 C.  First check that this is the case
     assert np.all(
         temp1[-1] > temp1[0]
     ), "Transient period temperature increase does not appear to have kicked in"
     # Dry cell temperatures are only warmed through conduction with neighboring
-    # 'trough' cells and shouldn't be as warm as wet cells at the end of the
+    # 'through' cells and shouldn't be as warm as wet cells at the end of the
     # warming period
     assert np.all(
         temp1[-1, :, 0] > temp1[-1, 0, 1]

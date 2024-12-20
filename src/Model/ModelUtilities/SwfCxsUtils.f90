@@ -62,9 +62,6 @@ contains
                                    cxs_xf, cxs_h, cxs_rf, unitconv, &
                                    icalcmeth)
     end if
-    !
-    ! -- return
-    return
   end function calc_depth_from_q
 
   !> @brief Calculate the depth at the midpoint of a irregular cross-section
@@ -129,9 +126,6 @@ contains
     !
     ! TODO: raise an error
     print *, "bisection routine failed"
-    !
-    ! -- return
-    return
   end function calc_depth_from_q_bisect
 
   !> @brief Calculate the depth at the midpoint of a irregular cross-section
@@ -204,9 +198,6 @@ contains
 
     end do nriter
     depth = d
-    !
-    ! -- return
-    return
   end function calc_depth_from_q_nr
 
   !> @brief Calculate streamflow using Manning's equation
@@ -250,9 +241,6 @@ contains
                                  cxs_xf, cxs_h, cxs_rf, unitconv, &
                                  linmeth)
     end select
-    !
-    ! -- return
-    return
   end function calc_qman
 
   function calc_qman_composite(depth, width, rough, slope, &
@@ -304,9 +292,6 @@ contains
       call sChSmooth(depth, sat, derv)
       qman = sat * qman
     end if
-    !
-    ! -- return
-    return
   end function calc_qman_composite
 
   function calc_composite_roughness(npts, depth, width, rough, slope, &
@@ -371,9 +356,6 @@ contains
       end if
 
     end if
-    !
-    ! -- return
-    return
   end function calc_composite_roughness
 
   function calc_qman_by_section(depth, width, rough, slope, &
@@ -441,9 +423,6 @@ contains
       ! -- calculate stream flow
       qman = sat * qman
     end if
-    !
-    ! -- return
-    return
   end function calc_qman_by_section
 
   !> @brief Calculate the saturated top width for a reach
@@ -466,9 +445,6 @@ contains
     else
       w = stations(1)
     end if
-    !
-    ! -- return
-    return
   end function get_saturated_topwidth
 
   !> @brief Calculate the wetted top width for a reach
@@ -506,9 +482,6 @@ contains
     do n = 1, npts - 1
       w = w + widths(n)
     end do
-    !
-    ! -- return
-    return
   end function get_wetted_topwidth
 
   !> @brief Calculate the wetted perimeter for a reach
@@ -546,9 +519,6 @@ contains
     do n = 1, npts - 1
       p = p + perimeters(n)
     end do
-    !
-    ! -- return
-    return
   end function get_wetted_perimeter
 
   !> @brief Calculate the cross-sectional area for a reach
@@ -586,9 +556,6 @@ contains
     do n = 1, npts - 1
       a = a + areas(n)
     end do
-    !
-    ! -- return
-    return
   end function get_cross_section_area
 
   !> @brief Calculate conveyance
@@ -738,9 +705,6 @@ contains
       end if
       c = c + cn
     end do
-    !
-    ! -- return
-    return
   end function get_composite_conveyance
 
   !> @brief Calculate the hydraulic radius for a reach
@@ -791,9 +755,6 @@ contains
       ! -- calculate the hydraulic radius
       r = a / p
     end if
-    !
-    ! -- return
-    return
   end function get_hydraulic_radius
 
   !> @brief Calculate the hydraulic radius for a reach
@@ -824,9 +785,6 @@ contains
     !
     ! -- calculate hydraulic radius
     r = get_hydraulic_radius(npts, stations, heights, d)
-    !
-    ! -- return
-    return
   end function get_hydraulic_radius_xf
 
   !> @brief Calculate the manning's discharge for a reach
@@ -897,9 +855,6 @@ contains
         end if
       end do
     end if
-    !
-    ! -- return
-    return
   end function get_mannings_section
 
   ! -- private functions and subroutines
@@ -962,9 +917,6 @@ contains
       end if
       p(n) = sqrt(xlen**DTWO + dlen**DTWO)
     end do
-    !
-    ! -- return
-    return
   end subroutine get_wetted_perimeters
 
   !> @brief Calculate the cross-sectional areas for each line segment
@@ -1025,9 +977,6 @@ contains
         end if
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine get_cross_section_areas
 
   !> @brief Calculate the wetted top widths for each line segment
@@ -1068,9 +1017,6 @@ contains
       ! -- calculate the wetted top width for the segment
       w(n) = x1 - x0
     end do
-    !
-    ! -- return
-    return
   end subroutine get_wetted_topwidths
 
   !> @brief Calculate the station values for the wetted portion of the cross-section
@@ -1134,9 +1080,6 @@ contains
       x0 = xt0
       x1 = xt1
     end if
-    !
-    ! -- return
-    return
   end subroutine get_wetted_station
 
 end module SwfCxsUtilsModule

@@ -1,15 +1,12 @@
 """
 Test for splitting parallel MODFLOW GWF model
-and using the HPC input file with partitioning 
+and using the HPC input file with partitioning
 to run the simulation on 4 domains.
 """
-
-import pathlib as pl
 
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = [
@@ -62,9 +59,7 @@ def get_model(idx, test):
         sim_ws=test.workspace,
     )
 
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     ims = flopy.mf6.ModflowIms(
         sim,
@@ -81,9 +76,7 @@ def get_model(idx, test):
 
     # left CHD:
     left_chd = [
-        [(ilay, irow, 0), h_left]
-        for irow in range(nrow)
-        for ilay in range(nlay)
+        [(ilay, irow, 0), h_left] for irow in range(nrow) for ilay in range(nlay)
     ]
 
     # right CHD:
@@ -156,9 +149,7 @@ def check_output(idx, test):
 
     # define reference result:
     def exact(x):
-        return h_left + (h_right - h_left) * (x - 0.5 * delr) / (
-            (ncol - 1) * delr
-        )
+        return h_left + (h_right - h_left) * (x - 0.5 * delr) / ((ncol - 1) * delr)
 
     # load the finished sim:
     sim = flopy.mf6.MFSimulation.load(sim_ws=test.workspace)
@@ -178,9 +169,10 @@ def check_output(idx, test):
                 for icol in range(grb.modelgrid.ncol):
                     xc = xyc[0][icol] + xoff
                     ref_value = exact(xc)
-                    assert heads[ilay, irow, icol] == pytest.approx(
-                        ref_value
-                    ), f"Comparing for model {model_name}, cell ({ilay},{irow},{icol}) failed"
+                    assert heads[ilay, irow, icol] == pytest.approx(ref_value), (
+                        f"Comparing for model {model_name}, "
+                        f"cell ({ilay},{irow},{icol}) failed"
+                    )
 
 
 @pytest.mark.parallel

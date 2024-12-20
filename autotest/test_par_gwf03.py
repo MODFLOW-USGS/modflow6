@@ -17,7 +17,6 @@ vs. serial behavior on an identical problem.
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["par_gwf03-a", "par_gwf03-b", "par_gwf03-c", "par_gwf03-d"]
@@ -62,9 +61,7 @@ def get_simulation(idx, ws):
         sim_ws=ws,
     )
 
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     ims = flopy.mf6.ModflowIms(
         sim,
@@ -95,9 +92,7 @@ def get_simulation(idx, ws):
         for iy in range(nr_models_y - 1):
             name_south = get_model_name(ix, iy)
             name_north = get_model_name(ix, iy + 1)
-            add_exchange_south_north(
-                sim, name_south, name_north, nlay, nrow, ncol
-            )
+            add_exchange_south_north(sim, name_south, name_north, nlay, nrow, ncol)
 
     return sim
 

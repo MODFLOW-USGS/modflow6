@@ -9,6 +9,7 @@ module SwfDfwInputModule
   public swf_dfw_block_definitions
   public SwfDfwParamFoundType
   public swf_dfw_multi_package
+  public swf_dfw_subpackages
 
   type SwfDfwParamFoundType
     logical :: icentral = .false.
@@ -29,6 +30,12 @@ module SwfDfwInputModule
 
   logical :: swf_dfw_multi_package = .false.
 
+  character(len=16), parameter :: &
+    swf_dfw_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     swfdfw_icentral = InputParamDefinitionType &
     ( &
@@ -39,6 +46,7 @@ module SwfDfwInputModule
     'ICENTRAL', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'use central in space weighting', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -56,6 +64,7 @@ module SwfDfwInputModule
     'LENGTHCONV', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'length conversion factor', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -73,6 +82,7 @@ module SwfDfwInputModule
     'TIMECONV', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'time conversion factor', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -90,6 +100,7 @@ module SwfDfwInputModule
     'IPAKCB', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to save DFW flows', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -107,6 +118,7 @@ module SwfDfwInputModule
     'IPRFLOW', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to print DFW flows to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -124,6 +136,7 @@ module SwfDfwInputModule
     'ISAVVELOCITY', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to save velocity', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -141,6 +154,7 @@ module SwfDfwInputModule
     'OBS_FILERECORD', & ! fortran variable
     'RECORD OBS6 FILEIN OBS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -158,6 +172,7 @@ module SwfDfwInputModule
     'OBS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'obs keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -175,6 +190,7 @@ module SwfDfwInputModule
     'FILEIN', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'file keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -192,6 +208,7 @@ module SwfDfwInputModule
     'OBS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'obs6 input filename', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -209,6 +226,7 @@ module SwfDfwInputModule
     'EXPORT_ASCII', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'export array variables to layered ascii files.', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -226,6 +244,7 @@ module SwfDfwInputModule
     'ISWRCOND', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'use SWR conductance formulation', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -243,6 +262,7 @@ module SwfDfwInputModule
     'MANNINGSN', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'mannings roughness coefficient', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -260,6 +280,7 @@ module SwfDfwInputModule
     'IDCXS', & ! fortran variable
     'INTEGER1D', & ! type
     'NODES', & ! shape
+    'cross section number', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -298,6 +319,7 @@ module SwfDfwInputModule
     '', & ! fortran variable
     '', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

@@ -1,5 +1,0 @@
-BEGIN CROSSSECTIONDATA
-  <xfraction> <height> <manfraction>
-  <xfraction> <height> <manfraction>
-  ...
-END CROSSSECTIONDATA

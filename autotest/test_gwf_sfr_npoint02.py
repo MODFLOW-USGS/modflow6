@@ -3,7 +3,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from cross_section_functions import get_depths
 from framework import TestFramework
 
@@ -71,10 +70,7 @@ def build_models(idx, test):
     )
 
     # create iterative model solution and register the gwf model with it
-    ims = flopy.mf6.ModflowIms(
-        sim,
-        print_option="ALL",
-    )
+    ims = flopy.mf6.ModflowIms(sim, print_option="ALL")
 
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(
@@ -106,9 +102,7 @@ def build_models(idx, test):
     spd = [
         [(0, 0, 0), 0.0],
     ]
-    chd = flopy.mf6.modflow.ModflowGwfchd(
-        gwf, stress_period_data=spd, pname="chd-1"
-    )
+    chd = flopy.mf6.modflow.ModflowGwfchd(gwf, stress_period_data=spd, pname="chd-1")
 
     # sfr file
     packagedata = []
@@ -188,9 +182,7 @@ def build_models(idx, test):
             ("width", "wet-width", (nreaches - 1,)),
         ]
     }
-    sfr.obs.initialize(
-        filename=fname, digits=25, print_input=True, continuous=sfr_obs
-    )
+    sfr.obs.initialize(filename=fname, digits=25, print_input=True, continuous=sfr_obs)
 
     # output control
     budpth = f"{name}.cbc"
@@ -234,9 +226,7 @@ def check_output(idx, test):
         )
         d.append(cdepth[0])
 
-    assert np.allclose(
-        obs["DEPTH"], d
-    ), "sfr depth not equal to calculated depth"
+    assert np.allclose(obs["DEPTH"], d), "sfr depth not equal to calculated depth"
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

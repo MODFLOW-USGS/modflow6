@@ -1,3 +1,3 @@
 # MODFLOW 6 version file automatically created using...update_version.py
-# created on...May 23, 2024 20:04:41
-__version__ = "6.5.0"
+# created on...December 19, 2024 23:59:59
+__version__ = "6.6.0"

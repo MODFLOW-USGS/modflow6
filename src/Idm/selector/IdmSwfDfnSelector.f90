@@ -15,6 +15,7 @@ module IdmSwfDfnSelectorModule
   use SwfCdbInputModule
   use SwfChdInputModule
   use SwfFlwInputModule
+  use SwfStoInputModule
   use SwfZdgInputModule
 
   implicit none
@@ -23,6 +24,7 @@ module IdmSwfDfnSelectorModule
   public :: swf_aggregate_definitions
   public :: swf_block_definitions
   public :: swf_idm_multi_package
+  public :: swf_idm_subpackages
   public :: swf_idm_integrated
 
 contains
@@ -38,6 +40,12 @@ contains
     type(InputBlockDefinitionType), dimension(:), target :: input_dfn_target
     input_dfn => input_dfn_target
   end subroutine set_block_pointer
+
+  subroutine set_subpkg_pointer(subpkg_list, subpkg_list_target)
+    character(len=16), dimension(:), pointer :: subpkg_list
+    character(len=16), dimension(:), target :: subpkg_list_target
+    subpkg_list => subpkg_list_target
+  end subroutine set_subpkg_pointer
 
   function swf_param_definitions(subcomponent) result(input_definition)
     character(len=*), intent(in) :: subcomponent
@@ -64,6 +72,8 @@ contains
       call set_param_pointer(input_definition, swf_chd_param_definitions)
     case ('FLW')
       call set_param_pointer(input_definition, swf_flw_param_definitions)
+    case ('STO')
+      call set_param_pointer(input_definition, swf_sto_param_definitions)
     case ('ZDG')
       call set_param_pointer(input_definition, swf_zdg_param_definitions)
     case default
@@ -96,6 +106,8 @@ contains
       call set_param_pointer(input_definition, swf_chd_aggregate_definitions)
     case ('FLW')
       call set_param_pointer(input_definition, swf_flw_aggregate_definitions)
+    case ('STO')
+      call set_param_pointer(input_definition, swf_sto_aggregate_definitions)
     case ('ZDG')
       call set_param_pointer(input_definition, swf_zdg_aggregate_definitions)
     case default
@@ -128,6 +140,8 @@ contains
       call set_block_pointer(input_definition, swf_chd_block_definitions)
     case ('FLW')
       call set_block_pointer(input_definition, swf_flw_block_definitions)
+    case ('STO')
+      call set_block_pointer(input_definition, swf_sto_block_definitions)
     case ('ZDG')
       call set_block_pointer(input_definition, swf_zdg_block_definitions)
     case default
@@ -159,6 +173,8 @@ contains
       multi_package = swf_chd_multi_package
     case ('FLW')
       multi_package = swf_flw_multi_package
+    case ('STO')
+      multi_package = swf_sto_multi_package
     case ('ZDG')
       multi_package = swf_zdg_multi_package
     case default
@@ -168,6 +184,39 @@ contains
     end select
     return
   end function swf_idm_multi_package
+
+  function swf_idm_subpackages(subcomponent) result(subpackages)
+    character(len=*), intent(in) :: subcomponent
+    character(len=16), dimension(:), pointer :: subpackages
+    select case (subcomponent)
+    case ('NAM')
+      call set_subpkg_pointer(subpackages, swf_nam_subpackages)
+    case ('DISV1D')
+      call set_subpkg_pointer(subpackages, swf_disv1d_subpackages)
+    case ('DIS2D')
+      call set_subpkg_pointer(subpackages, swf_dis2d_subpackages)
+    case ('DISV2D')
+      call set_subpkg_pointer(subpackages, swf_disv2d_subpackages)
+    case ('CXS')
+      call set_subpkg_pointer(subpackages, swf_cxs_subpackages)
+    case ('DFW')
+      call set_subpkg_pointer(subpackages, swf_dfw_subpackages)
+    case ('IC')
+      call set_subpkg_pointer(subpackages, swf_ic_subpackages)
+    case ('CDB')
+      call set_subpkg_pointer(subpackages, swf_cdb_subpackages)
+    case ('CHD')
+      call set_subpkg_pointer(subpackages, swf_chd_subpackages)
+    case ('FLW')
+      call set_subpkg_pointer(subpackages, swf_flw_subpackages)
+    case ('STO')
+      call set_subpkg_pointer(subpackages, swf_sto_subpackages)
+    case ('ZDG')
+      call set_subpkg_pointer(subpackages, swf_zdg_subpackages)
+    case default
+    end select
+    return
+  end function swf_idm_subpackages
 
   function swf_idm_integrated(subcomponent) result(integrated)
     character(len=*), intent(in) :: subcomponent
@@ -193,6 +242,8 @@ contains
     case ('CHD')
       integrated = .true.
     case ('FLW')
+      integrated = .true.
+    case ('STO')
       integrated = .true.
     case ('ZDG')
       integrated = .true.

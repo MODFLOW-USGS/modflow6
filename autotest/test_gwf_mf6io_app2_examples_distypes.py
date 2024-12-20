@@ -3,9 +3,8 @@ import pathlib as pl
 import flopy
 import numpy as np
 import pytest
-from flopy.utils.gridgen import Gridgen
 from conftest import try_get_target
-
+from flopy.utils.gridgen import Gridgen
 from framework import TestFramework
 
 dis_types = (
@@ -45,9 +44,7 @@ vk = [10.0, 0.01, 20.0]
 concentration = 1.0
 
 canal_head = 330.0
-canal_coordinates = [
-    (0.5 * delr, y1_base - delc * (i + 0.5)) for i in range(nrow)
-]
+canal_coordinates = [(0.5 * delr, y1_base - delc * (i + 0.5)) for i in range(nrow)]
 
 river_head = 320.0
 river_coordinates = [
@@ -269,7 +266,7 @@ def build_mf6(idx, ws, gridgen):
     elif "disu" in str(ws):
         dis_type = "disu"
     else:
-        raise ValueError(f"Invalid discretization type in {str(ws)}")
+        raise ValueError(f"Invalid discretization type in {ws!s}")
 
     if "disu" in str(ws):
         list_recharge = True
@@ -335,10 +332,7 @@ def build_mf6(idx, ws, gridgen):
         strt = top
     else:
         strt = [top, top, top]
-    ic = flopy.mf6.ModflowGwfic(
-        gwf,
-        strt=strt,
-    )
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
 
     if dis_type in ("dis", "disv"):
         k11 = hk
@@ -376,10 +370,7 @@ def build_mf6(idx, ws, gridgen):
             filename=f"{name}.canal.chd",
             pname="canal",
             stress_period_data=build_chd_data(
-                gwf.modelgrid,
-                canal_coordinates,
-                canal_head,
-                boundname="canal",
+                gwf.modelgrid, canal_coordinates, canal_head, boundname="canal"
             ),
         )
 
@@ -391,10 +382,7 @@ def build_mf6(idx, ws, gridgen):
             filename=f"{name}.river.chd",
             pname="river",
             stress_period_data=build_chd_data(
-                gwf.modelgrid,
-                river_coordinates,
-                river_head,
-                boundname="river",
+                gwf.modelgrid, river_coordinates, river_head, boundname="river"
             ),
         )
     else:
@@ -403,9 +391,7 @@ def build_mf6(idx, ws, gridgen):
             auxiliary=["concentration"],
             boundnames=True,
             pname="river",
-            stress_period_data=build_riv_data(
-                gwf.modelgrid,
-            ),
+            stress_period_data=build_riv_data(gwf.modelgrid),
         )
 
     if name.startswith("ps2"):
@@ -417,10 +403,7 @@ def build_mf6(idx, ws, gridgen):
                 gwf,
                 auxiliary=["concentration"],
                 boundnames=True,
-                stress_period_data=build_drn_data(
-                    gwf.modelgrid,
-                    boundname="ghb-1",
-                ),
+                stress_period_data=build_drn_data(gwf.modelgrid, boundname="ghb-1"),
             )
         else:
             drn = flopy.mf6.ModflowGwfdrn(

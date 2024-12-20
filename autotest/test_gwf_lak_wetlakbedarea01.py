@@ -12,7 +12,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["lak-1cellkbd"]
@@ -142,12 +141,6 @@ def calc_qSat(top, bot, thk):
         else:
             y = 1.0
 
-    else:
-        if x < bot:
-            y = 0.0
-        else:
-            y = 1.0
-
     return y
 
 
@@ -156,7 +149,7 @@ def build_models(idx, test):
     ws = test.workspace
     name = cases[idx]
 
-    print("Building model...{}".format(name))
+    print(f"Building model...{name}")
 
     # generate names for each model
     gwfname = "gwf-" + name
@@ -208,8 +201,8 @@ def build_models(idx, test):
         outer_dvclose=hclose,
         inner_maximum=ninner,
         inner_dvclose=hclose,
-        rcloserecord="{} strict".format(rclose),
-        filename="{}.ims".format(gwfname),
+        rcloserecord=f"{rclose} strict",
+        filename=f"{gwfname}.ims",
     )
     sim.register_ims_package(ims, [gwfname])
 
@@ -248,30 +241,16 @@ def build_models(idx, test):
     # Instantiate LAK package
     lak_conn = []
     if use_embedded_lak:
-        lak_conn.append(
-            [0, 0, (0, 0, 1), "embeddedv", lak_bedleak, 0.0, 0.0, 1.0, 0.0]
-        )
+        lak_conn.append([0, 0, (0, 0, 1), "embeddedv", lak_bedleak, 0.0, 0.0, 1.0, 0.0])
     else:
         lak_conn.append(
-            [
-                0,
-                0,
-                (0, 0, 0),
-                "horizontal",
-                lak_bedleak,
-                10.0,
-                20.0,
-                10.0,
-                10.0,
-            ]
+            [0, 0, (0, 0, 0), "horizontal", lak_bedleak, 10.0, 20.0, 10.0, 10.0]
         )
-        lak_conn.append(
-            [0, 1, (1, 0, 1), "vertical", lak_bedleak, 0.0, 0.0, 0.0, 0.0]
-        )
+        lak_conn.append([0, 1, (1, 0, 1), "vertical", lak_bedleak, 0.0, 0.0, 0.0, 0.0])
 
     lak_packagedata = [0, lak_strt, len(lak_conn)]
     budpth = f"{gwfname}.lak.cbc"
-    tab6_filename = "{}.laktab".format(gwfname)
+    tab6_filename = f"{gwfname}.laktab"
     if use_embedded_lak:
         # LAK package input requires tables option when using embedded lakes.
         lak = flopy.mf6.ModflowGwflak(
@@ -290,7 +269,7 @@ def build_models(idx, test):
             length_conversion=3.28081,
             surfdep=0.05,
             pname="LAK-1",
-            filename="{}.lak".format(gwfname),
+            filename=f"{gwfname}.lak",
         )
     else:
         # Don't need to use the "TABLES" option for non-embedded lakes
@@ -308,9 +287,9 @@ def build_models(idx, test):
             length_conversion=3.28081,
             # surfdep=0.05,
             pname="LAK-1",
-            filename="{}.lak".format(gwfname),
+            filename=f"{gwfname}.lak",
         )
-    obs_file = "{}.lak.obs".format(gwfname)
+    obs_file = f"{gwfname}.lak.obs"
     csv_file = obs_file + ".csv"
     obs_dict = {
         csv_file: [
@@ -336,8 +315,8 @@ def build_models(idx, test):
         )
 
     # Instantiate output control package
-    head_filerecord = "{}.hds".format(gwfname)
-    budget_filerecord = "{}.cbc".format(gwfname)
+    head_filerecord = f"{gwfname}.hds"
+    budget_filerecord = f"{gwfname}.cbc"
     flopy.mf6.ModflowGwfoc(
         gwf,
         head_filerecord=head_filerecord,
@@ -355,9 +334,7 @@ def check_output(idx, test):
     gwfname = "gwf-" + name
 
     # read flow results from model
-    sim1 = flopy.mf6.MFSimulation.load(
-        sim_ws=test.workspace, load_only=["dis"]
-    )
+    sim1 = flopy.mf6.MFSimulation.load(sim_ws=test.workspace, load_only=["dis"])
     gwf = sim1.get_model(gwfname)
 
     # get final lake stage

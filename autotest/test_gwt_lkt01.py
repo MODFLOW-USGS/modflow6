@@ -10,7 +10,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import DNODATA, TestFramework
 
 cases = ["lkt_01"]
@@ -55,9 +54,7 @@ def build_models(idx, test):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwfname = "gwf_" + name
@@ -128,7 +125,9 @@ def build_models(idx, test):
         filename=f"{gwfname}.chd",
     )
 
-    nlakeconn = 3  # note: this is the number of connectiosn for a lake, not total number of connections
+    # note: this is the number of connections for a lake,
+    # not total number of connections
+    nlakeconn = 3
     # pak_data = [ifno, strt, nlakeconn, CONC, dense, boundname]
     pak_data = [(0, -0.4, nlakeconn, 0.0, 1025.0)]
 
@@ -141,9 +140,7 @@ def build_models(idx, test):
     con_data.append(
         (0, 1, (0, 0, 3), "HORIZONTAL", DNODATA, 10, 10, connlen, connwidth)
     )
-    con_data.append(
-        (0, 2, (0, 0, 2), "VERTICAL", DNODATA, 10, 10, connlen, connwidth)
-    )
+    con_data.append((0, 2, (0, 0, 2), "VERTICAL", DNODATA, 10, 10, connlen, connwidth))
     p_data = [
         (0, "STATUS", "CONSTANT"),
         (0, "STAGE", -0.4),
@@ -241,15 +238,11 @@ def build_models(idx, test):
     ic = flopy.mf6.ModflowGwtic(gwt, strt=0.0, filename=f"{gwtname}.ic")
 
     # advection
-    adv = flopy.mf6.ModflowGwtadv(
-        gwt, scheme="UPSTREAM", filename=f"{gwtname}.adv"
-    )
+    adv = flopy.mf6.ModflowGwtadv(gwt, scheme="UPSTREAM", filename=f"{gwtname}.adv")
 
     # storage
     porosity = 0.30
-    sto = flopy.mf6.ModflowGwtmst(
-        gwt, porosity=porosity, filename=f"{gwtname}.sto"
-    )
+    sto = flopy.mf6.ModflowGwtmst(gwt, porosity=porosity, filename=f"{gwtname}.sto")
     # sources
     sourcerecarray = [
         ("CHD-1", "AUX", "CONCENTRATION"),
@@ -313,9 +306,7 @@ def build_models(idx, test):
         gwt,
         budget_filerecord=f"{gwtname}.cbc",
         concentration_filerecord=f"{gwtname}.ucn",
-        concentrationprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        concentrationprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("CONCENTRATION", "ALL")],
         printrecord=[
             ("CONCENTRATION", "ALL"),
@@ -379,12 +370,8 @@ def check_output(idx, test):
     fname = os.path.join(test.workspace, fname)
     cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")
     caq = cobj.get_alldata()
-    answer = np.array(
-        [4.86242795, 27.24270616, 64.55536421, 27.24270616, 4.86242795]
-    )
-    assert np.allclose(
-        caq[-1].flatten(), answer
-    ), f"{caq[-1].flatten()} {answer}"
+    answer = np.array([4.86242795, 27.24270616, 64.55536421, 27.24270616, 4.86242795])
+    assert np.allclose(caq[-1].flatten(), answer), f"{caq[-1].flatten()} {answer}"
 
     # lkt observation results
     fpth = os.path.join(test.workspace, gwtname + ".lkt.obs.csv")

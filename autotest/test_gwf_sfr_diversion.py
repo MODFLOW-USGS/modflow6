@@ -3,7 +3,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["sfr_div"]
@@ -15,9 +14,7 @@ def build_models(idx, test):
     # static model data
     # temporal discretization
     nper = len(inflows)
-    tdis_rc = [
-        (1.0, 1, 1.0),
-    ] * nper
+    tdis_rc = [(1.0, 1, 1.0)] * nper
 
     # spatial discretization data
     nlay, nrow, ncol = 1, 1, 1
@@ -45,16 +42,10 @@ def build_models(idx, test):
     )
 
     # create iterative model solution and register the gwf model with it
-    ims = flopy.mf6.ModflowIms(
-        sim,
-        print_option="ALL",
-    )
+    ims = flopy.mf6.ModflowIms(sim, print_option="ALL")
 
     # create gwf model
-    gwf = flopy.mf6.ModflowGwf(
-        sim,
-        modelname=name,
-    )
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=name)
 
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
@@ -71,10 +62,7 @@ def build_models(idx, test):
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
 
     # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(
-        gwf,
-        icelltype=0,
-    )
+    npf = flopy.mf6.ModflowGwfnpf(gwf, icelltype=0)
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
@@ -93,21 +81,9 @@ def build_models(idx, test):
 
     sfrrch_prop = [cellid, rlen, rwid, slope, top, rbth, rhk, roughness]
     packagedata = [
-        [
-            0,
-        ]
-        + sfrrch_prop
-        + [2, 1.0, 1],
-        [
-            1,
-        ]
-        + sfrrch_prop
-        + [1, 0.0, 0],
-        [
-            2,
-        ]
-        + sfrrch_prop
-        + [1, 1.0, 0],
+        [0] + sfrrch_prop + [2, 1.0, 1],
+        [1] + sfrrch_prop + [1, 0.0, 0],
+        [2] + sfrrch_prop + [1, 1.0, 0],
     ]
     connectiondata = [
         [0, -1, -2],

@@ -500,7 +500,6 @@ contains
     class is (GwtGwtConnectionType)
       res => obj
     end select
-    return
   end function CastAsGwtGwtConnection
 
 end module

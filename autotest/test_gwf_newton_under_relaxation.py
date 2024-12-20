@@ -3,7 +3,6 @@ import pathlib as pl
 import flopy
 import numpy as np
 import pytest
-
 from conftest import project_root_path
 from framework import TestFramework
 
@@ -108,15 +107,11 @@ def check_output(idx, test):
     mf6sim = flopy.mf6.MFSimulation.load(sim_ws=test.workspace)
     if idx == 1:
         mfsplit = flopy.mf6.utils.Mf6Splitter(mf6sim)
-        mfsplit.load_node_mapping(
-            mf6sim, pl.Path(f"{test.workspace}/mapping.json")
-        )
+        mfsplit.load_node_mapping(mf6sim, pl.Path(f"{test.workspace}/mapping.json"))
         head_dict = {}
         for modelname in mf6sim.model_names:
             mnum = int(modelname.split("_")[-1])
-            head_dict[mnum] = (
-                mf6sim.get_model(modelname).output.head().get_data()
-            )
+            head_dict[mnum] = mf6sim.get_model(modelname).output.head().get_data()
         heads = mfsplit.reconstruct_array(head_dict)
     else:
         heads = mf6sim.get_model().output.head().get_data()

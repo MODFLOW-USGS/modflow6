@@ -11,13 +11,12 @@ module GwfStoModule
   use ConstantsModule, only: DZERO, DEM6, DEM4, DHALF, DONE, DTWO, &
                              LENBUDTXT, LINELENGTH
   use SimVariablesModule, only: errmsg
-  use SimModule, only: store_error, count_errors
+  use SimModule, only: store_error, store_error_filename, count_errors
   use SmoothingModule, only: sQuadraticSaturation, &
                              sQuadraticSaturationDerivative, &
                              sQSaturation, sLinearSaturation
   use BaseDisModule, only: DisBaseType
   use NumericalPackageModule, only: NumericalPackageType
-  use BlockParserModule, only: BlockParserType
   use GwfStorageUtilsModule, only: SsCapacity, SyCapacity, SsTerms, SyTerms
   use InputOutputModule, only: GetUnit, openfile
   use TvsModule, only: TvsType, tvs_cr
@@ -47,6 +46,8 @@ module GwfStoModule
     type(TvsType), pointer :: tvs => null() !< TVS object
     real(DP), dimension(:), pointer, contiguous, private :: oldss => null() !< previous time step specific storage
     real(DP), dimension(:), pointer, contiguous, private :: oldsy => null() !< previous time step specific yield
+    integer(I4B), pointer :: iper => null() !< input context loaded period
+    character(len=:), pointer :: storage !< input context storage string
   contains
     procedure :: sto_ar
     procedure :: sto_rp
@@ -60,8 +61,9 @@ module GwfStoModule
     procedure :: allocate_scalars
     procedure, private :: allocate_arrays
     !procedure, private :: register_handlers
-    procedure, private :: read_options
-    procedure, private :: read_data
+    procedure, private :: source_options
+    procedure, private :: source_data
+    procedure, private :: log_options
     procedure, private :: save_old_ss_sy
   end type
 
@@ -72,10 +74,11 @@ contains
   !!  Create a new storage (STO) object
   !!
   !<
-  subroutine sto_cr(stoobj, name_model, inunit, iout)
+  subroutine sto_cr(stoobj, name_model, mempath, inunit, iout)
     ! -- dummy variables
     type(GwfStoType), pointer :: stoobj !< GwfStoType object
     character(len=*), intent(in) :: name_model !< name of model
+    character(len=*), intent(in) :: mempath !< input context mem path
     integer(I4B), intent(in) :: inunit !< package input file unit
     integer(I4B), intent(in) :: iout !< model listing file unit
     !
@@ -83,7 +86,7 @@ contains
     allocate (stoobj)
     !
     ! -- create name and memory path
-    call stoobj%set_names(1, name_model, 'STO', 'STO')
+    call stoobj%set_names(1, name_model, 'STO', 'STO', mempath)
     !
     ! -- Allocate scalars
     call stoobj%allocate_scalars()
@@ -91,12 +94,6 @@ contains
     ! -- Set variables
     stoobj%inunit = inunit
     stoobj%iout = iout
-    !
-    ! -- Initialize block parser
-    call stoobj%parser%Initialize(stoobj%inunit, stoobj%iout)
-    !
-    ! -- return
-    return
   end subroutine sto_cr
 
   !> @ brief Allocate and read method for package
@@ -116,10 +113,10 @@ contains
     ! -- formats
     character(len=*), parameter :: fmtsto = &
       "(1x,/1x,'STO -- STORAGE PACKAGE, VERSION 1, 5/19/2014', &
-      &' INPUT READ FROM UNIT ', i0, //)"
+      &' INPUT READ FROM MEMPATH: ', A, //)"
     !
     ! --print a message identifying the storage package.
-    write (this%iout, fmtsto) this%inunit
+    write (this%iout, fmtsto) this%input_mempath
     !
     ! -- store pointers to arguments that were passed in
     this%dis => dis
@@ -135,18 +132,15 @@ contains
     !call this%register_handlers()
     !
     ! -- Read storage options
-    call this%read_options()
+    call this%source_options()
     !
     ! -- read the data block
-    call this%read_data()
+    call this%source_data()
     !
     ! -- TVS
     if (this%intvs /= 0) then
       call this%tvs%ar(this%dis)
     end if
-    !
-    ! -- return
-    return
   end subroutine sto_ar
 
   !> @ brief Read and prepare method for package
@@ -156,86 +150,43 @@ contains
   !<
   subroutine sto_rp(this)
     ! -- modules
-    use TdisModule, only: kper, nper
+    use TdisModule, only: kper
     implicit none
     ! -- dummy variables
     class(GwfStoType) :: this !< GwfStoType object
     ! -- local variables
-    integer(I4B) :: ierr
-    logical :: isfound, readss, readsy, endOfBlock
     character(len=16) :: css(0:1)
-    character(len=LINELENGTH) :: line, keyword
-    ! -- formats
-    character(len=*), parameter :: fmtlsp = &
-      &"(1X,/1X,'REUSING ',A,' FROM LAST STRESS PERIOD')"
-    character(len=*), parameter :: fmtblkerr = &
-      &"('Error.  Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
     ! -- data
     data css(0)/'       TRANSIENT'/
     data css(1)/'    STEADY-STATE'/
-! ------------------------------------------------------------------------------
     !
     ! -- Store ss and sy values from end of last stress period if needed
     if (this%integratechanges /= 0) then
       call this%save_old_ss_sy()
     end if
     !
-    ! -- get stress period data
-    if (this%ionper < kper) then
-      !
-      ! -- get period block
-      call this%parser%GetBlock('PERIOD', isfound, ierr, &
-                                supportOpenClose=.true., &
-                                blockRequired=.false.)
-      if (isfound) then
-        !
-        ! -- read ionper and check for increasing period numbers
-        call this%read_check_ionper()
-      else
-        !
-        ! -- PERIOD block not found
-        if (ierr < 0) then
-          ! -- End of file found; data applies for remainder of simulation.
-          this%ionper = nper + 1
-        else
-          ! -- Found invalid block
-          call this%parser%GetCurrentLine(line)
-          write (errmsg, fmtblkerr) adjustl(trim(line))
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        end if
-      end if
+    ! -- confirm package is active
+    if (this%inunit <= 0) return
+    !
+    ! -- confirm loaded iper
+    if (this%iper /= kper) return
+    !
+    write (this%iout, '(//,1x,a)') 'PROCESSING STORAGE PERIOD DATA'
+    !
+    ! -- set period iss
+    if (this%storage == 'STEADY-STATE') then
+      this%iss = 1
+    else if (this%storage == 'TRANSIENT') then
+      this%iss = 0
+    else
+      write (errmsg, '(a,a)') 'Unknown STORAGE data tag: ', &
+        trim(this%storage)
+      call store_error(errmsg)
+      call store_error_filename(this%input_fname)
     end if
     !
-    ! -- read data if ionper == kper
-    ! are these here to anticipate reading ss,sy per stress period?
-    readss = .false.
-    readsy = .false.
-
-    !stotxt = aname(2)
-    if (this%ionper == kper) then
-      write (this%iout, '(//,1x,a)') 'PROCESSING STORAGE PERIOD DATA'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-        case ('STEADY-STATE')
-          this%iss = 1
-        case ('TRANSIENT')
-          this%iss = 0
-        case default
-          write (errmsg, '(a,a)') 'Unknown STORAGE data tag: ', &
-            trim(keyword)
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        end select
-      end do
-      write (this%iout, '(1x,a)') 'END PROCESSING STORAGE PERIOD DATA'
-      !else
-      !  write(this%iout,fmtlsp) 'STORAGE VALUES'
-    end if
-
+    write (this%iout, '(1x,a)') 'END PROCESSING STORAGE PERIOD DATA'
+    !
     write (this%iout, '(//1X,A,I0,A,A,/)') &
       'STRESS PERIOD ', kper, ' IS ', trim(adjustl(css(this%iss)))
     !
@@ -243,9 +194,6 @@ contains
     if (this%intvs /= 0) then
       call this%tvs%rp()
     end if
-    !
-    ! -- return
-    return
   end subroutine sto_rp
 
   !> @ brief Advance the package
@@ -268,9 +216,6 @@ contains
     if (this%intvs /= 0) then
       call this%tvs%ad()
     end if
-    !
-    ! -- return
-    return
   end subroutine sto_ad
 
   !> @ brief Fill A and right-hand side for the package
@@ -397,9 +342,6 @@ contains
         rhs(n) = rhs(n) + rhsterm
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine sto_fc
 
   !> @ brief Fill Newton-Raphson terms in A and right-hand side for the package
@@ -494,9 +436,6 @@ contains
         end if
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine sto_fn
 
   !> @ brief Calculate flows for package
@@ -622,9 +561,6 @@ contains
         flowja(idiag) = flowja(idiag) + rate
       end do
     end if
-    !
-    ! -- return
-    return
   end subroutine sto_cq
 
   !> @ brief Model budget calculation for package
@@ -656,9 +592,6 @@ contains
       call model_budget%addentry(rin, rout, delt, budtxt(2), &
                                  isuppress_output, '         STORAGE')
     end if
-    !
-    ! -- return
-    return
   end subroutine sto_bd
 
   !> @ brief Save model flows for package
@@ -704,9 +637,6 @@ contains
                                    nwidthp, editdesc, dinact)
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine sto_save_model_flows
 
   !> @ brief Deallocate package memory
@@ -741,6 +671,10 @@ contains
       if (associated(this%oldsy)) then
         call mem_deallocate(this%oldsy)
       end if
+      !
+      ! -- nullify input context pointers
+      nullify (this%iper)
+      nullify (this%storage)
     end if
     !
     ! -- Deallocate scalars
@@ -754,9 +688,6 @@ contains
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
-    !
-    ! -- return
-    return
   end subroutine sto_da
 
   !> @ brief Allocate scalars
@@ -767,7 +698,7 @@ contains
   !<
   subroutine allocate_scalars(this)
     ! -- modules
-    use MemoryManagerModule, only: mem_allocate, mem_setptr
+    use MemoryManagerModule, only: mem_allocate
     ! -- dummy variables
     class(GwfStoType) :: this !< GwfStoType object
     !
@@ -792,9 +723,6 @@ contains
     this%satomega = DZERO
     this%integratechanges = 0
     this%intvs = 0
-    !
-    ! -- return
-    return
   end subroutine allocate_scalars
 
   !> @ brief Allocate package arrays
@@ -804,7 +732,7 @@ contains
   !<
   subroutine allocate_arrays(this, nodes)
     ! -- modules
-    use MemoryManagerModule, only: mem_allocate
+    use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy variables
     class(GwfStoType), target :: this !< GwfStoType object
     integer(I4B), intent(in) :: nodes !< active model nodes
@@ -817,6 +745,12 @@ contains
     call mem_allocate(this%sy, nodes, 'SY', this%memoryPath)
     call mem_allocate(this%strgss, nodes, 'STRGSS', this%memoryPath)
     call mem_allocate(this%strgsy, nodes, 'STRGSY', this%memoryPath)
+    !
+    ! -- set input context pointers
+    if (this%inunit > 0) then
+      call mem_setptr(this%iper, 'IPER', this%input_mempath)
+      call mem_setptr(this%storage, 'STORAGE', this%input_mempath)
+    end if
     !
     ! -- Initialize arrays
     this%iss = 0
@@ -833,24 +767,81 @@ contains
         end if
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine allocate_arrays
 
-  !> @ brief Read options for package
+  !> @ brief Source input options for package
   !!
-  !!  Read options block for STO package.
+  !!  Source options block parameters for STO package.
   !!
   !<
-  subroutine read_options(this)
+  subroutine source_options(this)
     ! -- modules
+    use ConstantsModule, only: LENMEMPATH
+    use MemoryManagerExtModule, only: mem_set_value
+    use SourceCommonModule, only: filein_fname
+    use GwfStoInputModule, only: GwfStoParamFoundType
     ! -- dummy variables
     class(GwfStoType) :: this !< GwfStoType object
     ! -- local variables
-    character(len=LINELENGTH) :: keyword, fname
-    integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
+    type(GwfStoParamFoundType) :: found
+    character(len=LENMEMPATH) :: tvs6_mempath !< mempath of loaded subpackage
+    character(len=LINELENGTH) :: fname
+    !
+    ! -- source package input
+    call mem_set_value(this%ipakcb, 'IPAKCB', this%input_mempath, found%ipakcb)
+    call mem_set_value(this%istor_coef, 'ISTOR_COEF', this%input_mempath, &
+                       found%istor_coef)
+    call mem_set_value(this%iconf_ss, 'SS_CONFINED_ONLY', this%input_mempath, &
+                       found%ss_confined_only)
+    call mem_set_value(tvs6_mempath, 'TVS6_MEMPATH', this%input_mempath, &
+                       found%tvs6_filename)
+    call mem_set_value(this%iorig_ss, 'IORIG_SS', this%input_mempath, &
+                       found%iorig_ss)
+    call mem_set_value(this%iconf_ss, 'ICONF_SS', this%input_mempath, &
+                       found%iconf_ss)
+    !
+    if (found%ipakcb) then
+      this%ipakcb = -1
+    end if
+    !
+    if (found%ss_confined_only) then
+      this%iorig_ss = 0
+    end if
+    !
+    ! -- enforce 0 or 1 TVS6_FILENAME entries in option block
+    if (filein_fname(fname, 'TVS6_FILENAME', this%input_mempath, &
+                     this%input_fname)) then
+      this%intvs = GetUnit()
+      call openfile(this%intvs, this%iout, fname, 'TVS')
+      call tvs_cr(this%tvs, this%name_model, this%intvs, this%iout)
+    end if
+    !
+    if (found%iconf_ss) then
+      this%iorig_ss = 0
+    end if
+    !
+    ! -- log found options
+    call this%log_options(found)
+    !
+    ! -- set omega value used for saturation calculations
+    if (this%inewton > 0) then
+      this%satomega = DEM6
+    end if
+  end subroutine source_options
+
+  !> @ brief Log found options for package
+  !!
+  !!  Log options block for STO package.
+  !!
+  !<
+  subroutine log_options(this, found)
+    ! -- modules
+    use MemoryManagerExtModule, only: mem_set_value
+    use GwfStoInputModule, only: GwfStoParamFoundType
+    ! -- dummy variables
+    class(GwfStoType) :: this !< GwfStoType object
+    type(GwfStoParamFoundType), intent(in) :: found
+    ! -- local variables
     ! -- formats
     character(len=*), parameter :: fmtisvflow = &
       "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE SAVED TO BINARY FILE &
@@ -867,156 +858,67 @@ contains
       "(4X,'SS_CONFINED_ONLY OPTION:',/, &
       &1X,'Specific storage changes only occur under confined conditions')"
     !
-    ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, &
-                              supportOpenClose=.true., blockRequired=.false.)
+    write (this%iout, '(1x,a)') 'PROCESSING STORAGE OPTIONS'
     !
-    ! -- parse options block if detected
-    if (isfound) then
-      write (this%iout, '(1x,a)') 'PROCESSING STORAGE OPTIONS'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-        case ('SAVE_FLOWS')
-          this%ipakcb = -1
-          write (this%iout, fmtisvflow)
-        case ('STORAGECOEFFICIENT')
-          this%istor_coef = 1
-          write (this%iout, fmtstoc)
-        case ('SS_CONFINED_ONLY')
-          this%iconf_ss = 1
-          this%iorig_ss = 0
-          write (this%iout, fmtconfss)
-        case ('TVS6')
-          if (this%intvs /= 0) then
-            errmsg = 'Multiple TVS6 keywords detected in OPTIONS block.'// &
-                     ' Only one TVS6 entry allowed.'
-            call store_error(errmsg, terminate=.TRUE.)
-          end if
-          call this%parser%GetStringCaps(keyword)
-          if (trim(adjustl(keyword)) /= 'FILEIN') then
-            errmsg = 'TVS6 keyword must be followed by "FILEIN" '// &
-                     'then by filename.'
-            call store_error(errmsg, terminate=.TRUE.)
-          end if
-          call this%parser%GetString(fname)
-          this%intvs = GetUnit()
-          call openfile(this%intvs, this%iout, fname, 'TVS')
-          call tvs_cr(this%tvs, this%name_model, this%intvs, this%iout)
-          !
-          ! -- right now these are options that are only available in the
-          !    development version and are not included in the documentation.
-          !    These options are only available when IDEVELOPMODE in
-          !    constants module is set to 1
-        case ('DEV_ORIGINAL_SPECIFIC_STORAGE')
-          this%iorig_ss = 1
-          write (this%iout, fmtorigss)
-        case ('DEV_OLDSTORAGEFORMULATION')
-          call this%parser%DevOpt()
-          this%iconf_ss = 1
-          this%iorig_ss = 0
-          write (this%iout, fmtconfss)
-        case default
-          write (errmsg, '(a,a)') 'Unknown STO option: ', &
-            trim(keyword)
-          call store_error(errmsg, terminate=.TRUE.)
-        end select
-      end do
-      write (this%iout, '(1x,a)') 'END OF STORAGE OPTIONS'
+    if (found%ipakcb) then
+      write (this%iout, fmtisvflow)
     end if
     !
-    ! -- set omega value used for saturation calculations
-    if (this%inewton > 0) then
-      this%satomega = DEM6
+    if (found%istor_coef) then
+      write (this%iout, fmtstoc)
     end if
     !
-    ! -- return
-    return
-  end subroutine read_options
+    if (found%ss_confined_only) then
+      write (this%iout, fmtconfss)
+    end if
+    !
+    if (found%iorig_ss) then
+      write (this%iout, fmtorigss)
+    end if
+    !
+    if (found%iconf_ss) then
+      write (this%iout, fmtconfss)
+    end if
+    !
+    write (this%iout, '(1x,a)') 'END OF STORAGE OPTIONS'
+  end subroutine log_options
 
-  !> @ brief Read data for package
+  !> @ brief Source input data for package
   !!
-  !!  Read griddata block for STO package.
+  !!  Source griddata block parameters for STO package.
   !!
   !<
-  subroutine read_data(this)
+  subroutine source_data(this)
     ! -- modules
+    use MemoryManagerExtModule, only: mem_set_value
+    use GwfStoInputModule, only: GwfStoParamFoundType
     ! -- dummy variables
     class(GwfStotype) :: this !< GwfStoType object
     ! -- local variables
-    character(len=LINELENGTH) :: keyword
-    character(len=:), allocatable :: line
     character(len=LINELENGTH) :: cellstr
-    integer(I4B) :: istart, istop, lloc, ierr
-    logical :: isfound, endOfBlock
-    logical :: readiconv
-    logical :: readss
-    logical :: readsy
-    logical :: isconv
+    logical(LGP) :: isconv
     character(len=24), dimension(4) :: aname
     integer(I4B) :: n
-    ! -- formats
-    !data
+    integer(I4B), dimension(:), pointer, contiguous :: map
+    type(GwfStoParamFoundType) :: found
+    !
+    ! -- initialize data
     data aname(1)/'                ICONVERT'/
     data aname(2)/'        SPECIFIC STORAGE'/
     data aname(3)/'          SPECIFIC YIELD'/
-    data aname(4)/'     STORAGE COEFFICIENT'/
     !
-    ! -- initialize
-    isfound = .false.
-    readiconv = .false.
-    readss = .false.
-    readsy = .false.
-    isconv = .false.
+    ! -- set map to reduce data input arrays
+    map => null()
+    if (this%dis%nodes < this%dis%nodesuser) map => this%dis%nodeuser
     !
-    ! -- get stodata block
-    call this%parser%GetBlock('GRIDDATA', isfound, ierr)
-    if (isfound) then
-      write (this%iout, '(1x,a)') 'PROCESSING GRIDDATA'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        call this%parser%GetRemainingLine(line)
-        lloc = 1
-        select case (keyword)
-        case ('ICONVERT')
-          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                        this%parser%iuactive, this%iconvert, &
-                                        aname(1))
-          readiconv = .true.
-        case ('SS')
-          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                        this%parser%iuactive, this%ss, &
-                                        aname(2))
-          readss = .true.
-        case ('SY')
-          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                        this%parser%iuactive, this%sy, &
-                                        aname(3))
-          readsy = .true.
-        case default
-          write (errmsg, '(a,a)') 'Unknown GRIDDATA tag: ', &
-            trim(keyword)
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        end select
-      end do
-      write (this%iout, '(1x,a)') 'END PROCESSING GRIDDATA'
-    else
-      write (errmsg, '(a)') 'Required GRIDDATA block not found.'
-      call store_error(errmsg)
-      call this%parser%StoreErrorUnit()
-    end if
+    ! -- copy data from input context
+    call mem_set_value(this%iconvert, 'ICONVERT', this%input_mempath, map, &
+                       found%iconvert)
+    call mem_set_value(this%ss, 'SS', this%input_mempath, map, found%ss)
+    call mem_set_value(this%sy, 'SY', this%input_mempath, map, found%sy)
     !
     ! -- Check for ICONVERT
-    if (.not. readiconv) then
-      write (errmsg, '(a, a, a)') 'Error in GRIDDATA block: ', &
-        trim(adjustl(aname(1))), ' not found.'
-      call store_error(errmsg)
-    else
+    if (found%iconvert) then
       isconv = .false.
       do n = 1, this%dis%nodes
         if (this%iconvert(n) /= 0) then
@@ -1025,24 +927,34 @@ contains
           exit
         end if
       end do
+    else
+      write (errmsg, '(a, a, a)') 'Error in GRIDDATA block: ', &
+        trim(adjustl(aname(1))), ' not found.'
+      call store_error(errmsg)
     end if
     !
     ! -- Check for SS
-    if (.not. readss) then
+    if (found%ss) then
+      ! no-op
+    else
       write (errmsg, '(a, a, a)') 'Error in GRIDDATA block: ', &
         trim(adjustl(aname(2))), ' not found.'
       call store_error(errmsg)
     end if
     !
     ! -- Check for SY
-    if (.not. readsy .and. isconv) then
-      write (errmsg, '(a, a, a)') 'Error in GRIDDATA block: ', &
-        trim(adjustl(aname(3))), ' not found.'
-      call store_error(errmsg)
+    if (found%sy) then
+      ! no-op
+    else
+      if (isconv) then
+        write (errmsg, '(a, a, a)') 'Error in GRIDDATA block: ', &
+          trim(adjustl(aname(3))), ' not found.'
+        call store_error(errmsg)
+      end if
     end if
     !
     if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
+      call store_error_filename(this%input_fname)
     end if
     !
     ! -- Check SS and SY for negative values
@@ -1054,7 +966,7 @@ contains
           'is less than zero (', this%ss(n), ').'
         call store_error(errmsg)
       end if
-      if (readsy) then
+      if (found%sy) then
         if (this%sy(n) < DZERO) then
           call this%dis%noder_to_string(n, cellstr)
           write (errmsg, '(a,2(1x,a),1x,g0,1x,a)') &
@@ -1064,10 +976,7 @@ contains
         end if
       end if
     end do
-    !
-    ! -- return
-    return
-  end subroutine read_data
+  end subroutine source_data
 
   !> @ brief Save old storage property values
   !!
@@ -1102,9 +1011,6 @@ contains
         this%oldsy(n) = this%sy(n)
       end do
     end if
-    !
-    ! -- Return
-    return
   end subroutine save_old_ss_sy
 
 end module GwfStoModule

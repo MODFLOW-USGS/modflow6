@@ -1,5 +1,0 @@
-BEGIN CONNECTIONDATA
-  <ifno> <icon> <cellid(ncelldim)> <scrn_top> <scrn_bot> <hk_skin> <radius_skin>
-  <ifno> <icon> <cellid(ncelldim)> <scrn_top> <scrn_bot> <hk_skin> <radius_skin>
-  ...
-END CONNECTIONDATA

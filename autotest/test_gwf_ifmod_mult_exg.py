@@ -3,7 +3,7 @@ Test the interface model approach for multiple (2) exchanges between
 the same two models. One exchange has XT3D and the other one doesn't.
 
         'parent: 1x6x8'          'child: 1x16x16'
-                            
+
      1  1  1  1  1  1  1  1                      XT3D on exg
      1  1  0  0  0  0  1  1         1, ..., 1
      1  1  0  0  0  0  1  1         1, ..., 1
@@ -26,7 +26,6 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.lgrutil import Lgr
-
 from framework import TestFramework
 
 cases = ["ifmod_mult_exg"]
@@ -88,9 +87,7 @@ def get_model(idx, dir):
         memory_print_option="all",
     )
 
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     ims = flopy.mf6.ModflowIms(
         sim,
@@ -107,9 +104,7 @@ def get_model(idx, dir):
 
     # boundary data
     left_chd = [
-        [(ilay, irow, 0), h_left]
-        for irow in range(nrow)
-        for ilay in range(nlay)
+        [(ilay, irow, 0), h_left] for irow in range(nrow) for ilay in range(nlay)
     ]
     right_chd = [
         [(ilay, irow, ncol - 1), h_right]
@@ -202,25 +197,12 @@ def get_model(idx, dir):
     idomainp = gwf.dis.idomain.array
 
     lgr = Lgr(
-        nlay,
-        nrowp,
-        ncolp,
-        delrp,
-        delcp,
-        topp,
-        botmp,
-        idomainp,
-        ncpp=rft,
-        ncppl=1,
+        nlay, nrowp, ncolp, delrp, delcp, topp, botmp, idomainp, ncpp=rft, ncppl=1
     )
 
     exgdata = lgr.get_exchange_data(angldegx=True, cdist=True)
-    exgdata_north = [
-        e for e in exgdata if (e[0])[1] < 3
-    ]  # northern three rows
-    exgdata_south = [
-        e for e in exgdata if (e[0])[1] > 2
-    ]  # southern three rows
+    exgdata_north = [e for e in exgdata if (e[0])[1] < 3]  # northern three rows
+    exgdata_south = [e for e in exgdata if (e[0])[1] > 2]  # southern three rows
 
     # north, has XT3D
     flopy.mf6.ModflowGwfgwf(

@@ -3,13 +3,10 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cell_dimensions = (300,)
-cases = [
-    f"gwf_obs01{chr(ord('a') + idx)}" for idx in range(len(cell_dimensions))
-]
+cases = [f"gwf_obs01{chr(ord('a') + idx)}" for idx in range(len(cell_dimensions))]
 h0, h1 = 1.0, 0.0
 
 
@@ -72,9 +69,7 @@ def build_models(idx, test):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create iterative model solution and register the gwf model with it
     flopy.mf6.ModflowIms(
@@ -111,9 +106,7 @@ def build_models(idx, test):
         botm=botm,
         idomain=np.ones((nlay, nrow, ncol), dtype=int),
     )
-    flopy.mf6.ModflowUtlobs(
-        gwf, pname="head_obs", digits=20, continuous=get_obs(idx)
-    )
+    flopy.mf6.ModflowUtlobs(gwf, pname="head_obs", digits=20, continuous=get_obs(idx))
 
     # initial conditions
     flopy.mf6.ModflowGwfic(gwf, strt=get_strt_array(idx))

@@ -7,32 +7,33 @@ To build and test a parallel version of the program, first read the instructions
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-
 - [Prerequisites](#prerequisites)
   - [Git](#git)
+  - [Python](#python)
   - [Fortran compiler](#fortran-compiler)
     - [GNU Fortran](#gnu-fortran)
-      - [Linux](#linux)
-      - [macOS](#macos)
-      - [Windows](#windows)
     - [Intel Fortran](#intel-fortran)
-      - [Windows](#windows-1)
+      - [Windows](#windows)
     - [Compiler compatibility](#compiler-compatibility)
       - [Compile](#compile)
       - [Test](#test)
-  - [Python](#python)
-    - [Dependencies](#dependencies)
-      - [`meson`](#meson)
-      - [`fprettify`](#fprettify)
-      - [`mfpymake`](#mfpymake)
-      - [`flopy`](#flopy)
-      - [`modflow-devtools`](#modflow-devtools)
   - [Optional tools](#optional-tools)
-    - [GNU Make](#gnu-make)
-    - [Visual Studio](#visual-studio)
-    - [Doxygen & LaTeX](#doxygen--latex)
-- [Installation](#installation)
+- [Get the MODFLOW 6 repository](#get-the-modflow-6-repository)
+- [Install the python environment](#install-the-python-environment)
+  - [Python dependencies](#python-dependencies)
+    - [`meson`](#meson)
+    - [`codespell`](#codespell)
+    - [`fprettify`](#fprettify)
+    - [`ruff`](#ruff)
+    - [`mfpymake`](#mfpymake)
+    - [`flopy`](#flopy)
+    - [`modflow-devtools`](#modflow-devtools)
 - [Building](#building)
+- [Formatting](#formatting)
+  - [Spell checking](#spell-checking)
+  - [Fortran formatting](#fortran-formatting)
+  - [Python formatting](#python-formatting)
+  - [Python linting](#python-linting)
 - [Testing](#testing)
   - [Configuring a test environment](#configuring-a-test-environment)
     - [Configuring unit tests](#configuring-unit-tests)
@@ -48,10 +49,12 @@ To build and test a parallel version of the program, first read the instructions
   - [Writing tests](#writing-tests)
     - [Writing unit tests](#writing-unit-tests)
     - [Writing integration tests](#writing-integration-tests)
+      - [Test framework](#test-framework)
 - [Generating makefiles](#generating-makefiles)
   - [Updating extra and excluded files](#updating-extra-and-excluded-files)
   - [Testing makefiles](#testing-makefiles)
   - [Installing `make` on Windows](#installing-make-on-windows)
+    - [Using Conda from Git Bash](#using-conda-from-git-bash)
 - [Branching model](#branching-model)
   - [Overview](#overview)
   - [Managing long-lived branches](#managing-long-lived-branches)
@@ -66,11 +69,10 @@ To build and test a parallel version of the program, first read the instructions
 
 ## Prerequisites
 
-Before you can build and test MODFLOW 6, you must install and configure the
-following on your development machine:
+Before you can build and test MODFLOW 6, you must install and configure the following on your development machine:
 
 - git
-- Python3.8+
+- Python3.9+
 - a modern Fortran compiler
 
 Some additional, optional tools are also discussed below.
@@ -80,6 +82,16 @@ Some additional, optional tools are also discussed below.
 [Git](https://git-scm.com) and/or the **GitHub app** (for [Mac](https://mac.github.com) or [Windows](https://windows.github.com)).
 [GitHub's Guide to Installing Git](https://help.github.com/articles/set-up-git) is a good source of information.
 
+Optionally, the [`git blame`](https://git-scm.com/docs/git-blame) tool can be configured to work locally using:
+
+```shell
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
+
+### Python
+
+Python 3.9+ is required to run MODFLOW 6 tests and in some cases to build MODFLOW 6. Information on installing the python environment is given in the [Installing Python environment](#install-the-python-environment) section. The MODFLOW 6 python environment should be installed after [locally cloning the repository](#get-the-modflow-6-repository).
+
 ### Fortran compiler
 
 GNU Fortran or Intel Fortran compilers can be used to build MODFLOW 6. It may be possible to build MODFLOW 6 with other compilers, but this cannot be guaranteed.
@@ -88,12 +100,12 @@ GNU Fortran or Intel Fortran compilers can be used to build MODFLOW 6. It may be
 
 GNU Fortran can be installed on all three major platforms.
 
-##### Linux
+*Linux*
 
 - Fedora-based: `dnf install gcc-gfortran`
 - Debian-based: `apt install gfortran`
 
-##### macOS
+*macOS*
 
 - [Homebrew](https://brew.sh/): `brew install gcc@13`
 - [MacPorts](https://www.macports.org/): `sudo port install gcc13`
@@ -106,7 +118,7 @@ export LDFLAGS="$LDFLAGS -Wl,-ld_classic"
 
 See [this ticket](https://github.com/mesonbuild/meson/issues/12282) on the Meson repository for more information.
 
-##### Windows
+*Windows*
 
 [Minimalist GNU for Windows](https://www.mingw-w64.org/) is the recommended way to obtain the GCC toolchain on Windows. Several MinGW distributions are available.
 
@@ -176,67 +188,26 @@ The following tables are automatically generated by [a CI workflow](.github/work
 | windows-2022 | &check;         | &check;         | &check;         | &check;         |             |             | &check;        |                            |                             |                            |                            |                            |                            | &check;                       | &check;                       |                            |                            |                    |                    |                    |                    |                    |                      |                    |                    |                    |                    |
 <!-- test compat ends -->
 
-### Python
-
-Python 3.8+ is required to run MODFLOW 6 tests. Using Python via Pixi is recommended. Pixi installation docs can be found [here](https://pixi.sh). After installing `pixi`, to set up an environment with all development dependencies, run:
-
-```
-pixi run install
-```
-
-#### Dependencies
-
-This project depends critically on a few Python packages for building, linting and testing tasks:
-
-- `meson`
-- `fprettify`
-- `pymake`
-- `flopy`
-- `modflow-devtools`
-
-These are each described briefly below. These and a number of other dependencies are build-, test-, or release-time dependencies are included the Pixi environment `pixi.toml` as well as the Conda `environment.yml` file in this repository.
-
-##### `meson`
-
-[Meson](https://mesonbuild.com/index.html) is the recommended build system for MODFLOW 6.
-
-##### `fprettify`
-
-[`fprettify`](https://github.com/pseewald/fprettify) can be used to format Fortran source code and in combination with the [MODFLOW 6 fprettify configuration](.fprettify.yaml) establishes a contribution standard for properly formatted MODFLOW 6 Fortran source. This tool can be used from the command line or integrated with a [VSCode](.vscode/README.md) or Visual Studio development environment. See [contribution guidelines](CONTRIBUTING.md) for additional information.
-
-##### `mfpymake`
-
-The `mfpymake` package can build MODFLOW 6 and related programs and artifacts (e.g. makefiles), and is used in particular by the `distribution/build_makefiles.py` script.
-
-##### `flopy`
-
-[`flopy`](https://github.com/modflowpy/flopy) is used throughout MODFLOW 6 tests to create, run and post-process models.
-
-Like MODFLOW 6, `flopy` is modular &mdash; for each MODFLOW 6 package there is generally a corresponding `flopy` package. Packages are generated dynamically from DFN files stored in this repository under `doc/mf6io/mf6ivar/dfn`.
-
-##### `modflow-devtools`
-
-The tests use a set of shared fixtures and utilities provided by the [`modflow-devtools`](https://github.com/MODFLOW-USGS/modflow-devtools) package.
-
 ### Optional tools
 
 Some other tools are useful but not required to develop MODFLOW 6.
 
-#### GNU Make
+*GNU Make*
 
 This repository provides makefiles, generated by `mfpymake`, which can be used to build MODFLOW 6 with [GNU Make](https://www.gnu.org/software/make/). For further instructions we refer to the [GNU Make Manual](https://www.gnu.org/software/make/manual/).
 
-#### Visual Studio
+*Visual Studio*
 
 Visual Studio installers can be downloaded from the [official website](https://visualstudio.microsoft.com/). MODFLOW 6 solution files can be found in the `msvs` folder.
 
-#### Doxygen & LaTeX
+*Doxygen & LaTeX*
 
-[Doxygen](https://www.doxygen.nl/index.html) is used to generate the [MODFLOW 6 source code documentation](https://modflow-usgs.github.io/modflow6/). [Graphviz](https://graphviz.org/) is used by doxygen to produce source code diagrams. [LaTeX](https://www.latex-project.org/) is used to generate the MODFLOW 6 release notes and Input/Output documents (docs/mf6io/mf6io.nightlybuild).
+[Doxygen](https://www.doxygen.nl/index.html) is used to generate the [MODFLOW 6 source code documentation](https://modflow-usgs.github.io/modflow6/). [Graphviz](https://graphviz.org/) is used by doxygen to produce source code diagrams. [LaTeX](https://www.latex-project.org/) is used to generate the MODFLOW 6 release notes and Input/Output documents.
 
 These programs can be installed from various sources, including by conda, macports, or from individual sources such as https://www.tug.org/. Details about USGS LaTeX libraries can be seen in addition to linux installs in the CI workflow for the docs (`.github/workflows/ci-docs.yml`).
 
-## Installation
+
+## Get the MODFLOW 6 repository
 
 Fork and clone the MODFLOW 6 repository:
 
@@ -244,16 +215,94 @@ Fork and clone the MODFLOW 6 repository:
 2. [Fork](http://help.github.com/forking) the [main MODFLOW 6](https://github.com/MODFLOW-USGS/modflow6).
 3. Clone your fork of the MODFLOW 6 repository and create an `upstream` remote pointing back to your fork.
 
+After forking the MODFLOW 6 repository on GitHub.
+
+1. Clone your fork of the GitHub repository to your computer.
+
 ```shell
-# Clone your GitHub repository:
-git clone git@github.com:<github username>/modflow6.git
+  git clone git@github.com:<github username>/modflow6.git
+```
 
-# Go to the MODFLOW 6 directory:
+2. Go to the MODFLOW 6 directory.
+
+```shell
 cd modflow6
+```
 
-# Add the main MODFLOW 6 repository as an upstream remote to your repository:
+3. Add the main MODFLOW 6 repository as an upstream remote to your repository.
+
+```shell
 git remote add upstream https://github.com/MODFLOW-USGS/modflow6.git
 ```
+
+## Install the python environment
+
+Python 3.9+ is required to run MODFLOW 6 tests and in some cases to build MODFLOW 6. Miniforge is the recommended python distribution if you do not have an existing Conda or Mamba based python distribution.
+
+The [environment file for MODFLOW 6](./environment.yml) includes all of the required [python dependencies](#python-dependencies). Install the `modflow6` environment using the Conda `environment.yml` file in the repository. 
+
+1. Open a terminal (command prompt) in the root directory of the repository.
+2. Use either Mamba or Conda to install the `modflow6` environment.
+
+```shell
+mamba env create -f environment.yml 
+```
+
+```shell
+conda env create -f environment.yml
+```
+
+Python can also be installed via Pixi. Pixi is currently being used to install python on GitHub Actions continuous integration/continuous development (CI/CD) virtual machines. In the future, Pixi may be the preferred approach for installing python for MODFLOW 6. As a result it is recommended for developers to also install the Pixi python environment, which can coexist with the Mamba/Conda python installation and `modflow6` environment. 
+
+Pixi installation docs can be found [here](https://pixi.sh). After installing `pixi`, to set up an environment with all development dependencies, in the root directory of the MODFLOW 6 repository run:
+
+```shell
+pixi run install
+```
+
+### Python dependencies
+
+This project depends critically on a few Python packages for building, linting, spell checking, and testing tasks:
+
+- `meson`
+- `codespell`
+- `fprettify`
+- `ruff`
+- `mfpymake`
+- `flopy`
+- `modflow-devtools`
+
+These are each described briefly below. These and a number of other dependencies are build-, test-, or release-time dependencies are included the Pixi environment `pixi.toml` as well as the Conda `environment.yml` file in this repository.
+
+#### `meson`
+
+[Meson](https://mesonbuild.com/index.html) is the recommended build system for MODFLOW 6.
+
+#### `codespell`
+
+[`codespell`](https://github.com/codespell-project/codespell) was designed primarily for checking misspelled words in source code, but can be used with other text files as well. This tool can be used from the command line or integrated with a [VSCode](.vscode/README.md). See [Spell check guidelines](#spell-checking) for additional information.
+
+#### `fprettify`
+
+[`fprettify`](https://github.com/pseewald/fprettify) can be used to format Fortran source code and in combination with the [MODFLOW 6 fprettify configuration](.fprettify.yaml) establishes a contribution standard for properly formatted MODFLOW 6 Fortran source. This tool can be used from the command line or integrated with a [VSCode](.vscode/README.md) or Visual Studio development environment. See [Fortran formatting guidelines](#fortran-formatting) for additional information.
+
+#### `ruff`
+
+[`ruff`](https://docs.astral.sh/ruff/) can be used to format and lint python code and scripts (for example, autotest scripts) and in combination with the [MODFLOW 6 ruff configuration](.github/common/ruff.toml) establishes a contribution standard for properly formatted python code and scripts. This tool can be used from the command line or integrated with a [VSCode](.vscode/README.md).  See [python formatting guidelines](#python-formatting) and [python linting guidelines](#python-linting) for additional information.
+
+#### `mfpymake`
+
+The `mfpymake` package can build MODFLOW 6 and related programs and artifacts (e.g. makefiles), and is used in particular by the `distribution/build_makefiles.py` script.
+
+#### `flopy`
+
+[`flopy`](https://github.com/modflowpy/flopy) is used throughout MODFLOW 6 tests to create, run and post-process models.
+
+Like MODFLOW 6, `flopy` is modular &mdash; for each MODFLOW 6 package there is generally a corresponding `flopy` package. Packages are generated dynamically from DFN files stored in this repository under `doc/mf6io/mf6ivar/dfn`.
+
+#### `modflow-devtools`
+
+The tests use a set of shared fixtures and utilities provided by the [`modflow-devtools`](https://github.com/MODFLOW-USGS/modflow-devtools) package.
 
 ## Building
 
@@ -271,22 +320,151 @@ Building MODFLOW 6 requires two steps:
 - configure the build directory
 - build the project
 
-To configure the build directory:
+To configure the build directory for a debug version:
 
 ```shell
-meson setup -Ddebug=true -Doptimization=0 builddir
-meson setup builddir  # for an optimized release build
-pixi run setup builddir  # alternatively, with pixi task
+meson setup --prefix=$(pwd) --libdir=bin builddir -Ddebug=true
 ```
+Or to configure the build directory for an optimized release version:
+
+```shell
+meson setup --prefix=$(pwd) --libdir=bin builddir
+```
+
+or using pixi to setup the build directory:
+
+```shell
+pixi run setup builddir
+```
+
+Debug versions can be built using pixi by adding `-Ddebug=true` at the end of the pixi command. Other meson commands (for example, `-Dparallel=true`, `--wipe`, _etc._) added to the pixi command are passed through to Meson. 
+
+Substitute `%CD%` as necessary on Windows.
 
 To build MODFLOW 6 and install binaries to `<project root>/bin/`:
 
 ```shell
 meson install -C builddir
-pixi run build builddir  # alternatively, with pixi
+```
+
+or using pixi:
+
+```shell
+pixi run build builddir
 ```
 
 **Note:** If using Visual Studio Code, you can use tasks as described [here](.vscode/README.md) to automate the above.
+
+## Formatting
+
+### Spell checking
+
+Fortran source files, python files, definition files, markdown, and LaTeX files can be checked with [codespell](https://github.com/codespell-project/codespell). codespell was designed primarily for checking misspelled words in source code, but it can be used with other text files as well. The `codespell` package is included in the Conda `environment.yml` and the Pixi `pixi.toml` files and can be run directly, via Pixi, or via [VSCode](.vscode/README.md) tasks.
+
+To check whether the repository's Fortran source files, python files, definition files, markdown, and LaTeX files have any spelling errors without making any changes:
+
+```shell
+pixi run check-spelling
+```
+
+Or, from an environment with `codespell` installed, simply
+
+```shell
+codespell
+```
+
+To fix spelling errors in all files, use `-w` (`--write-changes`). When run in this way, the tool will modify the file in place. If unresolvable errors are encountered, these are written to standard output and must be manually fixed before attempting to rerun the tool.
+
+**Note**: Spell checking by codespell may make unwanted changes (for example, a variable name in source code). As a result, you should check the `codespell` changes. codespell can be forced to leave a particular word unchanged by adding it to the `.codespell.ignore` file.
+
+### Fortran formatting
+
+Fortran source code can be formatted with [fprettify](https://github.com/pseewald/fprettify), specifying the [MODFLOW 6 fprettify configuration](.fprettify.yaml). The `fprettify` package is included in the Conda `environment.yml` and the Pixi `pixi.toml` files and can be run directly, via Pixi, or via [VSCode](.vscode/README.md) tasks.
+
+For instance, to format a single file:
+
+```shell
+fprettify -c .fprettify.yaml ./utils/zonebudget/src/zbud6.f90
+```
+
+When run in this way, the tool will modify the file in place and generate no output if successful. If unresolvable formatting errors are encountered (e.g. for excess line length), these are written to standard output and must be manually fixed before attempting to rerun the tool.
+
+To check whether the repository's source files satisfy formatting requirements without making any changes:
+
+```shell
+python .github/common/check_format.py
+```
+
+or using pixi:
+
+```shell
+pixi run check-format
+```
+
+To format all files, add the `--write-changes` flag to the end of the python or pixi commands. These commands will exclude the proper files from formatting, including vendored library sources in [`src/Utilities/Libraries`](src/Utilities/Libraries/).
+
+**Note**: as `fprettify` may shift code in unexpected ways, it is a good idea to visually check source files afterwards.
+
+
+### Python formatting
+
+Python code and scripts can be formatted with [ruff](https://docs.astral.sh/ruff/), specifying the [MODFLOW 6 ruff configuration](.github/common/ruff.toml). The `ruff` package is included in the Conda `environment.yml` and Pixi `pixi.toml` files and can be run directly, via Pixi, or via [VSCode](.vscode/README.md) tasks.
+
+For instance, to format a single file:
+
+```shell
+ruff format autotest/test_gwe_cnd.py
+```
+
+When run in this way, `ruff` will modify the file in place and generate no output if successful. If unresolvable formatting errors are encountered, these are written to standard output and must be manually fixed before attempting to rerun the tool.
+
+To check whether the repository's python code and scripts satisfy formatting requirements without making any changes:
+
+```shell
+ruff format --check .
+```
+
+or using pixi:
+
+```shell
+pixi run check-python-format
+```
+
+To format all files, remove the `--check` flag from the python command or run the pixi command:
+
+```shell
+pixi run fix-python-format
+```
+
+### Python linting
+
+Linting is the automated checking of source code for programmatic and stylistic errors. python code and scripts can be linted with [ruff](https://docs.astral.sh/ruff/), specifying the [MODFLOW 6 ruff configuration](.github/common/ruff.toml). The `ruff` package is included in the Conda `environment.yml` and Pixi `pixi.toml` files and can be run directly, via Pixi, or via [VSCode](.vscode/README.md) tasks.
+
+For instance, to lint a single file:
+
+```shell
+ruff check --fix autotest/test_gwe_cnd.py
+```
+
+When run in this way, `ruff` will modify the file in place and generate no output if successful. If unresolvable formatting errors are encountered, these are written to standard output and must be manually fixed before attempting to rerun the tool.
+
+To check whether the repository's python code and scripts satisfy linting requirements without making any changes:
+
+```shell
+ruff check .
+```
+
+or using pixi:
+
+```shell
+pixi run check-python-lint
+```
+
+To format all files, add the `--fix` flag to the python command or pixi command. Alternatively with pixi run:
+
+```shell
+pixi run fix-python-lint
+```
 
 ## Testing
 
@@ -366,7 +544,12 @@ FloPy packages should be regenerated from DFN files before running tests for the
 There is a single optional argument, the path to the folder containing definition files. By default DFN files are assumed to live in `doc/mf6io/mf6ivar/dfn`, making the following functionally identical:
 
 ```shell
-pixi run update-flopy  # uses default dfn path
+pixi run update-flopy
+```
+
+which uses the default dfn path. Or the location of the definition files can be explitily defined using:
+
+```shell
 pixi run update-flopy doc/mf6io/mf6ivar/dfn
 ```
 
@@ -374,12 +557,19 @@ Alternatively, run `python update_flopy.py` directly from `autotest/`.
 
 ##### Updating Fortran definitions
 
-Any time a MODFLOW 6 input definition file (dfn) has been changed internal MODFLOW 6 Fortran definitions should be updated as well. This can be accomplished locally by running utils/idmloader/scripts/dfn2f90.py and then recompiling. This script will update the appropriate input package Fortran definition files if the dfn change is relevant to input processing. Updated definition files should accompany related dfn file changes when creating a pull request.
+Any time a MODFLOW 6 input definition file (dfn) has been changed internal MODFLOW 6 Fortran definitions should be updated as well. This can be accomplished locally by running `utils/idmloader/scripts/dfn2f90.py` and then recompiling. This script will update the appropriate input package Fortran definition files if the dfn change is relevant to input processing. Updated Fortran definition files should accompany related dfn file changes when creating a pull request.
 
 ```shell
 cd utils/idmloader/scripts
 python dfn2f90.py
 ```
+
+or using pixi:
+
+```shell
+pixi run update-fortran-definitions
+```
+
 
 ##### Installing external models
 
@@ -401,14 +591,23 @@ Unit tests must be run from the project root. To run unit tests in verbose mode:
 
 ```shell
 meson test -C builddir
-pixi run test builddir  # alternatively, with pixi
+```
+or using pixi:
+
+```shell
+pixi run test builddir
 ```
 
 Unit tests can be selected by module name (as listed in `autotest/tester.f90`). For instance, to test the `ArrayHandlersModule`:
 
 ```shell
 meson test -C builddir --verbose ArrayHandlers
-pixi run test builddir --verbose ArrayHandlers  # alternatively, with pixi
+```
+
+or using pixi:
+
+```shell
+pixi run test builddir --verbose ArrayHandlers
 ```
 
 To run a test module in the `gdb` debugger, just add the `--gdb` flag to the test command.
@@ -420,8 +619,14 @@ Integration tests must be run from the `autotest/` folder if invoked with `pytes
 To run tests in parallel:
 
 ```shell
+cd autotest/
 pytest -v -n auto  # from autotest/
-pixi run autotest  # from project root
+```
+
+or using pixi:
+
+```shell
+pixi run autotest
 ```
 
 The Pixi `autotest` task includes options to run tests in parallel, show test runtimes, and save failed test results in `autotest/.failed/`.
@@ -447,6 +652,12 @@ The `--smoke` (short `-S`) flag, provided by `modflow-devtools` is an alias for 
 
 ```shell
 pytest -v -n auto -S
+```
+
+or using pixi:
+
+```shell
+pixi run autotest -S
 ```
 
 [Smoke testing](https://modflow-devtools.readthedocs.io/en/latest/md/markers.html#smoke-testing) is a form of integration testing which aims to test a decent fraction of the codebase quickly enough to run often during development.
@@ -552,23 +763,29 @@ def check_output(idx, test):
   e = expected[idx]
   ...
 
+def plot_output(idx, test):
+  import matplotlib.pyplot as plt
+  ...
+
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, plot):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
+        plot=lambda t: plot_output(idx, t) if plot else None,
         compare=None,
     )
     test.run()
 ```
 
-The framework has two hooks:
+The framework has three hooks:
 
 - `build`: construct one or more MF6 simulations and/or non-MF6 models with FloPy
 - `check`: evaluate simulation/model output
+- `plot`: make one or more plots of simulation/model output
 
 A test script conventionally contains one or more test cases, fed to the test function as `idx, name` pairs. `idx` can be used to index parameter values or expected results for a specific test case. The test case `name` is useful for model/subdirectory naming, etc.
 
@@ -595,8 +812,14 @@ After running the reference and comparison models, the framework will try to fin
 Run `build_makefiles.py` in the `distribution/` directory after adding, removing, or renaming source files. This script uses [Pymake](https://github.com/modflowpy/pymake) to regenerate makefiles. For instance:
 
 ```shell
-pixi run build-makefiles   # from project root
-python build_makefiles.py  # alternatively, from distribution/
+cd distribution/
+python build_makefiles.py
+```
+
+or using pixi:
+
+```shell
+pixi run build-makefiles
 ```
 
 ### Updating extra and excluded files

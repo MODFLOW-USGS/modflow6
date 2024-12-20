@@ -6,12 +6,19 @@ if test_drive.found() and not fc_id.contains('intel')
     'GeomUtil',
     'HashTable',
     'InputOutput',
+    'KeyValueList',
     'List',
+    'ListIterator',
     'MathUtil',
+    'MemoryContainerIterator',
+    'MemoryStore',
     'Message',
+    'PtrHashTable',
     'Sim',
     'SwfUtils',
-    'TimeSelect'
+    'TimeSelect',
+    'TimeStepSelect',
+    'UzfEtUtil'
   ]
 
   test_srcs = files(

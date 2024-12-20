@@ -20,12 +20,9 @@ dispersion, and reaction (sorption and decay):
 
 import os
 from pathlib import Path
-from typing import Tuple
 
 import flopy
 import numpy as np
-import pytest
-
 from conftest import try_get_target
 
 testgroup = "mt3dms_p01"
@@ -224,18 +221,14 @@ def p01mf6(
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
     ws = model_ws
-    sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name=exe, sim_ws=ws
-    )
+    sim = flopy.mf6.MFSimulation(sim_name=name, version="mf6", exe_name=exe, sim_ws=ws)
     from flopy.mf6.mfbase import VerbosityLevel
 
     sim.simulation_data.verbosity_level = VerbosityLevel.quiet
     sim.name_file.memory_print_option = "all"
 
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwfname = "gwf_" + name
@@ -364,9 +357,7 @@ def p01mf6(
         scheme = "TVD"
     else:
         raise Exception()
-    adv = flopy.mf6.ModflowGwtadv(
-        gwt, scheme=scheme, filename=f"{gwtname}.adv"
-    )
+    adv = flopy.mf6.ModflowGwtadv(gwt, scheme=scheme, filename=f"{gwtname}.adv")
 
     # dispersion
     dsp = flopy.mf6.ModflowGwtdsp(gwt, xt3d_off=True, alh=al, ath1=0.1)
@@ -419,7 +410,7 @@ def p01mf6(
     if zeta is not None:
         ist = flopy.mf6.ModflowGwtist(
             gwt,
-            sorption=True,
+            sorption="LINEAR",
             first_order_decay=first_order_decay,
             zero_order_decay=zero_order_decay,
             bulk_density=rhob,
@@ -438,9 +429,7 @@ def p01mf6(
         gwt,
         budget_filerecord=f"{gwtname}.bud",
         concentration_filerecord=f"{gwtname}.ucn",
-        concentrationprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        concentrationprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
     )
@@ -464,16 +453,14 @@ def p01mf6(
 
     # load concentrations
     fname = os.path.join(model_ws, gwtname + ".ucn")
-    ucnobj = flopy.utils.HeadFile(
-        fname, precision="double", text="CONCENTRATION"
-    )
+    ucnobj = flopy.utils.HeadFile(fname, precision="double", text="CONCENTRATION")
     times = ucnobj.get_times()
     conc = ucnobj.get_alldata()
 
     return sim, conc
 
 
-def get_binaries(targets) -> Tuple[Path, Path, Path]:
+def get_binaries(targets) -> tuple[Path, Path, Path]:
     return (
         targets["mf6"],
         try_get_target(targets, "mf2005s"),

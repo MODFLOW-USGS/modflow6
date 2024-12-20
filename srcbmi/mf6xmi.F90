@@ -222,13 +222,13 @@ contains
     !DIR$ ATTRIBUTES DLLEXPORT :: xmi_prepare_solve
     ! -- modules
     use ListsModule, only: solutiongrouplist
-    use NumericalSolutionModule
+    use BaseSolutionModule, only: BaseSolutionType
     use SimVariablesModule, only: istdout
     ! -- dummy variables
     integer(kind=c_int) :: subcomponent_idx !< index of the subcomponent (i.e. Numerical Solution)
     integer(kind=c_int) :: bmi_status !< BMI status code
     ! -- local variables
-    class(NumericalSolutionType), pointer :: ns
+    class(BaseSolutionType), pointer :: bs
 
     ! people might not call 'xmi_get_subcomponent_count' first, so let's repeat this:
     if (solutiongrouplist%Count() /= 1) then
@@ -238,11 +238,11 @@ contains
       return
     end if
 
-    ! get the numerical solution we are running
-    ns => getSolution(subcomponent_idx)
+    ! get the solution we are running
+    bs => getSolution(subcomponent_idx)
 
     ! *_ad (model, exg, sln)
-    call ns%prepareSolve()
+    call bs%prepareSolve()
 
     ! reset counter
     allocate (iterationCounter)
@@ -262,27 +262,34 @@ contains
     bind(C, name="solve")
     !DIR$ ATTRIBUTES DLLEXPORT :: xmi_solve
     ! -- modules
-    use NumericalSolutionModule
+    use BaseSolutionModule, only: BaseSolutionType
+    use NumericalSolutionModule, only: NumericalSolutionType
+    use ExplicitSolutionModule, only: ExplicitSolutionType
     ! -- dummy variables
     integer(kind=c_int), intent(in) :: subcomponent_idx !< index of the subcomponent (i.e. Numerical Solution)
     integer(kind=c_int), intent(out) :: has_converged !< equal to 1 for convergence, 0 otherwise
     integer(kind=c_int) :: bmi_status !< BMI status code
     ! -- local variables
-    class(NumericalSolutionType), pointer :: ns
+    class(BaseSolutionType), pointer :: bs
 
     ! get the numerical solution we are running
-    ns => getSolution(subcomponent_idx)
+    bs => getSolution(subcomponent_idx)
 
     ! execute the nth iteration
     iterationCounter = iterationCounter + 1
-    call ns%solve(iterationCounter)
+    call bs%solve(iterationCounter)
 
     ! the following check is equivalent to that in NumericalSolution%sln_ca
-    if (ns%icnvg == 1) then
+    select type (bs)
+    class is (NumericalSolutionType)
+      if (bs%icnvg == 1) then
+        has_converged = 1
+      else
+        has_converged = 0
+      end if
+    class is (ExplicitSolutionType)
       has_converged = 1
-    else
-      has_converged = 0
-    end if
+    end select
 
     bmi_status = BMI_SUCCESS
 
@@ -300,23 +307,23 @@ contains
     bind(C, name="finalize_solve")
     !DIR$ ATTRIBUTES DLLEXPORT :: xmi_finalize_solve
     ! -- modules
-    use NumericalSolutionModule
+    use BaseSolutionModule, only: BaseSolutionType
     ! -- dummy variables
     integer(kind=c_int), intent(in) :: subcomponent_idx !< index of the subcomponent (i.e. Numerical Solution)
     integer(kind=c_int) :: bmi_status !< BMI status code
     ! -- local variables
-    class(NumericalSolutionType), pointer :: ns
+    class(BaseSolutionType), pointer :: bs
     integer(I4B) :: hasConverged
 
     ! get the numerical solution we are running
-    ns => getSolution(subcomponent_idx)
+    bs => getSolution(subcomponent_idx)
 
     ! hasConverged is equivalent to the isgcnvg variable which is initialized to 1,
     ! see the body of the picard loop in SolutionGroupType%sgp_ca
     hasConverged = 1
 
     ! finish up
-    call ns%finalizeSolve(iterationCounter, hasConverged, 0)
+    call bs%finalizeSolve(iterationCounter, hasConverged, 0)
 
     ! check convergence on solution
     if (.not. hasConverged == 1) then
@@ -340,17 +347,10 @@ contains
     ! -- modules
     use VersionModule, only: VERSIONNUMBER, IDEVELOPMODE
     ! -- dummy variables
-    character(kind=c_char), intent(out) :: mf_version(BMI_LENVERSION)
+    character(kind=c_char), intent(inout) :: mf_version(BMI_LENVERSION)
     integer(kind=c_int) :: bmi_status !< BMI status code
-    ! -- local variables
-    character(len=BMI_LENVERSION) :: vstr
 
-    if (IDEVELOPMODE == 1) then
-      vstr = VERSIONNUMBER//'-dev'
-    else
-      vstr = VERSIONNUMBER
-    end if
-    mf_version = string_to_char_array(vstr, len_trim(vstr))
+    mf_version = string_to_char_array(VERSIONNUMBER, len_trim(VERSIONNUMBER))
     bmi_status = BMI_SUCCESS
 
   end function xmi_get_version

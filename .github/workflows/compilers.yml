@@ -15,30 +15,19 @@ jobs:
         # combinations from https://github.com/fortran-lang/setup-fortran#runner-compatibility
         include:
           # gfortran
-          - {os: ubuntu-20.04, compiler: gcc, version: 11}
           - {os: ubuntu-22.04, compiler: gcc, version: 11}
           - {os: ubuntu-22.04, compiler: gcc, version: 12}
           - {os: ubuntu-22.04, compiler: gcc, version: 13}
-          - {os: macos-11, compiler: gcc, version: 11}
-          - {os: macos-11, compiler: gcc, version: 12}
-          - {os: macos-11, compiler: gcc, version: 13}
-          - {os: macos-12, compiler: gcc, version: 11}
-          - {os: macos-12, compiler: gcc, version: 12}
-          - {os: macos-12, compiler: gcc, version: 13}
-          - {os: windows-2019, compiler: gcc, version: 11}
-          - {os: windows-2019, compiler: gcc, version: 12}
-          - {os: windows-2019, compiler: gcc, version: 13}
+          - {os: macos-13, compiler: gcc, version: 11}
+          - {os: macos-13, compiler: gcc, version: 12}
+          - {os: macos-13, compiler: gcc, version: 13}
+          - {os: macos-14, compiler: gcc, version: 11}
+          - {os: macos-14, compiler: gcc, version: 12}
+          - {os: macos-14, compiler: gcc, version: 13}
           - {os: windows-2022, compiler: gcc, version: 11}
           - {os: windows-2022, compiler: gcc, version: 12}
           - {os: windows-2022, compiler: gcc, version: 13}
           # ifx
-          - {os: ubuntu-20.04, compiler: intel, version: 2024.1}
-          - {os: ubuntu-20.04, compiler: intel, version: "2024.0"}
-          - {os: ubuntu-20.04, compiler: intel, version: 2023.2}
-          - {os: ubuntu-20.04, compiler: intel, version: 2023.1}
-          - {os: ubuntu-20.04, compiler: intel, version: "2023.0"}
-          - {os: ubuntu-20.04, compiler: intel, version: 2022.2.1}
-          - {os: ubuntu-20.04, compiler: intel, version: 2022.2}
           - {os: ubuntu-22.04, compiler: intel, version: 2024.1}
           - {os: ubuntu-22.04, compiler: intel, version: "2024.0"}
           - {os: ubuntu-22.04, compiler: intel, version: 2023.2}
@@ -46,13 +35,6 @@ jobs:
           - {os: ubuntu-22.04, compiler: intel, version: "2023.0"}
           - {os: ubuntu-22.04, compiler: intel, version: 2022.2.1}
           - {os: ubuntu-22.04, compiler: intel, version: 2022.2}
-          # no ifx on mac
-          - {os: windows-2019, compiler: intel, version: 2024.1}
-          - {os: windows-2019, compiler: intel, version: "2024.0"}
-          - {os: windows-2019, compiler: intel, version: 2023.2}
-          - {os: windows-2019, compiler: intel, version: 2023.1}
-          - {os: windows-2019, compiler: intel, version: "2023.0"}
-          - {os: windows-2019, compiler: intel, version: 2022.2}
           - {os: windows-2022, compiler: intel, version: 2024.1}
           - {os: windows-2022, compiler: intel, version: "2024.0"}
           - {os: windows-2022, compiler: intel, version: 2023.2}
@@ -60,16 +42,6 @@ jobs:
           - {os: windows-2022, compiler: intel, version: "2023.0"}
           - {os: windows-2022, compiler: intel, version: 2022.2}
           # ifort
-          - {os: ubuntu-20.04, compiler: intel-classic, version: "2021.10"}
-          - {os: ubuntu-20.04, compiler: intel-classic, version: 2021.9}
-          - {os: ubuntu-20.04, compiler: intel-classic, version: 2021.8}
-          - {os: ubuntu-20.04, compiler: intel-classic, version: 2021.7}
-          - {os: ubuntu-20.04, compiler: intel-classic, version: 2021.6}
-          - {os: ubuntu-20.04, compiler: intel-classic, version: 2021.5}
-          - {os: ubuntu-20.04, compiler: intel-classic, version: 2021.4}
-          - {os: ubuntu-20.04, compiler: intel-classic, version: 2021.3}
-          - {os: ubuntu-20.04, compiler: intel-classic, version: 2021.2}
-          - {os: ubuntu-20.04, compiler: intel-classic, version: 2021.1}
           - {os: ubuntu-22.04, compiler: intel-classic, version: "2021.10"}
           - {os: ubuntu-22.04, compiler: intel-classic, version: 2021.9}
           - {os: ubuntu-22.04, compiler: intel-classic, version: 2021.8}
@@ -80,31 +52,16 @@ jobs:
           - {os: ubuntu-22.04, compiler: intel-classic, version: 2021.3}
           - {os: ubuntu-22.04, compiler: intel-classic, version: 2021.2}
           - {os: ubuntu-22.04, compiler: intel-classic, version: 2021.1}
-          - {os: macos-11, compiler: intel-classic, version: "2021.10"}
-          - {os: macos-11, compiler: intel-classic, version: 2021.9}
-          - {os: macos-11, compiler: intel-classic, version: 2021.8}
-          - {os: macos-11, compiler: intel-classic, version: 2021.7}
-          - {os: macos-11, compiler: intel-classic, version: 2021.6}
-          - {os: macos-11, compiler: intel-classic, version: 2021.5}
-          - {os: macos-11, compiler: intel-classic, version: 2021.4}
-          - {os: macos-11, compiler: intel-classic, version: 2021.3}
-          - {os: macos-11, compiler: intel-classic, version: 2021.2}
-          - {os: macos-11, compiler: intel-classic, version: 2021.1}
-          - {os: macos-12, compiler: intel-classic, version: "2021.10"}
-          - {os: macos-12, compiler: intel-classic, version: 2021.9}
-          - {os: macos-12, compiler: intel-classic, version: 2021.8}
-          - {os: macos-12, compiler: intel-classic, version: 2021.7}
-          - {os: macos-12, compiler: intel-classic, version: 2021.6}
-          - {os: macos-12, compiler: intel-classic, version: 2021.5}
-          - {os: macos-12, compiler: intel-classic, version: 2021.4}
-          - {os: macos-12, compiler: intel-classic, version: 2021.3}
-          - {os: macos-12, compiler: intel-classic, version: 2021.2}
-          - {os: macos-12, compiler: intel-classic, version: 2021.1}
-          - {os: windows-2019, compiler: intel-classic, version: "2021.10"}
-          - {os: windows-2019, compiler: intel-classic, version: 2021.9}
-          - {os: windows-2019, compiler: intel-classic, version: 2021.8}
-          - {os: windows-2019, compiler: intel-classic, version: 2021.7}
-          - {os: windows-2019, compiler: intel-classic, version: 2021.6}
+          - {os: macos-13, compiler: intel-classic, version: "2021.10"}
+          - {os: macos-13, compiler: intel-classic, version: 2021.9}
+          - {os: macos-13, compiler: intel-classic, version: 2021.8}
+          - {os: macos-13, compiler: intel-classic, version: 2021.7}
+          - {os: macos-13, compiler: intel-classic, version: 2021.6}
+          - {os: macos-13, compiler: intel-classic, version: 2021.5}
+          - {os: macos-13, compiler: intel-classic, version: 2021.4}
+          - {os: macos-13, compiler: intel-classic, version: 2021.3}
+          - {os: macos-13, compiler: intel-classic, version: 2021.2}
+          - {os: macos-13, compiler: intel-classic, version: 2021.1}
           - {os: windows-2022, compiler: intel-classic, version: "2021.10"}
           - {os: windows-2022, compiler: intel-classic, version: 2021.9}
           - {os: windows-2022, compiler: intel-classic, version: 2021.8}
@@ -138,9 +95,9 @@ jobs:
           version: ${{ matrix.version }}
 
       - name: Setup pixi
-        uses: prefix-dev/setup-pixi@v0.7.0
+        uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.19.1
+          pixi-version: v0.24.2
           manifest-path: "modflow6/pixi.toml"
 
       - name: Custom pixi install

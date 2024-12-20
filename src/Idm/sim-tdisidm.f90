@@ -9,6 +9,7 @@ module SimTdisInputModule
   public sim_tdis_block_definitions
   public SimTdisParamFoundType
   public sim_tdis_multi_package
+  public sim_tdis_subpackages
 
   type SimTdisParamFoundType
     logical :: time_units = .false.
@@ -25,6 +26,12 @@ module SimTdisInputModule
 
   logical :: sim_tdis_multi_package = .false.
 
+  character(len=16), parameter :: &
+    sim_tdis_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     simtdis_time_units = InputParamDefinitionType &
     ( &
@@ -35,6 +42,7 @@ module SimTdisInputModule
     'TIME_UNITS', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'time unit', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -52,6 +60,7 @@ module SimTdisInputModule
     'START_DATE_TIME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'starting date and time', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -69,6 +78,7 @@ module SimTdisInputModule
     'ATS_FILERECORD', & ! fortran variable
     'RECORD ATS6 FILEIN ATS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -86,6 +96,7 @@ module SimTdisInputModule
     'ATS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'ats keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -103,6 +114,7 @@ module SimTdisInputModule
     'FILEIN', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'file keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -120,6 +132,7 @@ module SimTdisInputModule
     'ATS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'file name of adaptive time series information', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -137,6 +150,7 @@ module SimTdisInputModule
     'NPER', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of stress periods', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -154,6 +168,7 @@ module SimTdisInputModule
     'PERLEN', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'length of stress period', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -171,6 +186,7 @@ module SimTdisInputModule
     'NSTP', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'number of time steps', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -188,6 +204,7 @@ module SimTdisInputModule
     'TSMULT', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'number of time steps', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -220,6 +237,7 @@ module SimTdisInputModule
     'PERIODDATA', & ! fortran variable
     'RECARRAY PERLEN NSTP TSMULT', & ! type
     '', & ! shape
+    'stress period time information', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

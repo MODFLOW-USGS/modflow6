@@ -19,7 +19,8 @@ module PrtModule
   use BudgetModule, only: BudgetType
   use ListModule, only: ListType
   use ParticleModule, only: ParticleType, create_particle
-  use TrackModule, only: TrackFileControlType, TrackFileType
+  use TrackFileModule, only: TrackFileType
+  use TrackControlModule, only: TrackControlType
   use SimModule, only: count_errors, store_error, store_error_filename
   use MemoryManagerModule, only: mem_allocate
   use MethodModule, only: MethodType
@@ -43,7 +44,7 @@ module PrtModule
     type(PrtOcType), pointer :: oc => null() ! output control package
     type(BudgetType), pointer :: budget => null() ! budget object
     class(MethodType), pointer :: method => null() ! tracking method
-    type(TrackFileControlType), pointer :: trackfilectl ! track file control
+    type(TrackControlType), pointer :: trackctl ! track control
     integer(I4B), pointer :: infmi => null() ! unit number FMI
     integer(I4B), pointer :: inmip => null() ! unit number MIP
     integer(I4B), pointer :: inmvt => null() ! unit number MVT
@@ -143,7 +144,7 @@ contains
     this%memoryPath = create_mem_path(modelname)
 
     ! -- Allocate track control object
-    allocate (this%trackfilectl)
+    allocate (this%trackctl)
 
     ! -- Allocate scalars and add model to basemodellist
     call this%allocate_scalars(modelname)
@@ -249,7 +250,7 @@ contains
       select type (packobj)
       type is (PrtPrpType)
         call packobj%prp_set_pointers(this%ibound, this%mip%izone, &
-                                      this%trackfilectl)
+                                      this%trackctl)
       end select
       ! -- Read and allocate package
       call packobj%bnd_ar()
@@ -260,7 +261,7 @@ contains
     type is (DisType)
       call method_dis%init( &
         fmi=this%fmi, &
-        trackfilectl=this%trackfilectl, &
+        trackctl=this%trackctl, &
         izone=this%mip%izone, &
         flowja=this%flowja, &
         porosity=this%mip%porosity, &
@@ -270,7 +271,7 @@ contains
     type is (DisvType)
       call method_disv%init( &
         fmi=this%fmi, &
-        trackfilectl=this%trackfilectl, &
+        trackctl=this%trackctl, &
         izone=this%mip%izone, &
         flowja=this%flowja, &
         porosity=this%mip%porosity, &
@@ -281,10 +282,10 @@ contains
 
     ! -- Initialize track output files and reporting options
     if (this%oc%itrkout > 0) &
-      call this%trackfilectl%init_track_file(this%oc%itrkout)
+      call this%trackctl%init_track_file(this%oc%itrkout)
     if (this%oc%itrkcsv > 0) &
-      call this%trackfilectl%init_track_file(this%oc%itrkcsv, csv=.true.)
-    call this%trackfilectl%set_track_events( &
+      call this%trackctl%init_track_file(this%oc%itrkcsv, csv=.true.)
+    call this%trackctl%set_track_events( &
       this%oc%trackrelease, &
       this%oc%trackexit, &
       this%oc%tracktimestep, &
@@ -687,7 +688,7 @@ contains
   subroutine prt_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
-    use MemoryManagerExtModule, only: memorylist_remove
+    use MemoryManagerExtModule, only: memorystore_remove
     use SimVariablesModule, only: idm_context
     use MethodPoolModule, only: destroy_method_pool
     use MethodCellPoolModule, only: destroy_method_cell_pool
@@ -699,8 +700,8 @@ contains
     class(BndType), pointer :: packobj
 
     ! -- Deallocate idm memory
-    call memorylist_remove(this%name, 'NAM', idm_context)
-    call memorylist_remove(component=this%name, context=idm_context)
+    call memorystore_remove(this%name, 'NAM', idm_context)
+    call memorystore_remove(component=this%name, context=idm_context)
 
     ! -- Internal packages
     call this%dis%dis_da()
@@ -742,7 +743,7 @@ contains
     call mem_deallocate(this%ratesto)
 
     ! -- Track file control
-    deallocate (this%trackfilectl)
+    deallocate (this%trackctl)
 
     ! -- Parent type
     call this%NumericalModelType%model_da()
@@ -910,49 +911,60 @@ contains
         ! -- Update PRP index
         iprp = iprp + 1
 
-        ! -- Initialize PRP-specific track files, if enabled
-        if (packobj%itrkout > 0) then
-          call this%trackfilectl%init_track_file( &
-            packobj%itrkout, &
-            iprp=iprp)
-        end if
-        if (packobj%itrkcsv > 0) then
-          call this%trackfilectl%init_track_file( &
-            packobj%itrkcsv, &
-            csv=.true., &
-            iprp=iprp)
+        ! -- Initialize PRP-specific track files
+        if (kper == 1 .and. kstp == 1) then
+          if (packobj%itrkout > 0) then
+            call this%trackctl%init_track_file( &
+              packobj%itrkout, &
+              iprp=iprp)
+          end if
+          if (packobj%itrkcsv > 0) then
+            call this%trackctl%init_track_file( &
+              packobj%itrkcsv, &
+              csv=.true., &
+              iprp=iprp)
+          end if
         end if
 
         ! -- Loop over particles in package
         do np = 1, packobj%nparticles
           ! -- Load particle from storage
-          call particle%load_from_store(packobj%particles, &
-                                        this%id, iprp, np)
+          call particle%load_particle(packobj%particles, &
+                                      this%id, iprp, np)
 
           ! -- If particle is permanently unreleased, record its initial/terminal state
           if (particle%istatus == 8) &
-            call this%method%save(particle, reason=3) ! reason=3: termination
+            call this%method%save(particle, reason=3)
 
-          ! -- If particle is inactive or not yet to be released, cycle
+          ! If particle is inactive or not yet to be released, cycle
           if (particle%istatus > 1) cycle
 
-          ! -- If particle released this time step, record its initial state
+          ! If particle released this time step, record its initial state
           particle%istatus = 1
           if (particle%trelease >= totimc) &
-            call this%method%save(particle, reason=0) ! reason=0: release
+            call this%method%save(particle, reason=0)
 
-          ! -- Maximum time is end of time step unless this is the last
-          !    time step in the simulation, which case it's the particle
-          !    stop time.
-          tmax = totimc + delt
-          if (nper == kper .and. nstp(kper) == kstp) &
+          ! Maximum time is the end of the time step or the particle
+          ! stop time, whichever comes first, unless it's the final
+          ! time step and the extend option is on, in which case
+          ! it's just the particle stop time.
+          if (nper == kper .and. &
+              nstp(kper) == kstp .and. &
+              particle%iextend > 0) then
             tmax = particle%tstop
+          else
+            tmax = min(totimc + delt, particle%tstop)
+          end if
 
-          ! -- Get and apply the tracking method
+          ! Get and apply the tracking method
           call this%method%apply(particle, tmax)
 
-          ! -- Update particle storage
-          call packobj%particles%load_from_particle(particle, np)
+          ! Reset previous cell and zone numbers
+          particle%icp = 0
+          particle%izp = 0
+
+          ! Update particle storage
+          call packobj%particles%save_particle(particle, np)
         end do
       end select
     end do

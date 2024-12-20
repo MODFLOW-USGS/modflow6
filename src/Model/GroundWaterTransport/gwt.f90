@@ -9,7 +9,8 @@ module GwtModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LENFTYPE, LENMEMPATH, DZERO, DONE, &
-                             LENPAKLOC, LENVARNAME, LENPACKAGETYPE
+                             LENPAKLOC, LENVARNAME, LENPACKAGETYPE, &
+                             DNODATA, LINELENGTH
   use NumericalModelModule, only: NumericalModelType
 
   use BaseModelModule, only: BaseModelType
@@ -46,13 +47,15 @@ module GwtModule
     procedure :: model_mc => gwt_mc
     procedure :: model_ar => gwt_ar
     procedure :: model_rp => gwt_rp
+    procedure :: model_dt => gwt_dt
     procedure :: model_ad => gwt_ad
     procedure :: model_cf => gwt_cf
     procedure :: model_fc => gwt_fc
     procedure :: model_cc => gwt_cc
     procedure :: model_cq => gwt_cq
     procedure :: model_bd => gwt_bd
-    procedure :: model_ot => gwt_ot
+    procedure :: tsp_ot_flow => gwt_ot_flow
+    procedure :: tsp_ot_dv => gwt_ot_dv
     procedure :: model_da => gwt_da
     procedure :: model_bdentry => gwt_bdentry
     procedure :: allocate_scalars
@@ -98,7 +101,7 @@ contains
     ! -- modules
     use ListsModule, only: basemodellist
     use BaseModelModule, only: AddBaseModelToList
-    use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
+    use ConstantsModule, only: LENPACKAGENAME
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerExtModule, only: mem_set_value
     use GwtNamInputModule, only: GwtNamParamFoundType
@@ -132,9 +135,6 @@ contains
     !
     ! -- create model packages
     call this%create_packages(indis)
-    !
-    ! -- Return
-    return
   end subroutine gwt_cr
 
   !> @brief Define packages of the GWT model
@@ -191,9 +191,6 @@ contains
     !
     ! -- Store information needed for observations
     call this%obs%obs_df(this%iout, this%name, 'GWT', this%dis)
-    !
-    ! -- Return
-    return
   end subroutine gwt_df
 
   !> @brief Add the internal connections of this model to the sparse matrix
@@ -218,9 +215,6 @@ contains
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_ac(this%moffset, sparse)
     end do
-    !
-    ! -- Return
-    return
   end subroutine gwt_ac
 
   !> @brief Map the positions of the GWT model connections in the numerical
@@ -245,9 +239,6 @@ contains
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_mc(this%moffset, matrix_sln)
     end do
-    !
-    ! -- Return
-    return
   end subroutine gwt_mc
 
   !> @brief GWT Model Allocate and Read
@@ -299,9 +290,6 @@ contains
       ! -- Read and allocate package
       call packobj%bnd_ar()
     end do
-    !
-    ! -- Return
-    return
   end subroutine gwt_ar
 
   !> @brief GWT Model Read and Prepare
@@ -332,10 +320,30 @@ contains
       call packobj%bnd_rp()
       call packobj%bnd_rp_obs()
     end do
-    !
-    ! -- Return
-    return
   end subroutine gwt_rp
+
+  !> @brief GWT Model time step size
+  !!
+  !! Calculate the maximum allowable time step size subject to time-step
+  !! constraints.  If adaptive time steps are used, then the time step used
+  !! will be no larger than dtmax calculated here.
+  !<
+  subroutine gwt_dt(this)
+    use TdisModule, only: kstp, kper
+    use AdaptiveTimeStepModule, only: ats_submit_delt
+    ! dummy
+    class(GwtModelType) :: this
+    ! local
+    real(DP) :: dtmax
+    character(len=LINELENGTH) :: msg
+    dtmax = DNODATA
+
+    ! advection package courant stability
+    call this%adv%adv_dt(dtmax, msg, this%mst%thetam)
+    if (msg /= '') then
+      call ats_submit_delt(kstp, kper, dtmax, msg)
+    end if
+  end subroutine gwt_dt
 
   !> @brief GWT Model Time Step Advance
   !!
@@ -388,9 +396,6 @@ contains
     !
     ! -- Push simulated values to preceding time/subtime step
     call this%obs%obs_ad()
-    !
-    ! -- Return
-    return
   end subroutine gwt_ad
 
   !> @brief GWT Model calculate coefficients
@@ -411,9 +416,6 @@ contains
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_cf()
     end do
-    !
-    ! -- Return
-    return
   end subroutine gwt_cf
 
   !> @brief GWT Model fill coefficients
@@ -458,9 +460,6 @@ contains
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_fc(this%rhs, this%ia, this%idxglo, matrix_sln)
     end do
-    !
-    ! -- Return
-    return
   end subroutine gwt_fc
 
   !> @brief GWT Model Final Convergence Check
@@ -487,9 +486,6 @@ contains
     !
     ! -- If mover is on, then at least 2 outers required
     if (this%inmvt > 0) call this%mvt%mvt_cc(kiter, iend, icnvgmod, cpak, dpak)
-    !
-    ! -- Return
-    return
   end subroutine gwt_cc
 
   !> @brief GWT Model calculate flow
@@ -536,9 +532,6 @@ contains
     !    This results in the flow residual being stored in the diagonal
     !    position for each cell.
     call csr_diagsum(this%dis%con%ia, this%flowja)
-    !
-    ! -- Return
-    return
   end subroutine gwt_cq
 
   !> @brief GWT Model Budget
@@ -573,37 +566,43 @@ contains
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_bd(this%budget)
     end do
-    !
-    ! -- Return
-    return
   end subroutine gwt_bd
 
-  !> @brief Print and/or save model output
+  !> @brief GWT model output routine
   !!
-  !! Call the parent class output routine
+  !! Save and print flows
   !<
-  subroutine gwt_ot(this)
-    ! -- dummy
+  subroutine gwt_ot_flow(this, icbcfl, ibudfl, icbcun)
+    ! dummy
     class(GwtModelType) :: this
-    ! -- local
-    integer(I4B) :: icbcfl
-    integer(I4B) :: icbcun
-    !
-    !
-    ! -- Initialize
-    icbcfl = 0
-    !
-    ! -- Because mst belongs to gwt, call mst_ot_flow directly (and not from parent)
-    if (this%oc%oc_save('BUDGET')) icbcfl = 1
-    icbcun = this%oc%oc_save_unit('BUDGET')
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: ibudfl
+    integer(I4B), intent(in) :: icbcun
+    ! local
+
+    ! call GWT flow output routines
     if (this%inmst > 0) call this%mst%mst_ot_flow(icbcfl, icbcun)
-    !
-    ! -- Call parent class _ot routines.
-    call this%tsp_ot(this%inmst)
-    !
-    ! -- Return
-    return
-  end subroutine gwt_ot
+
+    ! call general transport model flow output routines
+    call this%TransportModelType%tsp_ot_flow(icbcfl, ibudfl, icbcun)
+
+  end subroutine gwt_ot_flow
+
+  !> @brief GWT model dependent variable output
+  !<
+  subroutine gwt_ot_dv(this, idvsave, idvprint, ipflag)
+    class(GwtModelType) :: this
+    integer(I4B), intent(in) :: idvsave
+    integer(I4B), intent(in) :: idvprint
+    integer(I4B), intent(inout) :: ipflag
+
+    ! call GWT dependent variable output routines
+    if (this%inmst > 0) call this%mst%mst_ot_dv(idvsave)
+
+    ! call general transport model dependent variable output routines
+    call this%TransportModelType%tsp_ot_dv(idvsave, idvprint, ipflag)
+
+  end subroutine gwt_ot_dv
 
   !> @brief Deallocate
   !!
@@ -612,7 +611,7 @@ contains
   subroutine gwt_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
-    use MemoryManagerExtModule, only: memorylist_remove
+    use MemoryManagerExtModule, only: memorystore_remove
     use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwtModelType) :: this
@@ -621,8 +620,8 @@ contains
     class(BndType), pointer :: packobj
     !
     ! -- Deallocate idm memory
-    call memorylist_remove(this%name, 'NAM', idm_context)
-    call memorylist_remove(component=this%name, context=idm_context)
+    call memorystore_remove(this%name, 'NAM', idm_context)
+    call memorystore_remove(component=this%name, context=idm_context)
     !
     ! -- Internal flow packages deallocate
     call this%dis%dis_da()
@@ -665,9 +664,6 @@ contains
     !
     ! -- NumericalModelType
     call this%NumericalModelType%model_da()
-    !
-    ! -- Return
-    return
   end subroutine gwt_da
 
   !> @brief GroundWater Transport Model Budget Entry
@@ -687,9 +683,6 @@ contains
     character(len=*), intent(in) :: rowlabel
     !
     call this%budget%addentry(budterm, delt, budtxt, rowlabel=rowlabel)
-    !
-    ! -- Return
-    return
   end subroutine gwt_bdentry
 
   !> @brief return 1 if any package causes the matrix to be asymmetric.
@@ -720,9 +713,6 @@ contains
       packobj => GetBndFromList(this%bndlist, ip)
       if (packobj%iasym /= 0) iasym = 1
     end do
-    !
-    ! -- Return
-    return
   end function gwt_get_iasym
 
   !> Allocate memory for non-allocatable members
@@ -747,9 +737,6 @@ contains
     !
     this%inmst = 0
     this%indsp = 0
-    !
-    ! -- Return
-    return
   end subroutine allocate_scalars
 
   !> @brief Create boundary condition packages for this model
@@ -759,7 +746,6 @@ contains
   subroutine package_create(this, filtyp, ipakid, ipaknum, pakname, mempath, &
                             inunit, iout)
     ! -- modules
-    use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error
     use GwtCncModule, only: cnc_create
     use GwtSrcModule, only: src_create
@@ -830,9 +816,6 @@ contains
       end if
     end do
     call AddBndToList(this%bndlist, packobj)
-    !
-    ! -- Return
-    return
   end subroutine package_create
 
   !> @brief Cast to GwtModelType
@@ -847,9 +830,6 @@ contains
     type is (GwtModelType)
       gwtmodel => model
     end select
-    !
-    ! -- Return
-    return
   end function CastAsGwtModel
 
   !> @brief Source package info and begin to process
@@ -857,7 +837,7 @@ contains
   subroutine create_bndpkgs(this, bndpkgs, pkgtypes, pkgnames, &
                             mempaths, inunits)
     ! -- modules
-    use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
+    use ConstantsModule, only: LENPACKAGENAME
     use CharacterStringModule, only: CharacterStringType
     ! -- dummy
     class(GwtModelType) :: this
@@ -904,16 +884,13 @@ contains
       ! -- cleanup
       deallocate (bndpkgs)
     end if
-    !
-    ! -- Return
-    return
   end subroutine create_bndpkgs
 
   !> @brief Source package info and begin to process
   !<
   subroutine create_gwt_packages(this, indis)
     ! -- modules
-    use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
+    use ConstantsModule, only: LENPACKAGENAME
     use CharacterStringModule, only: CharacterStringType
     use ArrayHandlersModule, only: expandarray
     use MemoryManagerModule, only: mem_setptr
@@ -984,9 +961,6 @@ contains
     call this%ftype_check(indis, this%inmst)
     !
     call this%create_bndpkgs(bndpkgs, pkgtypes, pkgnames, mempaths, inunits)
-    !
-    ! -- Return
-    return
   end subroutine create_gwt_packages
 
 end module GwtModule

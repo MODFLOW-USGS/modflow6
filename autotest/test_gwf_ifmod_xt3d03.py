@@ -3,7 +3,7 @@ Test the interface model approach.
 It compares the result of a single, strongly anisotropic model
 with XT3D enabled to the equivalent case where the domain is
 decomposed into 4 models connected with GWF-GWF exchanges all
-having XT3D enabled. Note the location of the well W, in the 
+having XT3D enabled. Note the location of the well W, in the
 bottom right corner of model "tl" (and also in "ref" of course)
 
           'ref'                    'tl'            'tr'
@@ -36,7 +36,6 @@ from types import SimpleNamespace
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["ifmod_xt3d03"]
@@ -100,9 +99,7 @@ def get_model(idx, dir):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=dir
     )
 
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     ims = flopy.mf6.ModflowIms(
         sim,
@@ -280,9 +277,7 @@ def create_gwf_model(sim, mname, dis_params):
         right_chd = []
     elif mname == "tr" or mname == "br":
         left_chd = []
-        right_chd = [
-            [(0, irow, ncol_split - 1), h_right] for irow in range(nrow_split)
-        ]
+        right_chd = [[(0, irow, ncol_split - 1), h_right] for irow in range(nrow_split)]
     chd_data = left_chd + right_chd
     chd_spd = {0: chd_data}
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd)
@@ -334,38 +329,38 @@ def qxqyqz(fname, nlay, nrow, ncol):
 
 
 def check_output(idx, test):
-    fpth = os.path.join(test.workspace, f"ref.hds")
+    fpth = os.path.join(test.workspace, "ref.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads = hds.get_data()
-    fpth = os.path.join(test.workspace, f"ref.cbc")
+    fpth = os.path.join(test.workspace, "ref.cbc")
     nlay, nrow, ncol = heads.shape
     qx, qy, qz = qxqyqz(fpth, nlay, nrow, ncol)
 
-    fpth = os.path.join(test.workspace, f"tl.hds")
+    fpth = os.path.join(test.workspace, "tl.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads_tl = hds.get_data()
-    fpth = os.path.join(test.workspace, f"tl.cbc")
+    fpth = os.path.join(test.workspace, "tl.cbc")
     nlay, nrow, ncol = heads_tl.shape
     qx_tl, qy_tl, qz_tl = qxqyqz(fpth, nlay, nrow, ncol)
 
-    fpth = os.path.join(test.workspace, f"tr.hds")
+    fpth = os.path.join(test.workspace, "tr.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads_tr = hds.get_data()
-    fpth = os.path.join(test.workspace, f"tr.cbc")
+    fpth = os.path.join(test.workspace, "tr.cbc")
     nlay, nrow, ncol = heads_tr.shape
     qx_tr, qy_tr, qz_tr = qxqyqz(fpth, nlay, nrow, ncol)
 
-    fpth = os.path.join(test.workspace, f"bl.hds")
+    fpth = os.path.join(test.workspace, "bl.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads_bl = hds.get_data()
-    fpth = os.path.join(test.workspace, f"bl.cbc")
+    fpth = os.path.join(test.workspace, "bl.cbc")
     nlay, nrow, ncol = heads_bl.shape
     qx_bl, qy_bl, qz_bl = qxqyqz(fpth, nlay, nrow, ncol)
 
-    fpth = os.path.join(test.workspace, f"br.hds")
+    fpth = os.path.join(test.workspace, "br.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads_br = hds.get_data()
-    fpth = os.path.join(test.workspace, f"br.cbc")
+    fpth = os.path.join(test.workspace, "br.cbc")
     nlay, nrow, ncol = heads_br.shape
     qx_br, qy_br, qz_br = qxqyqz(fpth, nlay, nrow, ncol)
 
@@ -375,12 +370,8 @@ def check_output(idx, test):
 
     # compare heads
     maxdiff = np.amax(abs(heads - heads_merged))
-    assert (
-        maxdiff < 10 * hclose_check
-    ), "Max. head diff. {} should \
-                     be within solver tolerance (x10): {}".format(
-        maxdiff, 10 * hclose_check
-    )
+    assert maxdiff < 10 * hclose_check, f"Max. head diff. {maxdiff} should \
+                     be within solver tolerance (x10): {10 * hclose_check}"
 
     # compare spdis-x
     qx_top = np.append(qx_tl[0], qx_tr[0], axis=1)
@@ -388,12 +379,8 @@ def check_output(idx, test):
     qx_merged = np.append(qx_top, qx_bot, axis=0)
 
     maxdiff = np.amax(abs(qx - qx_merged))
-    assert (
-        maxdiff < 10 * hclose_check
-    ), "Max. diff. in spec. discharge (x) {} \
-                     should be within solver tolerance (x10): {}".format(
-        maxdiff, 10 * hclose_check
-    )
+    assert maxdiff < 10 * hclose_check, f"Max. diff. in spec. discharge (x) {maxdiff} \
+                     should be within solver tolerance (x10): {10 * hclose_check}"
 
     # compare spdis-y
     qy_top = np.append(qy_tl[0], qy_tr[0], axis=1)
@@ -401,12 +388,8 @@ def check_output(idx, test):
     qy_merged = np.append(qy_top, qy_bot, axis=0)
 
     maxdiff = np.amax(abs(qy - qy_merged))
-    assert (
-        maxdiff < 10 * hclose_check
-    ), "Max. diff. in spec. discharge (y) {} \
-                     should be within solver tolerance (x10): {}".format(
-        maxdiff, 10 * hclose_check
-    )
+    assert maxdiff < 10 * hclose_check, f"Max. diff. in spec. discharge (y) {maxdiff} \
+                     should be within solver tolerance (x10): {10 * hclose_check}"
 
     # compare spdis-z
     qz_top = np.append(qz_tl[0], qz_tr[0], axis=1)
@@ -414,12 +397,8 @@ def check_output(idx, test):
     qz_merged = np.append(qz_top, qz_bot, axis=0)
 
     maxdiff = np.amax(abs(qz - qz_merged))
-    assert (
-        maxdiff < 10 * hclose_check
-    ), "Max. diff. in spec. discharge (z) {} \
-                     should be within solver tolerance (x10): {}".format(
-        maxdiff, 10 * hclose_check
-    )
+    assert maxdiff < 10 * hclose_check, f"Max. diff. in spec. discharge (z) {maxdiff} \
+                     should be within solver tolerance (x10): {10 * hclose_check}"
 
     # check budget error from .lst file
     for mname in ["ref", "tl", "tr", "bl", "br"]:
@@ -427,10 +406,9 @@ def check_output(idx, test):
         for line in open(fpth):
             if line.lstrip().startswith("PERCENT"):
                 cumul_balance_error = float(line.split()[3])
-                assert (
-                    abs(cumul_balance_error) < 0.00001
-                ), "Cumulative balance error = {} for {}, should equal 0.0".format(
-                    cumul_balance_error, mname
+                assert abs(cumul_balance_error) < 0.00001, (
+                    f"Cumulative balance error = {cumul_balance_error} for {mname}, "
+                    "should equal 0.0"
                 )
 
 

@@ -1,5 +1,0 @@
-BEGIN PACKAGEDATA
-  <irhospec> <drhodc> <crhoref> <modelname> <auxspeciesname>
-  <irhospec> <drhodc> <crhoref> <modelname> <auxspeciesname>
-  ...
-END PACKAGEDATA

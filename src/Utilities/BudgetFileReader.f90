@@ -56,13 +56,9 @@ module BudgetFileReaderModule
 
 contains
 
+  !< @brief initialize
+  !<
   subroutine initialize(this, iu, iout, ncrbud)
-! ******************************************************************************
-! initialize
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(BudgetFileReaderType) :: this
     integer(I4B), intent(in) :: iu
@@ -73,7 +69,6 @@ contains
     integer(I4B) :: kstp_last, kper_last
     integer(I4B) :: maxaux
     logical :: success
-! ------------------------------------------------------------------------------
     this%inunit = iu
     this%endoffile = .false.
     this%nbudterms = 0
@@ -123,18 +118,11 @@ contains
     if (iout > 0) &
       write (iout, '(a, i0, a)') 'Detected ', this%nbudterms, &
       ' unique flow terms in budget file.'
-    !
-    ! -- return
-    return
   end subroutine initialize
 
+  !< @brief read record
+  !<
   subroutine read_record(this, success, iout_opt)
-! ******************************************************************************
-! read_record
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use InputOutputModule, only: fseek_stream
     ! -- dummy
@@ -144,7 +132,6 @@ contains
     ! -- local
     integer(I4B) :: i, n, iostat, iout
     character(len=LINELENGTH) :: errmsg
-! ------------------------------------------------------------------------------
     !
     if (present(iout_opt)) then
       iout = iout_opt
@@ -235,20 +222,12 @@ contains
         this%endoffile = .true.
       end if
     end if
-    !
-    ! -- return
-    return
   end subroutine read_record
 
+  !< @brief finalize
+  !<
   subroutine finalize(this)
-! ******************************************************************************
-! budgetdata_finalize
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     class(BudgetFileReaderType) :: this
-! ------------------------------------------------------------------------------
     close (this%inunit)
     if (allocated(this%auxtxt)) deallocate (this%auxtxt)
     if (allocated(this%flowja)) deallocate (this%flowja)
@@ -256,9 +235,6 @@ contains
     if (allocated(this%nodedst)) deallocate (this%nodedst)
     if (allocated(this%flow)) deallocate (this%flow)
     if (allocated(this%auxvar)) deallocate (this%auxvar)
-    !
-    ! -- return
-    return
   end subroutine finalize
 
 end module BudgetFileReaderModule

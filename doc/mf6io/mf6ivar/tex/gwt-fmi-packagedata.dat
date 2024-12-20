@@ -1,5 +1,0 @@
-BEGIN PACKAGEDATA
-  <flowtype> FILEIN <fname>
-  <flowtype> FILEIN <fname>
-  ...
-END PACKAGEDATA

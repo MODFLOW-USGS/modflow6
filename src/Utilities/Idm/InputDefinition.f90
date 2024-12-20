@@ -28,6 +28,7 @@ module InputDefinitionModule
     character(len=LENVARNAME) :: mf6varname = '' !< parameter internal managed memory name
     character(len=LINELENGTH) :: datatype = '' !< parameter data type
     character(len=LINELENGTH) :: shape = '' !< shape of data type
+    character(len=LINELENGTH) :: longname = '' !< description of variable
     logical(LGP) :: required = .false. !< is the parameter required
     logical(LGP) :: in_record = .false. !< is the parameter within an input record
     logical(LGP) :: preserve_case = .false. !< should string case be preserved

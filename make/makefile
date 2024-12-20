@@ -5,42 +5,47 @@ include ./makedefaults
 
 # Define the source file directories
 SOURCEDIR1=../src
-SOURCEDIR2=../src/Model
-SOURCEDIR3=../src/Model/Geometry
-SOURCEDIR4=../src/Model/GroundWaterFlow
-SOURCEDIR5=../src/Model/TransportModel
-SOURCEDIR6=../src/Model/GroundWaterTransport
-SOURCEDIR7=../src/Model/Connection
-SOURCEDIR8=../src/Model/Discretization
-SOURCEDIR9=../src/Model/ParticleTracking
-SOURCEDIR10=../src/Model/SurfaceWaterFlow
-SOURCEDIR11=../src/Model/ModelUtilities
-SOURCEDIR12=../src/Model/GroundWaterEnergy
-SOURCEDIR13=../src/Timing
-SOURCEDIR14=../src/Distributed
-SOURCEDIR15=../src/Exchange
-SOURCEDIR16=../src/Solution
-SOURCEDIR17=../src/Solution/ParticleTracker
-SOURCEDIR18=../src/Solution/LinearMethods
-SOURCEDIR19=../src/Solution/PETSc
-SOURCEDIR20=../src/Utilities
-SOURCEDIR21=../src/Utilities/Memory
-SOURCEDIR22=../src/Utilities/Matrix
-SOURCEDIR23=../src/Utilities/ArrayRead
-SOURCEDIR24=../src/Utilities/TimeSeries
-SOURCEDIR25=../src/Utilities/Libraries
-SOURCEDIR26=../src/Utilities/Libraries/rcm
-SOURCEDIR27=../src/Utilities/Libraries/blas
-SOURCEDIR28=../src/Utilities/Libraries/sparsekit
-SOURCEDIR29=../src/Utilities/Libraries/daglib
-SOURCEDIR30=../src/Utilities/Libraries/sparskit2
-SOURCEDIR31=../src/Utilities/Idm
-SOURCEDIR32=../src/Utilities/Idm/mf6blockfile
-SOURCEDIR33=../src/Utilities/Vector
-SOURCEDIR34=../src/Utilities/OutputControl
-SOURCEDIR35=../src/Utilities/Observation
-SOURCEDIR36=../src/Idm
-SOURCEDIR37=../src/Idm/selector
+SOURCEDIR2=../src/Distributed
+SOURCEDIR3=../src/Exchange
+SOURCEDIR4=../src/Idm
+SOURCEDIR5=../src/Idm/selector
+SOURCEDIR6=../src/Model
+SOURCEDIR7=../src/Model/ChannelFlow
+SOURCEDIR8=../src/Model/Connection
+SOURCEDIR9=../src/Model/Discretization
+SOURCEDIR10=../src/Model/Geometry
+SOURCEDIR11=../src/Model/GroundWaterEnergy
+SOURCEDIR12=../src/Model/GroundWaterFlow
+SOURCEDIR13=../src/Model/GroundWaterFlow/submodules
+SOURCEDIR14=../src/Model/GroundWaterTransport
+SOURCEDIR15=../src/Model/ModelUtilities
+SOURCEDIR16=../src/Model/OverlandFlow
+SOURCEDIR17=../src/Model/ParticleTracking
+SOURCEDIR18=../src/Model/SurfaceWaterFlow
+SOURCEDIR19=../src/Model/TransportModel
+SOURCEDIR20=../src/Solution
+SOURCEDIR21=../src/Solution/LinearMethods
+SOURCEDIR22=../src/Solution/ParticleTracker
+SOURCEDIR23=../src/Solution/PETSc
+SOURCEDIR24=../src/Timing
+SOURCEDIR25=../src/Utilities
+SOURCEDIR26=../src/Utilities/ArrayRead
+SOURCEDIR27=../src/Utilities/Export
+SOURCEDIR28=../src/Utilities/Idm
+SOURCEDIR29=../src/Utilities/Idm/mf6blockfile
+SOURCEDIR30=../src/Utilities/Idm/netcdf
+SOURCEDIR31=../src/Utilities/Libraries
+SOURCEDIR32=../src/Utilities/Libraries/blas
+SOURCEDIR33=../src/Utilities/Libraries/daglib
+SOURCEDIR34=../src/Utilities/Libraries/rcm
+SOURCEDIR35=../src/Utilities/Libraries/sparsekit
+SOURCEDIR36=../src/Utilities/Libraries/sparskit2
+SOURCEDIR37=../src/Utilities/Matrix
+SOURCEDIR38=../src/Utilities/Memory
+SOURCEDIR39=../src/Utilities/Observation
+SOURCEDIR40=../src/Utilities/OutputControl
+SOURCEDIR41=../src/Utilities/TimeSeries
+SOURCEDIR42=../src/Utilities/Vector
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -79,7 +84,12 @@ ${SOURCEDIR33} \
 ${SOURCEDIR34} \
 ${SOURCEDIR35} \
 ${SOURCEDIR36} \
-${SOURCEDIR37} 
+${SOURCEDIR37} \
+${SOURCEDIR38} \
+${SOURCEDIR39} \
+${SOURCEDIR40} \
+${SOURCEDIR41} \
+${SOURCEDIR42} 
 
 .SUFFIXES: .f90 .F90 .o
 
@@ -96,15 +106,25 @@ $(OBJDIR)/compilerversion.o \
 $(OBJDIR)/version.o \
 $(OBJDIR)/Sim.o \
 $(OBJDIR)/OpenSpec.o \
+$(OBJDIR)/KeyValueNode.o \
+$(OBJDIR)/Iterator.o \
 $(OBJDIR)/InputOutput.o \
+$(OBJDIR)/KeyValueListIterator.o \
 $(OBJDIR)/TableTerm.o \
+$(OBJDIR)/KeyValueList.o \
 $(OBJDIR)/Table.o \
 $(OBJDIR)/MemoryHelper.o \
-$(OBJDIR)/InputDefinition.o \
+$(OBJDIR)/ListNode.o \
+$(OBJDIR)/PtrHashTableIterator.o \
 $(OBJDIR)/Memory.o \
-$(OBJDIR)/List.o \
+$(OBJDIR)/InputDefinition.o \
+$(OBJDIR)/ListIterator.o \
+$(OBJDIR)/PtrHashTable.o \
+$(OBJDIR)/MemoryContainerIterator.o \
+$(OBJDIR)/utl-ncfidm.o \
 $(OBJDIR)/utl-hpcidm.o \
 $(OBJDIR)/swf-zdgidm.o \
+$(OBJDIR)/swf-stoidm.o \
 $(OBJDIR)/swf-namidm.o \
 $(OBJDIR)/swf-icidm.o \
 $(OBJDIR)/swf-flwidm.o \
@@ -121,6 +141,18 @@ $(OBJDIR)/prt-namidm.o \
 $(OBJDIR)/prt-mipidm.o \
 $(OBJDIR)/prt-disvidm.o \
 $(OBJDIR)/prt-disidm.o \
+$(OBJDIR)/olf-zdgidm.o \
+$(OBJDIR)/olf-stoidm.o \
+$(OBJDIR)/olf-namidm.o \
+$(OBJDIR)/olf-icidm.o \
+$(OBJDIR)/olf-flwidm.o \
+$(OBJDIR)/olf-disv2didm.o \
+$(OBJDIR)/olf-disv1didm.o \
+$(OBJDIR)/olf-dis2didm.o \
+$(OBJDIR)/olf-dfwidm.o \
+$(OBJDIR)/olf-cxsidm.o \
+$(OBJDIR)/olf-chdidm.o \
+$(OBJDIR)/olf-cdbidm.o \
 $(OBJDIR)/gwt-namidm.o \
 $(OBJDIR)/gwt-icidm.o \
 $(OBJDIR)/gwt-dspidm.o \
@@ -129,6 +161,7 @@ $(OBJDIR)/gwt-disuidm.o \
 $(OBJDIR)/gwt-disidm.o \
 $(OBJDIR)/gwt-cncidm.o \
 $(OBJDIR)/gwf-welidm.o \
+$(OBJDIR)/gwf-stoidm.o \
 $(OBJDIR)/gwf-rividm.o \
 $(OBJDIR)/gwf-rchidm.o \
 $(OBJDIR)/gwf-rchaidm.o \
@@ -150,24 +183,40 @@ $(OBJDIR)/gwe-disuidm.o \
 $(OBJDIR)/gwe-disidm.o \
 $(OBJDIR)/gwe-ctpidm.o \
 $(OBJDIR)/gwe-cndidm.o \
-$(OBJDIR)/exg-swfgwfidm.o \
+$(OBJDIR)/exg-olfgwfidm.o \
 $(OBJDIR)/exg-gwtgwtidm.o \
 $(OBJDIR)/exg-gwfprtidm.o \
 $(OBJDIR)/exg-gwfgwtidm.o \
 $(OBJDIR)/exg-gwfgwfidm.o \
 $(OBJDIR)/exg-gwfgweidm.o \
 $(OBJDIR)/exg-gwegweidm.o \
+$(OBJDIR)/exg-chfgwfidm.o \
+$(OBJDIR)/chf-zdgidm.o \
+$(OBJDIR)/chf-stoidm.o \
+$(OBJDIR)/chf-namidm.o \
+$(OBJDIR)/chf-icidm.o \
+$(OBJDIR)/chf-flwidm.o \
+$(OBJDIR)/chf-disv2didm.o \
+$(OBJDIR)/chf-disv1didm.o \
+$(OBJDIR)/chf-dis2didm.o \
+$(OBJDIR)/chf-dfwidm.o \
+$(OBJDIR)/chf-cxsidm.o \
+$(OBJDIR)/chf-chdidm.o \
+$(OBJDIR)/chf-cdbidm.o \
+$(OBJDIR)/List.o \
 $(OBJDIR)/LongLineReader.o \
 $(OBJDIR)/DevFeature.o \
-$(OBJDIR)/MemoryList.o \
+$(OBJDIR)/MemoryStore.o \
 $(OBJDIR)/IdmUtlDfnSelector.o \
 $(OBJDIR)/IdmSwfDfnSelector.o \
 $(OBJDIR)/IdmSimDfnSelector.o \
 $(OBJDIR)/IdmPrtDfnSelector.o \
+$(OBJDIR)/IdmOlfDfnSelector.o \
 $(OBJDIR)/IdmGwtDfnSelector.o \
 $(OBJDIR)/IdmGwfDfnSelector.o \
 $(OBJDIR)/IdmGweDfnSelector.o \
 $(OBJDIR)/IdmExgDfnSelector.o \
+$(OBJDIR)/IdmChfDfnSelector.o \
 $(OBJDIR)/TimeSeriesRecord.o \
 $(OBJDIR)/MathUtil.o \
 $(OBJDIR)/BlockParser.o \
@@ -213,13 +262,15 @@ $(OBJDIR)/BudgetObject.o \
 $(OBJDIR)/BoundaryPackage.o \
 $(OBJDIR)/CellDefn.o \
 $(OBJDIR)/Particle.o \
+$(OBJDIR)/sort.o \
 $(OBJDIR)/FlowModelInterface.o \
 $(OBJDIR)/Cell.o \
 $(OBJDIR)/Subcell.o \
-$(OBJDIR)/TrackData.o \
+$(OBJDIR)/TrackFile.o \
+$(OBJDIR)/TrackControl.o \
 $(OBJDIR)/TimeSelect.o \
 $(OBJDIR)/prt-fmi.o \
-$(OBJDIR)/sort.o \
+$(OBJDIR)/TimeStepSelect.o \
 $(OBJDIR)/SfrCrossSectionUtils.o \
 $(OBJDIR)/TernarySolveTrack.o \
 $(OBJDIR)/SubcellTri.o \
@@ -240,6 +291,7 @@ $(OBJDIR)/SimStages.o \
 $(OBJDIR)/NumericalModel.o \
 $(OBJDIR)/OutputControlData.o \
 $(OBJDIR)/gwf-ic.o \
+$(OBJDIR)/UzfEtUtil.o \
 $(OBJDIR)/Xt3dAlgorithm.o \
 $(OBJDIR)/TvBase.o \
 $(OBJDIR)/gwf-sfr.o \
@@ -258,8 +310,8 @@ $(OBJDIR)/CellRectQuad.o \
 $(OBJDIR)/CellRect.o \
 $(OBJDIR)/VirtualModel.o \
 $(OBJDIR)/BaseExchange.o \
+$(OBJDIR)/TspSpc.o \
 $(OBJDIR)/tsp-fmi.o \
-$(OBJDIR)/GwtSpc.o \
 $(OBJDIR)/GweInputData.o \
 $(OBJDIR)/OutputControl.o \
 $(OBJDIR)/tsp-ic.o \
@@ -280,6 +332,8 @@ $(OBJDIR)/MethodCellTernary.o \
 $(OBJDIR)/MethodCellPollockQuad.o \
 $(OBJDIR)/MethodCellPollock.o \
 $(OBJDIR)/MethodCellPassToBot.o \
+$(OBJDIR)/SwfCxsUtils.o \
+$(OBJDIR)/Disv1dGeom.o \
 $(OBJDIR)/CellWithNbrs.o \
 $(OBJDIR)/NumericalExchange.o \
 $(OBJDIR)/tsp-ssm.o \
@@ -309,14 +363,17 @@ $(OBJDIR)/ImsReordering.o \
 $(OBJDIR)/StructVector.o \
 $(OBJDIR)/ModflowInput.o \
 $(OBJDIR)/IdmLogger.o \
+$(OBJDIR)/NCFileVars.o \
 $(OBJDIR)/Integer1dReader.o \
 $(OBJDIR)/Double2dReader.o \
 $(OBJDIR)/Double1dReader.o \
 $(OBJDIR)/DefinitionSelect.o \
-$(OBJDIR)/SwfCxsUtils.o \
-$(OBJDIR)/Disv1dGeom.o \
 $(OBJDIR)/MethodCellPool.o \
 $(OBJDIR)/CellUtil.o \
+$(OBJDIR)/swf-cxs.o \
+$(OBJDIR)/Disv1d.o \
+$(OBJDIR)/swf-ic.o \
+$(OBJDIR)/VectorInterpolation.o \
 $(OBJDIR)/VirtualExchange.o \
 $(OBJDIR)/GridSorting.o \
 $(OBJDIR)/DisConnExchange.o \
@@ -355,15 +412,22 @@ $(OBJDIR)/RouterBase.o \
 $(OBJDIR)/ImsLinearSolver.o \
 $(OBJDIR)/ImsLinearBase.o \
 $(OBJDIR)/StructArray.o \
+$(OBJDIR)/LoadNCInput.o \
 $(OBJDIR)/LayeredArrayReader.o \
 $(OBJDIR)/DynamicPackageParams.o \
 $(OBJDIR)/InputLoadType.o \
-$(OBJDIR)/swf-cxs.o \
-$(OBJDIR)/Disv1d.o \
-$(OBJDIR)/swf-ic.o \
-$(OBJDIR)/VectorInterpolation.o \
+$(OBJDIR)/ReleaseSchedule.o \
 $(OBJDIR)/MethodDisv.o \
 $(OBJDIR)/MethodDis.o \
+$(OBJDIR)/swf-zdg.o \
+$(OBJDIR)/swf-sto.o \
+$(OBJDIR)/swf-oc.o \
+$(OBJDIR)/swf-obs.o \
+$(OBJDIR)/swf-flw.o \
+$(OBJDIR)/swf-dfw.o \
+$(OBJDIR)/swf-cdb.o \
+$(OBJDIR)/Disv2d.o \
+$(OBJDIR)/Dis2d.o \
 $(OBJDIR)/GridConnection.o \
 $(OBJDIR)/DistributedVariable.o \
 $(OBJDIR)/gwt.o \
@@ -377,21 +441,13 @@ $(OBJDIR)/LinearSolverFactory.o \
 $(OBJDIR)/ImsLinear.o \
 $(OBJDIR)/BaseSolution.o \
 $(OBJDIR)/LoadMf6File.o \
-$(OBJDIR)/BoundInputContext.o \
 $(OBJDIR)/AsciiInputLoadType.o \
-$(OBJDIR)/swf-zdg.o \
-$(OBJDIR)/swf-sto.o \
-$(OBJDIR)/swf-oc.o \
-$(OBJDIR)/swf-obs.o \
-$(OBJDIR)/swf-flw.o \
-$(OBJDIR)/swf-dfw.o \
-$(OBJDIR)/swf-cdb.o \
-$(OBJDIR)/Disv2d.o \
-$(OBJDIR)/Dis2d.o \
+$(OBJDIR)/BoundInputContext.o \
 $(OBJDIR)/prt-prp.o \
 $(OBJDIR)/prt-oc.o \
 $(OBJDIR)/prt-mip.o \
 $(OBJDIR)/MethodPool.o \
+$(OBJDIR)/swf.o \
 $(OBJDIR)/SpatialModelConnection.o \
 $(OBJDIR)/GwtInterfaceModel.o \
 $(OBJDIR)/exg-gwtgwt.o \
@@ -402,16 +458,21 @@ $(OBJDIR)/exg-gwegwe.o \
 $(OBJDIR)/RouterFactory.o \
 $(OBJDIR)/NumericalSolution.o \
 $(OBJDIR)/MappedMemory.o \
+$(OBJDIR)/NCModel.o \
+$(OBJDIR)/Mf6FileStoInput.o \
 $(OBJDIR)/Mf6FileListInput.o \
 $(OBJDIR)/Mf6FileGridInput.o \
-$(OBJDIR)/swf.o \
 $(OBJDIR)/prt.o \
+$(OBJDIR)/olf.o \
+$(OBJDIR)/chf.o \
 $(OBJDIR)/ExplicitSolution.o \
+$(OBJDIR)/exg-swfgwf.o \
 $(OBJDIR)/GwtGwtConnection.o \
 $(OBJDIR)/GwfGwfConnection.o \
 $(OBJDIR)/GweGweConnection.o \
 $(OBJDIR)/VirtualDataManager.o \
 $(OBJDIR)/Mapper.o \
+$(OBJDIR)/ModelExport.o \
 $(OBJDIR)/IdmMf6File.o \
 $(OBJDIR)/ModelPackageInput.o \
 $(OBJDIR)/VirtualGwtModel.o \
@@ -419,13 +480,14 @@ $(OBJDIR)/VirtualGwtExchange.o \
 $(OBJDIR)/VirtualGwfExchange.o \
 $(OBJDIR)/VirtualGweModel.o \
 $(OBJDIR)/VirtualGweExchange.o \
-$(OBJDIR)/exg-swfgwf.o \
 $(OBJDIR)/SolutionGroup.o \
 $(OBJDIR)/SolutionFactory.o \
+$(OBJDIR)/exg-olfgwf.o \
 $(OBJDIR)/exg-gwfprt.o \
 $(OBJDIR)/exg-gwfgwt.o \
 $(OBJDIR)/exg-gwfgwe.o \
 $(OBJDIR)/DistributedSim.o \
+$(OBJDIR)/exg-chfgwf.o \
 $(OBJDIR)/RunControl.o \
 $(OBJDIR)/SourceLoad.o \
 $(OBJDIR)/ModelPackageInputs.o \
@@ -444,10 +506,14 @@ $(OBJDIR)/sparsekit.o \
 $(OBJDIR)/rcm.o \
 $(OBJDIR)/blas1_d.o \
 $(OBJDIR)/Iunit.o \
+$(OBJDIR)/GwfSfrCommon.o \
+$(OBJDIR)/gwf-sfr-transient.o \
+$(OBJDIR)/gwf-sfr-steady.o \
+$(OBJDIR)/gwf-sfr-constant.o \
 $(OBJDIR)/RectangularGeometry.o \
 $(OBJDIR)/CircularGeometry.o \
 $(OBJDIR)/ExplicitModel.o \
-$(OBJDIR)/swf-disidm.o
+$(OBJDIR)/exg-swfgwfidm.o
 
 # Define the objects that make up the program
 $(PROGRAM) : $(OBJECTS)

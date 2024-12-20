@@ -1,5 +1,0 @@
-BEGIN PERIOD <iper>
-  <bndno> <spcsetting>
-  <bndno> <spcsetting>
-  ...
-END PERIOD

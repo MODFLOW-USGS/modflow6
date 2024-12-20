@@ -6,10 +6,10 @@ a smaller time step.
 
 import os
 import pathlib as pl
+
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["gwf_ats_lak_01a"]
@@ -299,12 +299,15 @@ def budcsv_to_cumulative(fpth):
     for name in budcsv.dtype.names[1:]:
         for i in range(nrow):
             dt = budcsv_cumulative["time"][i + 1] - budcsv_cumulative["time"][i]
-            budcsv_cumulative[name][i + 1] = budcsv_cumulative[name][i] + budcsv[name][i] * dt
+            budcsv_cumulative[name][i + 1] = (
+                budcsv_cumulative[name][i] + budcsv[name][i] * dt
+            )
     return budcsv_cumulative
 
 
 def listfile_to_cumulative(listfile):
     import flopy
+
     mflist = flopy.utils.Mf6ListBudget(listfile)
     return mflist.get_cumulative()
 
@@ -312,7 +315,7 @@ def listfile_to_cumulative(listfile):
 def compare_listbudget_and_budgetcsv(listfile, budcsvfile, verbose, check, atol):
     """Read a budgetcsv file, convert it to a cumulative budget
     and then compare it with the cumulative budget in a list file"""
-    
+
     if verbose:
         print(f"Comparing {listfile} with {budcsvfile}")
 
@@ -329,15 +332,20 @@ def compare_listbudget_and_budgetcsv(listfile, budcsvfile, verbose, check, atol)
     allclose_list = []
     for name1 in budlstcum.dtype.names[3:]:
         nl = name1.split("_")
-        if len(nl) > 1:            
+        if len(nl) > 1:
             for name2 in budcsvcum.dtype.names:
                 if nl[0] in name2 and nl[1] in name2:
                     # print(f"Found match: {name1} and {name2}")
                     diff = budcsvcum[name2][1:] - budlstcum[name1]
                     mindiff = diff.min()
                     maxdiff = diff.max()
-                    allclose = np.allclose(budcsvcum[name2][1:], budlstcum[name1], atol=atol)
-                    msg = f"{name2} is same: {allclose}.  Min diff: {mindiff} Max diff {maxdiff}"
+                    allclose = np.allclose(
+                        budcsvcum[name2][1:], budlstcum[name1], atol=atol
+                    )
+                    msg = (
+                        f"{name2} is same: {allclose}.  "
+                        f"Min diff: {mindiff} Max diff {maxdiff}"
+                    )
                     if verbose:
                         print(msg)
                     allclose_list.append((allclose, name1, mindiff, maxdiff, msg))
@@ -386,17 +394,13 @@ def check_output(idx, test):
             node, node2, q = r
             n0 = node - 1
             if ilak[n0] == 1:
-                kk, ii, jj = get_kij_from_node(
-                    n0, botm.shape[1], botm.shape[2]
-                )
+                kk, ii, jj = get_kij_from_node(n0, botm.shape[1], botm.shape[2])
                 tp = botm[kk - 1, ii, jj]
                 if stage_current > tp and q != 0.0:
                     all_passed = False
                     msg = (
                         "recharge must be zero if overlying lake is "
-                        "active. node {} qlak {} qrch {} time {}".format(
-                            n0, qlakleak[n0], q, t
-                        )
+                        f"active. node {n0} qlak {qlakleak[n0]} qrch {q} time {t}"
                     )
                     print(msg)
     assert all_passed, "found recharge applied to cell beneath active lake"

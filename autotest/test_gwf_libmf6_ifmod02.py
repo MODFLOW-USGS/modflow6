@@ -1,5 +1,5 @@
 """
-Test the interface model approach for an inhomogeneous coupling 
+Test the interface model approach for an inhomogeneous coupling
 of three gwf models using the API. One exchange will have XT3D
 enabled (Exg1) and the other one (Exg2) doesn't. And the top-left
 model's NPF will be configured with XT3D as well. The numbers
@@ -11,14 +11,14 @@ in the figure are the global (solution level) indices:
                   Exg1
     06 07 08 09 10 |  26 27 28 29 30
                    |
-    -----Exg2----  
-             
-    11 12 13 14 15        
+    -----Exg2----
+
+    11 12 13 14 15
                           y
     16 17 18 19 20        |
                           |
-      'bottom'            0 ---- x 
-    
+      'bottom'            0 ---- x
+
 Note that this global numbering is determined by the order in which
 the models are added to the simulation below.
 
@@ -27,22 +27,22 @@ From this configuration, we will assert properties such as:
 - model 'top-left' does not have one but two interface models
 - the grid sizes for it are
     o 12: {3,4,5,21,22,8,9,10,26,27,14,15} for the interface model based on Exg1
-    o 10: {6,7,8,9,10,11,12,13,14,15}      for the interface model based on Exg2    
-  and the grid for the interface model for Exg1 thus contains cells 
+    o 10: {6,7,8,9,10,11,12,13,14,15}      for the interface model based on Exg2
+  and the grid for the interface model for Exg1 thus contains cells
   from model 'bottom'
-- the coefficients for the internal connection between cell 9 and cell 10 
+- the coefficients for the internal connection between cell 9 and cell 10
   are calculated by the model itself (as it does not have XT3D enabled)
 - ...
 
 """
+
 import os
 
 import flopy
 import numpy as np
 import pytest
-from modflowapi import ModflowApi
-
 from framework import TestFramework
+from modflow_devtools.markers import requires_pkg
 
 cases = ["libgwf_ifmod02"]
 
@@ -95,9 +95,7 @@ def get_model(dir, name):
         memory_print_option="all",
     )
 
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     ims = flopy.mf6.ModflowIms(
         sim,
@@ -114,9 +112,7 @@ def get_model(dir, name):
 
     # boundary for submodels on the left:
     left_chd = [
-        [(ilay, irow, 0), h_left]
-        for irow in range(nrow)
-        for ilay in range(nlay)
+        [(ilay, irow, 0), h_left] for irow in range(nrow) for ilay in range(nlay)
     ]
     chd_spd_left = {0: left_chd}
 
@@ -303,6 +299,8 @@ def build_models(idx, test):
 
 
 def api_func(exe, idx, model_ws=None):
+    from modflowapi import ModflowApi
+
     if model_ws is None:
         model_ws = "."
 
@@ -311,7 +309,7 @@ def api_func(exe, idx, model_ws=None):
     try:
         mf6 = ModflowApi(exe, working_directory=model_ws)
     except Exception as e:
-        print("Failed to load " + exe)
+        print("Failed to load " + str(exe))
         print("with message: " + str(e))
         return False, open(output_file_path).readlines()
 
@@ -357,9 +355,7 @@ def check_interface_models(mf6):
     addr = mf6.get_var_address("IDXTOGLOBALIDX", gfc_topleft_1, "GC")
     idxToGlobalIdx_1 = mf6.get_value_ptr(addr)
     assert np.size(idxToGlobalIdx_1) == 12
-    assert np.array_equal(
-        idxToGlobalIdx_1, [3, 4, 5, 21, 22, 8, 9, 10, 26, 27, 14, 15]
-    )
+    assert np.array_equal(idxToGlobalIdx_1, [3, 4, 5, 21, 22, 8, 9, 10, 26, 27, 14, 15])
     addr = mf6.get_var_address("ia", gfc_topleft_1, "gc/con")
     ia_1 = mf6.get_value_ptr(addr)
     addr = mf6.get_var_address("ja", gfc_topleft_1, "gc/con")
@@ -396,11 +392,10 @@ def check_interface_models(mf6):
     addr = mf6.get_var_address("IDXTOGLOBALIDX", gfc_topleft_2, "GC")
     idxToGlobalIdx_2 = mf6.get_value_ptr(addr)
     assert np.size(idxToGlobalIdx_2) == 10
-    assert np.array_equal(
-        idxToGlobalIdx_2, [6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-    )
+    assert np.array_equal(idxToGlobalIdx_2, [6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
 
 
+@requires_pkg("modflowapi")
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 @pytest.mark.developmode
 def test_mf6model(idx, name, function_tmpdir, targets):

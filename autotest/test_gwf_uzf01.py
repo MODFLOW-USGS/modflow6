@@ -8,7 +8,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["gwf_uzf01a"]
@@ -44,9 +43,7 @@ def build_models(idx, test):
     )
 
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create iterative model solution and register the gwf model with it
     nouter, ninner = 100, 10
@@ -92,9 +89,7 @@ def build_models(idx, test):
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
 
     # node property flow
-    npf = flopy.mf6.ModflowGwfnpf(
-        gwf, save_flows=False, icelltype=laytyp, k=hk
-    )
+    npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False, icelltype=laytyp, k=hk)
     # storage
     sto = flopy.mf6.ModflowGwfsto(
         gwf,
@@ -136,43 +131,13 @@ def build_models(idx, test):
     thti = thtr
     thts = sy
     eps = 4
-    uzf_pkdat = [
-        [
-            0,
-            (0, 0, 0),
-            1,
-            1,
-            sd,
-            vks,
-            thtr,
-            thts,
-            thti,
-            eps,
-            "uzf 001",
-        ]
-    ] + [
-        [
-            k,
-            (k, 0, 0),
-            0,
-            k + 1,
-            sd,
-            vks,
-            thtr,
-            thts,
-            thti,
-            eps,
-            f"uzf {k + 1:03d}",
-        ]
+    uzf_pkdat = [[0, (0, 0, 0), 1, 1, sd, vks, thtr, thts, thti, eps, "uzf 001"]] + [
+        [k, (k, 0, 0), 0, k + 1, sd, vks, thtr, thts, thti, eps, f"uzf {k + 1:03d}"]
         for k in range(1, nlay - 1)
     ]
     uzf_pkdat[-1][3] = -1
     infiltration = 2.01
-    uzf_spd = {
-        0: [
-            [0, infiltration, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        ]
-    }
+    uzf_spd = {0: [[0, infiltration, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]]}
     uzf = flopy.mf6.ModflowGwfuzf(
         gwf,
         print_input=True,
@@ -204,9 +169,7 @@ def build_models(idx, test):
     obs_lst.append(["obs1", "head", (0, 0, 0)])
     obs_lst.append(["obs2", "head", (1, 0, 0)])
     obs_dict = {f"{name}.obs.csv": obs_lst}
-    obs = flopy.mf6.ModflowUtlobs(
-        gwf, pname="head_obs", digits=20, continuous=obs_dict
-    )
+    obs = flopy.mf6.ModflowUtlobs(gwf, pname="head_obs", digits=20, continuous=obs_dict)
 
     return sim, None
 

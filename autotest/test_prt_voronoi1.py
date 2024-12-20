@@ -22,13 +22,10 @@ from flopy.utils import GridIntersect
 from flopy.utils.triangle import Triangle
 from flopy.utils.voronoi import VoronoiGrid
 from framework import TestFramework
-from matplotlib.patches import Polygon
 from modflow_devtools.markers import requires_pkg
-from modflow_devtools.misc import is_in_ci
 from prt_test_utils import get_model_name
 from shapely.geometry import LineString, Point
 
-pytest_plugins = ["modflow_devtools.snapshots"]
 simname = "prtvor1"
 cases = [f"{simname}l2r", f"{simname}welp", f"{simname}weli"]
 times = [True, False, False]
@@ -74,168 +71,36 @@ def build_gwf_sim(name, ws, targets):
     ibd = np.zeros(vgrid.ncpl, dtype=int)
 
     # If test changes the intersection needs to be recomputed
-    # gi = GridIntersect(vgrid)
+    gi = GridIntersect(vgrid)
 
     # cells on left edge
-    # line = LineString([(xmin, ymin), (xmin, ymax)])
-    # cells_left = gi.intersect(line)["cellids"]
-    left_cells = [
-        0,
-        3,
-        1197,
-        1268,
-        1442,
-        1443,
-        1459,
-        1461,
-        1474,
-        1499,
-        1515,
-        1520,
-        1529,
-        1545,
-        1552,
-        1563,
-        1581,
-        1584,
-        1586,
-        1590,
-        1596,
-        1608,
-        1609,
-        1614,
-        1616,
-        1625,
-        1643,
-        1649,
-        1652,
-        1655,
-        1659,
-        1662,
-    ]
-    left_cells = np.array(list(left_cells))
+    line = LineString([(xmin, ymin), (xmin, ymax)])
+    cells_left = gi.intersect(line)["cellids"]
+    left_cells = np.array(list(cells_left))
     ibd[left_cells] = 1
 
-    # cells on right edge
-    # line = LineString([(xmax, ymin), (xmax, ymax)])
-    # cells_right = gi.intersect(line)["cellids"]
-    right_cells = [
-        1,
-        2,
-        6,
-        12,
-        210,
-        399,
-        400,
-        406,
-        412,
-        421,
-        519,
-        559,
-        601,
-        605,
-        617,
-        623,
-        624,
-        674,
-        770,
-        783,
-        785,
-        786,
-        792,
-        793,
-        801,
-        809,
-        812,
-        813,
-        814,
-        920,
-    ]
-    right_cells = np.array(list(right_cells))
+    # # cells on right edge
+    line = LineString([(xmax, ymin), (xmax, ymax)])
+    cells_right = gi.intersect(line)["cellids"]
+    right_cells = np.array(list(cells_right))
     ibd[right_cells] = 2
 
     # cells on bottom edge
-    # line = LineString([(xmin, ymin), (xmax, ymin)])
-    # cells_bottom = gi.intersect(line)["cellids"]
-    bottom_cells = [
-        0,
-        1,
-        4,
-        8,
-        258,
-        274,
-        308,
-        328,
-        332,
-        333,
-        334,
-        342,
-        343,
-        345,
-        347,
-        353,
-        354,
-        355,
-        439,
-        445,
-        456,
-        460,
-        465,
-        475,
-        479,
-        485,
-        516,
-        527,
-        533,
-        541,
-        631,
-        752,
-        810,
-        819,
-        824,
-        830,
-        832,
-        834,
-        835,
-        927,
-        929,
-        932,
-        1091,
-        1096,
-        1207,
-        1212,
-        1215,
-        1217,
-        1242,
-        1247,
-        1249,
-        1257,
-        1262,
-        1269,
-        1276,
-        1389,
-        1393,
-        1447,
-        1455,
-        1462,
-        1677,
-        1685,
-    ]
-    bottom_cells = np.array(list(bottom_cells))
+    line = LineString([(xmin, ymin), (xmax, ymin)])
+    cells_bottom = gi.intersect(line)["cellids"]
+    bottom_cells = np.array(list(cells_bottom))
     ibd[bottom_cells] = 3
 
     # well cells
-    # points = [Point((1200, 500)), Point((700, 200)), Point((1600, 700))]
-    # well_cells = [vgrid.intersect(p.x, p.y) for p in points]
-    well_cells = [163, 1178, 67]
+    points = [Point((1200, 500)), Point((700, 200)), Point((1600, 700))]
+    well_cells = [vgrid.intersect(p.x, p.y) for p in points]
+    # well_cells = [163, 1178, 67]
 
     # create simulation
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name=targets["mf6"], sim_ws=ws
     )
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", perioddata=[[1.0, 1, 1.0]]
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", perioddata=[[1.0, 1, 1.0]])
     gwf = flopy.mf6.ModflowGwf(sim, modelname=gwf_name, save_flows=True)
     ims = flopy.mf6.ModflowIms(
         sim,
@@ -249,9 +114,7 @@ def build_gwf_sim(name, ws, targets):
     )
     if "wel" in name:
         # k, j, q
-        wells = [
-            (0, c, 0.5 * (-1 if "welp" in name else 1)) for c in well_cells
-        ]
+        wells = [(0, c, 0.5 * (-1 if "welp" in name else 1)) for c in well_cells]
         wel = flopy.mf6.ModflowGwfwel(
             gwf,
             maxbound=len(wells),
@@ -321,226 +184,17 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets, cell_ids):
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name=targets["mf6"], sim_ws=prt_ws
     )
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", perioddata=[[1.0, 1, 1.0]]
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", perioddata=[[1.0, 1, 1.0]])
     prt = flopy.mf6.ModflowPrt(sim, modelname=prt_name)
     disv = flopy.mf6.ModflowGwfdisv(
         prt, nlay=nlay, **grid.get_disv_gridprops(), top=top, botm=botm
     )
     flopy.mf6.ModflowPrtmip(prt, pname="mip", porosity=porosity)
 
-    # if release points change, need to redo intersection below
-    rptcells = [
-        (0, 1462),
-        (0, 1462),
-        (0, 1462),
-        (0, 1462),
-        (0, 1454),
-        (0, 1454),
-        (0, 1454),
-        (0, 1454),
-        (0, 1454),
-        (0, 1454),
-        (0, 1457),
-        (0, 1457),
-        (0, 1457),
-        (0, 1457),
-        (0, 1457),
-        (0, 1457),
-        (0, 1457),
-        (0, 1458),
-        (0, 1458),
-        (0, 1458),
-        (0, 1458),
-        (0, 1458),
-        (0, 1458),
-        (0, 1458),
-        (0, 1458),
-        (0, 1442),
-        (0, 1442),
-        (0, 1442),
-        (0, 1515),
-        (0, 1515),
-        (0, 1515),
-        (0, 1515),
-        (0, 1515),
-        (0, 1515),
-        (0, 1515),
-        (0, 1459),
-        (0, 1459),
-        (0, 1459),
-        (0, 1518),
-        (0, 1518),
-        (0, 1518),
-        (0, 1518),
-        (0, 1520),
-        (0, 1520),
-        (0, 1520),
-        (0, 1520),
-        (0, 1520),
-        (0, 1268),
-        (0, 1268),
-        (0, 1268),
-        (0, 1268),
-        (0, 1268),
-        (0, 1562),
-        (0, 1562),
-        (0, 1562),
-        (0, 1562),
-        (0, 1562),
-        (0, 1562),
-        (0, 1562),
-        (0, 1563),
-        (0, 1552),
-        (0, 1552),
-        (0, 1552),
-        (0, 1552),
-        (0, 1552),
-        (0, 1552),
-        (0, 1586),
-        (0, 1586),
-        (0, 1624),
-        (0, 1624),
-        (0, 1624),
-        (0, 1624),
-        (0, 1624),
-        (0, 1624),
-        (0, 1624),
-        (0, 1624),
-        (0, 1529),
-        (0, 1529),
-        (0, 1581),
-        (0, 1581),
-        (0, 1581),
-        (0, 1581),
-        (0, 1582),
-        (0, 1582),
-        (0, 1582),
-        (0, 1582),
-        (0, 1582),
-        (0, 1545),
-        (0, 1545),
-        (0, 1545),
-        (0, 1583),
-        (0, 1583),
-        (0, 1583),
-        (0, 1584),
-        (0, 1584),
-        (0, 1584),
-        (0, 1584),
-        (0, 1197),
-        (0, 1197),
-        (0, 1197),
-        (0, 1626),
-        (0, 1626),
-        (0, 1626),
-        (0, 1626),
-        (0, 1626),
-        (0, 1626),
-        (0, 1626),
-        (0, 1628),
-        (0, 1628),
-        (0, 1628),
-        (0, 1628),
-        (0, 1628),
-        (0, 1628),
-        (0, 1590),
-        (0, 1590),
-        (0, 1629),
-        (0, 1629),
-        (0, 1629),
-        (0, 1629),
-        (0, 1629),
-        (0, 1629),
-        (0, 1629),
-        (0, 1629),
-        (0, 1499),
-        (0, 1657),
-        (0, 1657),
-        (0, 1657),
-        (0, 1657),
-        (0, 1657),
-        (0, 1662),
-        (0, 1662),
-        (0, 1662),
-        (0, 1662),
-        (0, 1638),
-        (0, 1638),
-        (0, 1616),
-        (0, 1616),
-        (0, 1660),
-        (0, 1660),
-        (0, 1660),
-        (0, 1660),
-        (0, 1660),
-        (0, 1660),
-        (0, 1660),
-        (0, 1661),
-        (0, 1661),
-        (0, 1661),
-        (0, 1661),
-        (0, 1661),
-        (0, 1661),
-        (0, 1615),
-        (0, 1615),
-        (0, 1615),
-        (0, 1615),
-        (0, 1615),
-        (0, 1615),
-        (0, 1615),
-        (0, 1614),
-        (0, 1614),
-        (0, 1614),
-        (0, 1609),
-        (0, 1609),
-        (0, 1609),
-        (0, 1609),
-        (0, 1609),
-        (0, 1609),
-        (0, 1652),
-        (0, 1652),
-        (0, 1652),
-        (0, 1652),
-        (0, 1652),
-        (0, 1611),
-        (0, 1611),
-        (0, 1596),
-        (0, 1596),
-        (0, 1596),
-        (0, 1596),
-        (0, 1596),
-        (0, 1610),
-        (0, 1643),
-        (0, 1643),
-        (0, 1644),
-        (0, 1644),
-        (0, 1644),
-        (0, 1644),
-        (0, 1644),
-        (0, 1644),
-        (0, 1644),
-        (0, 1608),
-        (0, 1608),
-        (0, 1646),
-        (0, 1646),
-        (0, 1646),
-        (0, 1646),
-        (0, 1646),
-        (0, 1646),
-        (0, 1646),
-        (0, 1648),
-        (0, 1648),
-        (0, 1648),
-    ]
     prpdata = [
-        # index, (layer, cell), x, y, z
-        (i, (ilay, ic), p[0], p[1], p[2])
-        for i, (p, (ilay, ic)) in enumerate(zip(rpts, rptcells))
-        # (i, (0, vgrid.intersect(p[0], p[1])), p[0], p[1], p[2])
-        # for i, p in enumerate(rpts)
+        (i, (0, vgrid.intersect(p[0], p[1])), p[0], p[1], p[2])
+        for i, p in enumerate(rpts)
     ]
-    # import pdb; pdb.set_trace()
     prp_track_file = f"{prt_name}.prp.trk"
     prp_track_csv_file = f"{prt_name}.prp.trk.csv"
     flopy.mf6.ModflowPrtprp(
@@ -555,6 +209,7 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets, cell_ids):
         boundnames=True,
         stop_at_weak_sink=True,
         exit_solve_tolerance=1e-10,
+        extend_tracking=True,
     )
     prt_track_file = f"{prt_name}.trk"
     prt_track_csv_file = f"{prt_name}.trk.csv"
@@ -567,22 +222,15 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets, cell_ids):
         track_release=True,
         track_terminate=True,
         track_usertime=times[idx],
-        track_timesrecord=tracktimes if times[idx] else None,
+        ntracktimes=len(tracktimes) if times[idx] else None,
+        tracktimes=[(t,) for t in tracktimes] if times[idx] else None,
     )
     gwf_budget_file = gwf_ws / f"{gwf_name}.bud"
     gwf_head_file = gwf_ws / f"{gwf_name}.hds"
     flopy.mf6.ModflowPrtfmi(
-        prt,
-        packagedata=[
-            ("GWFHEAD", gwf_head_file),
-            ("GWFBUDGET", gwf_budget_file),
-        ],
+        prt, packagedata=[("GWFHEAD", gwf_head_file), ("GWFBUDGET", gwf_budget_file)]
     )
-    ems = flopy.mf6.ModflowEms(
-        sim,
-        pname="ems",
-        filename=f"{prt_name}.ems",
-    )
+    ems = flopy.mf6.ModflowEms(sim, pname="ems", filename=f"{prt_name}.ems")
     sim.register_solution_package(ems, [prt.name])
     return sim
 
@@ -590,22 +238,35 @@ def build_prt_sim(idx, name, gwf_ws, prt_ws, targets, cell_ids):
 def build_models(idx, test):
     gwf_sim, cell_ids = build_gwf_sim(test.name, test.workspace, test.targets)
     prt_sim = build_prt_sim(
-        idx,
-        test.name,
-        test.workspace,
-        test.workspace / "prt",
-        test.targets,
-        cell_ids,
+        idx, test.name, test.workspace, test.workspace / "prt", test.targets, cell_ids
     )
     return gwf_sim, prt_sim
 
 
-def plot_output(name, gwf, head, spdis, pls, fpath):
+def plot_output(idx, test):
+    name = test.name
+    prt_ws = test.workspace / "prt"
+    prt_name = get_model_name(name, "prt")
+    gwfsim = test.sims[0]
+
+    # get gwf output
+    gwf = gwfsim.get_model()
+    head = gwf.output.head().get_data()
+    bdobj = gwf.output.budget()
+    spdis = bdobj.get_data(text="DATA-SPDIS")[0]
+    qx, qy, _ = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
+
+    # get prt output
+    prt_track_csv_file = f"{prt_name}.prp.trk.csv"
+    pls = pd.read_csv(prt_ws / prt_track_csv_file, na_filter=False)
+    endpts = pls[pls.ireason == 3]  # termination
+
     # plot in 2d with mpl
     fig = plt.figure(figsize=(16, 10))
     ax = plt.subplot(1, 1, 1, aspect="equal")
     pmv = flopy.plot.PlotMapView(model=gwf, ax=ax)
     pmv.plot_grid(alpha=0.25)
+
     pmv.plot_ibound(alpha=0.5)
     headmesh = pmv.plot_array(head, alpha=0.25)
     cv = pmv.contour_array(head, levels=np.linspace(0, 1, 9), colors="black")
@@ -625,19 +286,11 @@ def plot_output(name, gwf, head, spdis, pls, fpath):
     if "wel" in name:
         handles.append(
             mpl.lines.Line2D(
-                [0],
-                [0],
-                marker="o",
-                linestyle="",
-                label="Well",
-                markerfacecolor="red",
-            ),
+                [0], [0], marker="o", linestyle="", label="Well", markerfacecolor="red"
+            )
         )
-    ax.legend(
-        handles=handles,
-        loc="lower right",
-    )
-    pmv.plot_vector(*spdis, normalize=True, alpha=0.25)
+    ax.legend(handles=handles, loc="lower right")
+    pmv.plot_vector(qx, qy, normalize=True, alpha=0.25)
     if "wel" in name:
         pmv.plot_bc(ftype="WEL")
     mf6_plines = pls.groupby(["iprp", "irpt", "trelease"])
@@ -659,9 +312,10 @@ def plot_output(name, gwf, head, spdis, pls, fpath):
             legend=False,
             color="black",
         )
-    xc, yc = gwf.modelgrid.get_xcellcenters_for_layer(
-        0
-    ), gwf.modelgrid.get_ycellcenters_for_layer(0)
+    xc, yc = (
+        gwf.modelgrid.get_xcellcenters_for_layer(0),
+        gwf.modelgrid.get_ycellcenters_for_layer(0),
+    )
     for i in range(gwf.modelgrid.ncpl):
         x, y = xc[i], yc[i]
         if i == 1639:
@@ -674,45 +328,10 @@ def plot_output(name, gwf, head, spdis, pls, fpath):
         ax.annotate(str(i + 1), (x, y), color="grey", alpha=0.5)
 
     plt.show()
-    plt.savefig(fpath)
-
-    # plot in 3d with pyvista (via vtk)
-    import pyvista as pv
-    from flopy.export.vtk import Vtk
-    from flopy.plot.plotutil import to_mp7_pathlines
-
-    def get_meshes(model, pathlines):
-        vtk = Vtk(model=model, binary=False, smooth=False)
-        vtk.add_model(model)
-        vtk.add_pathline_points(
-            to_mp7_pathlines(pathlines.to_records(index=False))
-        )
-        grid_mesh, path_mesh = vtk.to_pyvista()
-        grid_mesh.rotate_x(-100, point=axes.origin, inplace=True)
-        grid_mesh.rotate_z(90, point=axes.origin, inplace=True)
-        grid_mesh.rotate_y(120, point=axes.origin, inplace=True)
-        path_mesh.rotate_x(-100, point=axes.origin, inplace=True)
-        path_mesh.rotate_z(90, point=axes.origin, inplace=True)
-        path_mesh.rotate_y(120, point=axes.origin, inplace=True)
-        return grid_mesh, path_mesh
-
-    def callback(mesh, value):
-        sub = pls[pls.t <= value]
-        gm, pm = get_meshes(gwf, sub)
-        mesh.shallow_copy(pm)
-
-    pv.set_plot_theme("document")
-    axes = pv.Axes(show_actor=True, actor_scale=2.0, line_width=5)
-    p = pv.Plotter(notebook=False)
-    grid_mesh, path_mesh = get_meshes(gwf, pls)
-    p.add_mesh(grid_mesh, scalars=head[0], cmap="Blues", opacity=0.5)
-    p.add_mesh(path_mesh, label="Time", style="points", color="black")
-    p.camera.zoom(1)
-    p.add_slider_widget(lambda v: callback(path_mesh, v), [0, 30202])
-    p.show()
+    plt.savefig(prt_ws / f"{name}.png")
 
 
-def check_output(idx, test, snapshot):
+def check_output(idx, test):
     name = test.name
     prt_ws = test.workspace / "prt"
     prt_name = get_model_name(name, "prt")
@@ -730,29 +349,21 @@ def check_output(idx, test, snapshot):
     pls = pd.read_csv(prt_ws / prt_track_csv_file, na_filter=False)
     endpts = pls[pls.ireason == 3]  # termination
 
-    # compare pathlines with snapshot. particles shouldn't
-    # have moved vertically. round for cross-platform error
-    assert snapshot == endpts.round(1).to_records(index=False)
-
-    # plot results if enabled
-    plot = False
-    if plot:
-        plot_output(
-            name, gwf, head, (qx, qy), pls, fpath=prt_ws / f"{name}.png"
-        )
+    assert np.allclose(endpts.z, 0.5)
+    assert np.isclose(endpts.y.min(), 1, atol=4)
+    assert np.isclose(endpts.y.max(), 996, atol=4)
 
 
 @requires_pkg("syrupy")
 @pytest.mark.slow
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(
-    idx, name, function_tmpdir, targets, benchmark, array_snapshot
-):
+def test_mf6model(idx, name, function_tmpdir, targets, benchmark, plot):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
-        check=lambda t: check_output(idx, t, array_snapshot),
+        check=lambda t: check_output(idx, t),
+        plot=lambda t: plot_output(idx, t) if plot else None,
         targets=targets,
         compare=None,
     )

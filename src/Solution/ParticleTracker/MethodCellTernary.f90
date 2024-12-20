@@ -8,7 +8,6 @@ module MethodCellTernaryModule
   use CellDefnModule
   use SubcellTriModule, only: SubcellTriType, create_subcell_tri
   use ParticleModule
-  use TrackModule, only: TrackFileControlType
   use GeomUtilModule, only: area
   use ConstantsModule, only: DZERO, DONE, DTWO
   implicit none
@@ -63,7 +62,7 @@ contains
     allocate (method)
     call create_cell_poly(cell)
     method%cell => cell
-    method%type => method%cell%type
+    method%name => method%cell%type
     method%delegates = .true.
     call create_subcell_tri(subcell)
     method%subcell => subcell
@@ -72,7 +71,7 @@ contains
   !> @brief Destroy the tracking method
   subroutine destroy_mct(this)
     class(MethodCellTernaryType), intent(inout) :: this
-    deallocate (this%type)
+    deallocate (this%name)
   end subroutine destroy_mct
 
   !> @brief Load subcell into tracking method
@@ -88,9 +87,10 @@ contains
       call this%load_subcell(particle, subcell)
     end select
     call method_subcell_tern%init( &
+      fmi=this%fmi, &
       cell=this%cell, &
       subcell=this%subcell, &
-      trackfilectl=this%trackfilectl, &
+      trackctl=this%trackctl, &
       tracktimes=this%tracktimes)
     submethod => method_subcell_tern
   end subroutine load_mct
@@ -156,25 +156,16 @@ contains
     ! local
     integer(I4B) :: i
 
-    ! Update particle state, checking whether any reporting or
-    ! termination conditions apply
-    call this%update(particle, this%cell%defn)
-
-    ! Return early if particle is done advancing
-    if (.not. particle%advancing) return
-
-    ! If the particle is above the top of the cell (presumed water table)
-    ! pass it vertically and instantaneously to the cell top and save the
-    ! particle state to file
-    if (particle%z > this%cell%defn%top) then
-      particle%z = this%cell%defn%top
-      call this%save(particle, reason=1) ! reason=1: cell transition
-    end if
-
+    ! (Re)allocate type-bound arrays
     select type (cell => this%cell)
     type is (CellPolyType)
+      ! Check termination/reporting conditions
+      call this%check(particle, this%cell%defn)
+      if (.not. particle%advancing) return
+
       ! Number of vertices
       this%nverts = cell%defn%npolyverts
+
       ! (Re)allocate type-bound arrays
       if (allocated(this%xvert)) then
         deallocate (this%xvert)
@@ -188,6 +179,7 @@ contains
         deallocate (this%xvertnext)
         deallocate (this%yvertnext)
       end if
+
       allocate (this%xvert(this%nverts))
       allocate (this%yvert(this%nverts))
       allocate (this%vne(this%nverts))
@@ -198,15 +190,18 @@ contains
       allocate (this%iprev(this%nverts))
       allocate (this%xvertnext(this%nverts))
       allocate (this%yvertnext(this%nverts))
+
       ! Cell vertices
       do i = 1, this%nverts
         this%xvert(i) = cell%defn%polyvert(1, i)
         this%yvert(i) = cell%defn%polyvert(2, i)
       end do
+
       ! Top, bottom, and thickness
       this%ztop = cell%defn%top
       this%zbot = cell%defn%bot
       this%dz = this%ztop - this%zbot
+
       ! Shifted arrays
       do i = 1, this%nverts
         this%iprev(i) = i
@@ -216,10 +211,10 @@ contains
       this%yvertnext = cshift(this%yvert, 1)
     end select
 
-    ! Calculate vertex velocities
+    ! Calculate vertex velocities.
     call this%vertvelo()
 
-    ! Track across subcells
+    ! Track the particle across the cell.
     call this%track(particle, 2, tmax)
 
   end subroutine apply_mct

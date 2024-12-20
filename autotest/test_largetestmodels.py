@@ -1,19 +1,14 @@
 from shutil import copytree
 
 import pytest
-
+from common_regression import get_mf6_comparison, setup_mf6, setup_mf6_comparison
 from framework import TestFramework
-from common_regression import (
-    setup_mf6,
-    setup_mf6_comparison,
-    get_mf6_comparison,
-)
 
 excluded_models = [
     "test1002_biscqtg_disv_gnc_nr_dev",
     "test1002_biscqtg_disv_nr_MD_dev",
     "test1002_biscqtg_disv_nr_RCM_dev",
-    "test1002_biscqtg_disv_nr_dev"
+    "test1002_biscqtg_disv_nr_dev",
 ]
 
 
@@ -31,7 +26,9 @@ def test_model(
     model_path = large_test_model.parent
     model_name = model_path.name
     excluded = model_name in excluded_models
-    compare = get_mf6_comparison(model_path) if original_regression else "mf6_regression"
+    compare = (
+        get_mf6_comparison(model_path) if original_regression else "mf6_regression"
+    )
     dev_only = "dev" in model_name and "not developmode" in markers
     if excluded or dev_only:
         reason = "excluded" if excluded else "developmode only"
@@ -51,9 +48,7 @@ def test_model(
     if compare == "mf6_regression":
         copytree(function_tmpdir, function_tmpdir / compare)
     else:
-        setup_mf6_comparison(
-            model_path, function_tmpdir, compare, overwrite=True
-        )
+        setup_mf6_comparison(model_path, function_tmpdir, compare, overwrite=True)
 
     # run the test
     test.run()

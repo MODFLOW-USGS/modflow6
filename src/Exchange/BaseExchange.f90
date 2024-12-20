@@ -22,7 +22,7 @@ module BaseExchangeModule
     procedure(exg_df), deferred :: exg_df
     procedure(exg_ar), deferred :: exg_ar
     procedure :: exg_rp
-    procedure :: exg_calculate_delt
+    procedure :: exg_dt
     procedure :: exg_ot
     procedure :: exg_fp
     procedure :: exg_da
@@ -57,31 +57,22 @@ contains
     if (.not. readnewdata) return
     !
     ! -- Nothing to do for RP
-    !
-    ! -- Return
-    return
   end subroutine exg_rp
 
   !> @brief Calculate time step length
   !<
-  subroutine exg_calculate_delt(this)
+  subroutine exg_dt(this)
     ! -- dummy
     class(BaseExchangeType) :: this
     !
     ! -- Nothing to do for TU
-    !
-    ! -- Return
-    return
-  end subroutine exg_calculate_delt
+  end subroutine exg_dt
 
   !> @brief Run output routines
   !<
   subroutine exg_ot(this)
     ! -- dummy
     class(BaseExchangeType) :: this
-    !
-    ! -- Return
-    return
   end subroutine exg_ot
 
   !> @brief Final processing
@@ -89,9 +80,6 @@ contains
   subroutine exg_fp(this)
     ! -- dummy
     class(BaseExchangeType) :: this
-    !
-    ! -- Return
-    return
   end subroutine exg_fp
 
   !> @brief Deallocate memory
@@ -99,9 +87,6 @@ contains
   subroutine exg_da(this)
     ! -- dummy
     class(BaseExchangeType) :: this
-    !
-    ! -- Return
-    return
   end subroutine exg_da
 
   !> @brief Should return true when the exchange should be added to the
@@ -115,9 +100,6 @@ contains
     logical(LGP) :: is_connected !< true, when connected
     !
     is_connected = .false.
-    !
-    ! -- Return
-    return
   end function
 
   !> @brief Cast the object passed in as BaseExchangeType and return it
@@ -135,9 +117,6 @@ contains
     class is (BaseExchangeType)
       res => obj
     end select
-    !
-    ! -- Return
-    return
   end function CastAsBaseExchangeClass
 
   !> @brief Add the exchange object (BaseExchangeType) to a list
@@ -151,9 +130,6 @@ contains
     !
     obj => exchange
     call list%Add(obj)
-    !
-    ! -- Return
-    return
   end subroutine AddBaseExchangeToList
 
   !> @brief Retrieve a specific BaseExchangeType object from a list
@@ -168,9 +144,6 @@ contains
     !
     obj => list%GetItem(idx)
     res => CastAsBaseExchangeClass(obj)
-    !
-    ! -- Return
-    return
   end function GetBaseExchangeFromList
 
 end module BaseExchangeModule

@@ -1,13 +1,14 @@
 module TspObsModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LINELENGTH, MAXOBSTYPES
+  use ConstantsModule, only: LINELENGTH, MAXOBSTYPES, LENVARNAME
   use BaseDisModule, only: DisBaseType
   use TspIcModule, only: TspIcType
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
   use SimModule, only: count_errors, store_error, &
                        store_error_unit
+
   implicit none
 
   private
@@ -16,8 +17,9 @@ module TspObsModule
   type, extends(ObsType) :: TspObsType
     ! -- Private members
     type(TspIcType), pointer, private :: ic => null() ! initial conditions
-    real(DP), dimension(:), pointer, contiguous, private :: x => null() ! concentration
+    real(DP), dimension(:), pointer, contiguous, private :: x => null() ! concentration or temperature
     real(DP), dimension(:), pointer, contiguous, private :: flowja => null() ! intercell flows
+    character(len=LENVARNAME) :: depvartype = '' !< "concentration" or "temperature"
   contains
     ! -- Public procedures
     procedure, public :: tsp_obs_ar
@@ -38,19 +40,18 @@ contains
   !!   - allocates pointers
   !!   - initializes values
   !<
-  subroutine tsp_obs_cr(obs, inobs)
+  subroutine tsp_obs_cr(obs, inobs, dvt)
     ! -- dummy
     type(TspObsType), pointer, intent(out) :: obs
     integer(I4B), pointer, intent(in) :: inobs
+    character(len=LENVARNAME), intent(in) :: dvt !< "concentration" or "temperature"
     !
     allocate (obs)
     call obs%allocate_scalars()
     obs%active = .false.
     obs%inputFilename = ''
     obs%inUnitObs => inobs
-    !
-    ! -- Return
-    return
+    obs%depvartype = dvt
   end subroutine tsp_obs_cr
 
   !> @brief Allocate and read method for package
@@ -64,14 +65,11 @@ contains
     real(DP), dimension(:), pointer, contiguous, intent(in) :: x
     real(DP), dimension(:), pointer, contiguous, intent(in) :: flowja
     !
-    ! Call ar method of parent class
+    ! -- Call ar method of parent class
     call this%obs_ar()
     !
-    ! set pointers
+    ! -- set pointers
     call this%set_pointers(ic, x, flowja)
-    !
-    ! -- Return
-    return
   end subroutine tsp_obs_ar
 
   !> @brief Define observation object
@@ -86,22 +84,19 @@ contains
     ! -- local
     integer(I4B) :: indx
     !
-    ! Call overridden method of parent class
+    ! -- Call overridden method of parent class
     call this%ObsType%obs_df(iout, pkgname, filtyp, dis)
     !
     ! -- StoreObsType arguments are: (ObserveType, cumulative, indx);
     !    indx is returned.
     !
     ! -- Store obs type and assign procedure pointer for head observation type
-    call this%StoreObsType('concentration', .false., indx)
-    this%obsData(indx)%ProcessIdPtr => gwt_process_concentration_obs_id
+    call this%StoreObsType(trim(adjustl(this%depvartype)), .false., indx)
+    this%obsData(indx)%ProcessIdPtr => tsp_process_obs_id
     !
     ! -- Store obs type and assign procedure pointer for flow-ja-face observation type
     call this%StoreObsType('flow-ja-face', .true., indx)
     this%obsData(indx)%ProcessIdPtr => tsp_process_intercell_obs_id
-    !
-    ! -- Return
-    return
   end subroutine tsp_obs_df
 
   !> @brief Save observations
@@ -123,7 +118,7 @@ contains
         nodenumber = obsrv%NodeNumber
         jaindex = obsrv%JaIndex
         select case (obsrv%ObsTypeId)
-        case ('CONCENTRATION')
+        case ('CONCENTRATION', 'TEMPERATURE')
           call this%SaveOneSimval(obsrv, this%x(nodenumber))
         case ('FLOW-JA-FACE')
           call this%SaveOneSimval(obsrv, this%flowja(jaindex))
@@ -134,9 +129,6 @@ contains
         end select
       end do
     end if
-    !
-    ! -- Return
-    return
   end subroutine tsp_obs_bd
 
   !> @brief If transport model observations need checks, add them here
@@ -145,15 +137,13 @@ contains
     ! -- dummy
     class(TspObsType), intent(inout) :: this
     !
-    ! Do GWT observations need any checking? If so, add checks here
-    !
-    ! -- Return
-    return
+    ! Do GWT (or GWE) observations need any checking? If so, add checks here
   end subroutine tsp_obs_rp
 
   !> Deallocate memory
   !!
   !! Deallocate memory associated with transport model
+  !<
   subroutine tsp_obs_da(this)
     ! -- dummy
     class(TspObsType), intent(inout) :: this
@@ -162,9 +152,6 @@ contains
     nullify (this%x)
     nullify (this%flowja)
     call this%ObsType%obs_da()
-    !
-    ! -- Return
-    return
   end subroutine tsp_obs_da
 
   !> @brief Set pointers needed by the transport OBS package
@@ -179,16 +166,13 @@ contains
     this%ic => ic
     this%x => x
     this%flowja => flowja
-    !
-    ! -- Return
-    return
   end subroutine set_pointers
 
   !> @brief Procedure related to Tsp observations (NOT type-bound)
   !!
   !! Process a specific observation ID
   !<
-  subroutine gwt_process_concentration_obs_id(obsrv, dis, inunitobs, iout)
+  subroutine tsp_process_obs_id(obsrv, dis, inunitobs, iout)
     ! -- dummy
     type(ObserveType), intent(inout) :: obsrv
     class(DisBaseType), intent(in) :: dis
@@ -215,10 +199,7 @@ contains
       call store_error(ermsg)
       call store_error_unit(inunitobs)
     end if
-    !
-    ! -- Return
-    return
-  end subroutine gwt_process_concentration_obs_id
+  end subroutine tsp_process_obs_id
 
   !> @brief Procedure related to Tsp observations (NOT type-bound)
   !!
@@ -275,9 +256,6 @@ contains
     if (count_errors() > 0) then
       call store_error_unit(inunitobs)
     end if
-    !
-    ! -- Return
-    return
   end subroutine tsp_process_intercell_obs_id
 
 end module TspObsModule

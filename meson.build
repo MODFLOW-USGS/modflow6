@@ -1,7 +1,7 @@
 project(
   'MODFLOW 6',
   'fortran',
-  version: '6.5.0',
+  version: '6.6.0',
   license: 'CC0',
   meson_version: '>= 1.1.0',
   default_options : [
@@ -20,12 +20,12 @@ if get_option('optimization') == '2'
 else
   profile = 'develop'
 endif
-message('The used profile is:', profile)
+message('Profile:', profile)
 
 # parse compiler options
 fc = meson.get_compiler('fortran')
 fc_id = fc.get_id()
-message('The fc_id is:', fc_id)
+message('Compiler ID:', fc_id)
 compile_args = []
 link_args = []
 
@@ -43,13 +43,6 @@ if fc_id == 'gcc'
                    '-Wno-uninitialized',
                    ]
   
-  # Options specific to profile
-  if profile == 'release'
-    compile_args += ['-ffpe-summary=overflow', '-ffpe-trap=overflow,zero,invalid']
-  elif profile == 'develop'
-    compile_args += ['-fcheck=all', '-ffpe-trap=overflow,zero,invalid']
-  endif
-
   # Define OS with gfortran for OS specific code
   # These are identical to pre-defined macros available with ifort
   system = build_machine.system()
@@ -107,16 +100,16 @@ endif
 
 # parallel build options
 is_extended_build = get_option('extended')
+is_parallel_build = get_option('parallel') or is_extended_build
+is_netcdf_build = get_option('netcdf') or is_extended_build
 is_cray = get_option('cray')
 is_mpich = get_option('mpich')
 if is_cray and build_machine.system() != 'linux'
-  error('cray=true only supported on linux systems')
+  error('cray only supported on linux systems')
 endif
-if not is_extended_build
- is_extended_build = get_option('parallel')
-endif
-if is_cray and not is_extended_build
+if is_cray and not is_parallel_build
   is_extended_build = true
+  is_parallel_build = true
   is_mpich = true
 endif
 if is_mpich
@@ -126,7 +119,14 @@ if is_mpich
     mpifort_name = 'mpichfort'
   endif
 endif
-message('Extended build:', is_extended_build)
+
+if is_extended_build
+  message('Extended build:', is_extended_build)
+elif is_parallel_build
+  message('Parallel build:', is_parallel_build)
+elif is_netcdf_build
+  message('NetCDF build:', is_netcdf_build)
+endif
 
 # windows options for petsc
 petsc_dir_rel = '..' /'petsc'
@@ -135,8 +135,18 @@ petsc_arch = 'arch-mswin-c-opt'
 petsc_compiled_rel = petsc_dir_rel / petsc_arch
 petsc_compiled_abs = petsc_dir_abs / petsc_arch
 
+# windows options for netcdf
+netcdf_dir_rel = '..' /'netcdf'
+netcdf_dir_abs = meson.project_source_root() / '..' / 'netcdf'
+netcdfc_build = 'netCDF4.9.2-NC4-64'
+netcdff_build = 'netcdf-fortran-4.6.1' / 'build'
+netcdfc_compiled_rel = netcdf_dir_rel / netcdfc_build
+netcdfc_compiled_abs = netcdf_dir_abs / netcdfc_build
+netcdff_compiled_rel = netcdf_dir_rel / netcdff_build
+netcdff_compiled_abs = netcdf_dir_abs / netcdff_build
+
 # on windows only with intel
-if build_machine.system() == 'windows' and is_extended_build
+if build_machine.system() == 'windows' and is_parallel_build
   if fc_id != 'intel-cl'
     error('Parallel build on Windows only with intel compiler. Terminating...')
   endif
@@ -145,9 +155,10 @@ endif
 # lists for parallel dependencies and compiler arguments
 dependencies = [ ]
 extra_cmp_args = [ ]
+extended_incdir = [ ]
 
 # load petsc, mpi, and netcdf dependencies/libraries
-if is_extended_build
+if is_parallel_build or is_extended_build
   # find petsc
   if build_machine.system() != 'windows'
     petsc = dependency('PETSc', required : true)
@@ -169,25 +180,51 @@ if is_extended_build
   endif
   extra_cmp_args += [ '-D__WITH_MPI__']
   with_mpi = true
-
-  # find netcdf
-  if build_machine.system() != 'windows'
-    netcdf = dependency('netcdf', language : 'fortran', required : false)
-  else
-    # For CI testing only; Windows not yet supported
-    nc_dir = meson.project_source_root() / '..' / 'ncf' / 'netcdf-fortran-4.6.1' / 'fortran'
-    netcdf = fc.find_library('netcdff', dirs: [ nc_dir ], required : false, static : false)
-    #nc_incdir = include_directories([ nc_dir ])
-  endif
-  if netcdf.found()
-    with_netcdf = true
-    extra_cmp_args += [ '-D__WITH_NETCDF__' ]
-    dependencies += [ netcdf ]    
-  endif
 else
-  with_netcdf = false
   with_petsc = false
   with_mpi = false
+endif
+
+# find netcdf
+with_netcdf = false
+if is_netcdf_build
+  netcdff = dependency('netcdf', language : 'fortran', static: false, required : true)
+  if netcdff.found()
+    with_netcdf = true
+    extra_cmp_args += [ '-D__WITH_NETCDF__' ]
+    dependencies += [ netcdff ]
+    if build_machine.system() == 'windows'
+      netcdf_incdir = include_directories([
+        netcdfc_compiled_rel / 'include',
+        netcdff_compiled_rel / 'fortran'
+      ])
+      extended_incdir += [
+        '..' / netcdfc_compiled_rel / 'include',
+        '..' / netcdff_compiled_rel / 'fortran'
+      ]
+      netcdff_libdir = netcdff_compiled_abs / 'fortran'
+      lnetcdff = fc.find_library('netcdff', dirs: netcdff_libdir, static: false, required : true)
+      dependencies += [ lnetcdff ]
+    endif
+  endif
+endif
+
+# GCC profile options need to be netcdf aware due to HDF5 issue
+if fc_id == 'gcc'
+  if with_netcdf
+    # HDF5 1.14.3 invalid fpe trap issue: https://github.com/HDFGroup/hdf5/issues/3831
+    if profile == 'release'
+      compile_args += ['-ffpe-summary=overflow', '-ffpe-trap=overflow,zero']
+    elif profile == 'develop'
+      compile_args += ['-fcheck=all', '-ffpe-trap=overflow,zero']
+    endif
+  else
+    if profile == 'release'
+      compile_args += ['-ffpe-summary=overflow', '-ffpe-trap=overflow,zero,invalid']
+    elif profile == 'develop'
+      compile_args += ['-fcheck=all', '-ffpe-trap=overflow,zero,invalid']
+    endif
+  endif
 endif
 
 compile_args += extra_cmp_args
@@ -195,9 +232,10 @@ compile_args += extra_cmp_args
 add_project_arguments(fc.get_supported_arguments(compile_args), language: 'fortran')
 add_project_link_arguments(fc.get_supported_arguments(link_args), language: 'fortran')
 
-if is_extended_build and build_machine.system() == 'windows'
+if is_parallel_build and build_machine.system() == 'windows'
   message('Compiling PETSc Fortran modules')
   petsc_incdir = include_directories([petsc_dir_rel / 'include', petsc_compiled_rel / 'include'])
+  extended_incdir += ['..' / petsc_dir_rel / 'include', '..' / petsc_compiled_rel / 'include']
   petsc_src = petsc_dir_abs / 'src'
   sources_petsc = [petsc_src / 'dm/f90-mod/petscdmdamod.F90',
                   petsc_src / 'dm/f90-mod/petscdmmod.F90',

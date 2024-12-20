@@ -10,7 +10,8 @@
 module GwtMstModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DONE, DZERO, DTWO, DHALF, LENBUDTXT
+  use ConstantsModule, only: DONE, DZERO, DTWO, DHALF, LENBUDTXT, MAXCHARLEN, &
+                             MNORMAL, LINELENGTH, DHNOFLO
   use SimVariablesModule, only: errmsg, warnmsg
   use SimModule, only: store_error, count_errors, &
                        store_warning
@@ -52,11 +53,13 @@ module GwtMstModule
     !
     ! -- sorption
     integer(I4B), pointer :: isrb => null() !< sorption active flag (0:off, 1:linear, 2:freundlich, 3:langmuir)
+    integer(I4B), pointer :: ioutsorbate => null() !< unit number for sorbate concentration output
     real(DP), dimension(:), pointer, contiguous :: bulk_density => null() !< bulk density of mobile domain; mass of mobile domain solid per aquifer volume
     real(DP), dimension(:), pointer, contiguous :: distcoef => null() !< kd distribution coefficient
     real(DP), dimension(:), pointer, contiguous :: sp2 => null() !< second sorption parameter
     real(DP), dimension(:), pointer, contiguous :: ratesrb => null() !< rate of sorption
     real(DP), dimension(:), pointer, contiguous :: ratedcys => null() !< rate of sorbed mass decay
+    real(DP), dimension(:), pointer, contiguous :: csrb => null() !< sorbate concentration
     !
     ! -- misc
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
@@ -75,8 +78,10 @@ module GwtMstModule
     procedure :: mst_cq_dcy
     procedure :: mst_cq_srb
     procedure :: mst_cq_dcy_srb
+    procedure :: mst_calc_csrb
     procedure :: mst_bd
     procedure :: mst_ot_flow
+    procedure :: mst_ot_dv
     procedure :: mst_da
     procedure :: allocate_scalars
     procedure :: addto_volfracim
@@ -118,9 +123,6 @@ contains
     !
     ! -- Initialize block parser
     call mstobj%parser%Initialize(mstobj%inunit, mstobj%iout)
-    !
-    ! -- Return
-    return
   end subroutine mst_cr
 
   !> @ brief Allocate and read method for package
@@ -155,9 +157,6 @@ contains
     !
     ! -- read the data block
     call this%read_data()
-    !
-    ! -- Return
-    return
   end subroutine mst_ar
 
   !> @ brief Fill coefficient method for package
@@ -199,9 +198,6 @@ contains
       call this%mst_fc_dcy_srb(nodes, cold, nja, matrix_sln, idxglo, rhs, &
                                cnew, kiter)
     end if
-    !
-    ! -- Return
-    return
   end subroutine mst_fc
 
   !> @ brief Fill storage coefficient method for package
@@ -249,9 +245,6 @@ contains
       call matrix_sln%add_value_pos(idxglo(idiag), hhcof)
       rhs(n) = rhs(n) + rrhs
     end do
-    !
-    ! -- Return
-    return
   end subroutine mst_fc_sto
 
   !> @ brief Fill decay coefficient method for package
@@ -310,9 +303,6 @@ contains
       end if
       !
     end do
-    !
-    ! -- Return
-    return
   end subroutine mst_fc_dcy
 
   !> @ brief Fill sorption coefficient method for package
@@ -372,9 +362,6 @@ contains
       rhs(n) = rhs(n) + rrhs
       !
     end do
-    !
-    ! -- Return
-    return
   end subroutine mst_fc_srb
 
   !> @ brief Calculate sorption terms
@@ -449,7 +436,6 @@ contains
                + term * cbaravg * (swnew - swold)
       end if
     end if
-    return
   end subroutine mst_srb_term
 
   !> @ brief Fill sorption-decay coefficient method for package
@@ -552,9 +538,6 @@ contains
       rhs(n) = rhs(n) + rrhs
       !
     end do
-    !
-    ! -- Return
-    return
   end subroutine mst_fc_dcy_srb
 
   !> @ brief Calculate flows for package
@@ -590,8 +573,10 @@ contains
       call this%mst_cq_dcy_srb(nodes, cnew, cold, flowja)
     end if
     !
-    ! -- Return
-    return
+    ! -- calculate csrb
+    if (this%isrb /= 0) then
+      call this%mst_calc_csrb(cnew)
+    end if
   end subroutine mst_cq
 
   !> @ brief Calculate storage terms for package
@@ -641,9 +626,6 @@ contains
       idiag = this%dis%con%ia(n)
       flowja(idiag) = flowja(idiag) + rate
     end do
-    !
-    ! -- Return
-    return
   end subroutine mst_cq_sto
 
   !> @ brief Calculate decay terms for package
@@ -699,9 +681,6 @@ contains
       flowja(idiag) = flowja(idiag) + rate
       !
     end do
-    !
-    ! -- Return
-    return
   end subroutine mst_cq_dcy
 
   !> @ brief Calculate sorption terms for package
@@ -759,9 +738,6 @@ contains
       flowja(idiag) = flowja(idiag) + rate
       !
     end do
-    !
-    ! -- Return
-    return
   end subroutine mst_cq_srb
 
   !> @ brief Calculate decay-sorption terms for package
@@ -862,15 +838,38 @@ contains
       flowja(idiag) = flowja(idiag) + rate
       !
     end do
-    !
-    ! -- Return
-    return
   end subroutine mst_cq_dcy_srb
 
+  !> @ brief Calculate sorbed concentration
+  !<
+  subroutine mst_calc_csrb(this, cnew)
+    ! -- dummy
+    class(GwtMstType) :: this !< GwtMstType object
+    real(DP), intent(in), dimension(:) :: cnew !< concentration at end of this time step
+    ! -- local
+    integer(I4B) :: n
+    real(DP) :: distcoef
+    real(DP) :: csrb
+
+    ! Calculate sorbed concentration
+    do n = 1, size(cnew)
+      csrb = DZERO
+      if (this%ibound(n) > 0) then
+        distcoef = this%distcoef(n)
+        if (this%isrb == 1) then
+          csrb = cnew(n) * distcoef
+        else if (this%isrb == 2) then
+          csrb = get_freundlich_conc(cnew(n), distcoef, this%sp2(n))
+        else if (this%isrb == 3) then
+          csrb = get_langmuir_conc(cnew(n), distcoef, this%sp2(n))
+        end if
+      end if
+      this%csrb(n) = csrb
+    end do
+
+  end subroutine mst_calc_csrb
+
   !> @ brief Calculate budget terms for package
-  !!
-  !!  Method to calculate budget terms for the package.
-  !!
   !<
   subroutine mst_bd(this, isuppress_output, model_budget)
     ! -- modules
@@ -909,9 +908,6 @@ contains
       call model_budget%addentry(rin, rout, delt, budtxt(4), &
                                  isuppress_output, rowlabel=this%packName)
     end if
-    !
-    ! -- Return
-    return
   end subroutine mst_bd
 
   !> @ brief Output flow terms for package
@@ -926,7 +922,6 @@ contains
     integer(I4B), intent(in) :: icbcun !< flag indication if cell-by-cell data should be saved
     ! -- local
     integer(I4B) :: ibinun
-    !character(len=16), dimension(2) :: aname
     integer(I4B) :: iprint, nvaluesp, nwidthp
     character(len=1) :: cdatafmp = ' ', editdesc = ' '
     real(DP) :: dinact
@@ -969,10 +964,43 @@ contains
                                    budtxt(4), cdatafmp, nvaluesp, &
                                    nwidthp, editdesc, dinact)
     end if
-    !
-    ! -- Return
-    return
   end subroutine mst_ot_flow
+
+  !> @brief Save sorbate concentration array to binary file
+  !<
+  subroutine mst_ot_dv(this, idvsave)
+    ! -- dummy
+    class(GwtMstType) :: this
+    integer(I4B), intent(in) :: idvsave
+    ! -- local
+    character(len=1) :: cdatafmp = ' ', editdesc = ' '
+    integer(I4B) :: ibinun
+    integer(I4B) :: iprint
+    integer(I4B) :: nvaluesp
+    integer(I4B) :: nwidthp
+    real(DP) :: dinact
+
+    ! Set unit number for sorbate output
+    if (this%ioutsorbate /= 0) then
+      ibinun = 1
+    else
+      ibinun = 0
+    end if
+    if (idvsave == 0) ibinun = 0
+
+    ! save sorbate concentration array
+    if (ibinun /= 0) then
+      iprint = 0
+      dinact = DHNOFLO
+      if (this%ioutsorbate /= 0) then
+        ibinun = this%ioutsorbate
+        call this%dis%record_array(this%csrb, this%iout, iprint, ibinun, &
+                                   '         SORBATE', cdatafmp, nvaluesp, &
+                                   nwidthp, editdesc, dinact)
+      end if
+    end if
+
+  end subroutine mst_ot_dv
 
   !> @ brief Deallocate
   !!
@@ -998,10 +1026,12 @@ contains
       call mem_deallocate(this%decaylast)
       call mem_deallocate(this%decayslast)
       call mem_deallocate(this%isrb)
+      call mem_deallocate(this%ioutsorbate)
       call mem_deallocate(this%bulk_density)
       call mem_deallocate(this%distcoef)
       call mem_deallocate(this%sp2)
       call mem_deallocate(this%ratesrb)
+      call mem_deallocate(this%csrb)
       call mem_deallocate(this%ratedcys)
       this%ibound => null()
       this%fmi => null()
@@ -1011,9 +1041,6 @@ contains
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
-    !
-    ! -- Return
-    return
   end subroutine mst_da
 
   !> @ brief Allocate scalar variables for package
@@ -1033,14 +1060,13 @@ contains
     !
     ! -- Allocate
     call mem_allocate(this%isrb, 'ISRB', this%memoryPath)
+    call mem_allocate(this%ioutsorbate, 'IOUTSORBATE', this%memoryPath)
     call mem_allocate(this%idcy, 'IDCY', this%memoryPath)
     !
     ! -- Initialize
     this%isrb = 0
+    this%ioutsorbate = 0
     this%idcy = 0
-    !
-    ! -- Return
-    return
   end subroutine allocate_scalars
 
   !> @ brief Allocate arrays for package
@@ -1093,10 +1119,12 @@ contains
       call mem_allocate(this%sp2, 1, 'SP2', this%memoryPath)
       call mem_allocate(this%distcoef, 1, 'DISTCOEF', this%memoryPath)
       call mem_allocate(this%ratesrb, 1, 'RATESRB', this%memoryPath)
+      call mem_allocate(this%csrb, 1, 'CSRB', this%memoryPath)
     else
       call mem_allocate(this%bulk_density, nodes, 'BULK_DENSITY', this%memoryPath)
       call mem_allocate(this%distcoef, nodes, 'DISTCOEF', this%memoryPath)
       call mem_allocate(this%ratesrb, nodes, 'RATESRB', this%memoryPath)
+      call mem_allocate(this%csrb, nodes, 'CSRB', this%memoryPath)
       if (this%isrb == 1) then
         call mem_allocate(this%sp2, 1, 'SP2', this%memoryPath)
       else
@@ -1120,6 +1148,7 @@ contains
       this%bulk_density(n) = DZERO
       this%distcoef(n) = DZERO
       this%ratesrb(n) = DZERO
+      this%csrb(n) = DZERO
     end do
     do n = 1, size(this%sp2)
       this%sp2(n) = DZERO
@@ -1128,9 +1157,6 @@ contains
       this%ratedcys(n) = DZERO
       this%decayslast(n) = DZERO
     end do
-    !
-    ! -- Return
-    return
   end subroutine allocate_arrays
 
   !> @ brief Read options for package
@@ -1140,18 +1166,21 @@ contains
   !<
   subroutine read_options(this)
     ! -- modules
-    use ConstantsModule, only: LINELENGTH
+    use OpenSpecModule, only: access, form
+    use InputOutputModule, only: getunit, openfile
     ! -- dummy
     class(GwtMstType) :: this !< GwtMstType object
     ! -- local
-    character(len=LINELENGTH) :: keyword, keyword2
+    character(len=LINELENGTH) :: keyword
+    character(len=LINELENGTH) :: sorption
+    character(len=MAXCHARLEN) :: fname
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     ! -- formats
     character(len=*), parameter :: fmtisvflow = &
       "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE SAVED TO BINARY FILE &
       &WHENEVER ICBCFL IS NOT ZERO.')"
-    character(len=*), parameter :: fmtisrb = &
+    character(len=*), parameter :: fmtlinear = &
       &"(4x,'LINEAR SORPTION IS ACTIVE. ')"
     character(len=*), parameter :: fmtfreundlich = &
       &"(4x,'FREUNDLICH SORPTION IS ACTIVE. ')"
@@ -1161,6 +1190,9 @@ contains
       &"(4x,'FIRST-ORDER DECAY IS ACTIVE. ')"
     character(len=*), parameter :: fmtidcy2 = &
       &"(4x,'ZERO-ORDER DECAY IS ACTIVE. ')"
+    character(len=*), parameter :: fmtfileout = &
+      "(4x,'MST ',1x,a,1x,' WILL BE SAVED TO FILE: ',a,/4x,&
+      &'OPENED ON UNIT: ',I7)"
     !
     ! -- get options block
     call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false., &
@@ -1177,19 +1209,28 @@ contains
         case ('SAVE_FLOWS')
           this%ipakcb = -1
           write (this%iout, fmtisvflow)
-        case ('SORBTION', 'SORPTION')
-          this%isrb = 1
-          call this%parser%GetStringCaps(keyword2)
-          if (trim(adjustl(keyword2)) == 'LINEAR') this%isrb = 1
-          if (trim(adjustl(keyword2)) == 'FREUNDLICH') this%isrb = 2
-          if (trim(adjustl(keyword2)) == 'LANGMUIR') this%isrb = 3
-          select case (this%isrb)
-          case (1)
-            write (this%iout, fmtisrb)
-          case (2)
+        case ('SORBTION')
+          call store_error('SORBTION is not a valid option.  Use &
+                           &SORPTION instead.')
+          call this%parser%StoreErrorUnit()
+        case ('SORPTION')
+          call this%parser%GetStringCaps(sorption)
+          select case (sorption)
+          case ('LINEAR', '')
+            this%isrb = 1
+            write (this%iout, fmtlinear)
+          case ('FREUNDLICH')
+            this%isrb = 2
             write (this%iout, fmtfreundlich)
-          case (3)
+          case ('LANGMUIR')
+            this%isrb = 3
             write (this%iout, fmtlangmuir)
+          case default
+            call store_error('Unknown sorption type was specified ' &
+                             & //'('//trim(adjustl(sorption))//').'// &
+                             &' Sorption must be specified as LINEAR, &
+                             &FREUNDLICH, or LANGMUIR.')
+            call this%parser%StoreErrorUnit()
           end select
         case ('FIRST_ORDER_DECAY')
           this%idcy = 1
@@ -1197,6 +1238,20 @@ contains
         case ('ZERO_ORDER_DECAY')
           this%idcy = 2
           write (this%iout, fmtidcy2)
+        case ('SORBATE')
+          call this%parser%GetStringCaps(keyword)
+          if (keyword == 'FILEOUT') then
+            call this%parser%GetString(fname)
+            this%ioutsorbate = getunit()
+            call openfile(this%ioutsorbate, this%iout, fname, 'DATA(BINARY)', &
+                          form, access, 'REPLACE', mode_opt=MNORMAL)
+            write (this%iout, fmtfileout) &
+              'SORBATE', fname, this%ioutsorbate
+          else
+            errmsg = 'Optional SORBATE keyword must be '// &
+                     'followed by FILEOUT.'
+            call store_error(errmsg)
+          end if
         case default
           write (errmsg, '(a,a)') 'Unknown MST option: ', trim(keyword)
           call store_error(errmsg)
@@ -1205,9 +1260,6 @@ contains
       end do
       write (this%iout, '(1x,a)') 'END OF MOBILE STORAGE AND TRANSFER OPTIONS'
     end if
-    !
-    ! -- Return
-    return
   end subroutine read_options
 
   !> @ brief Read data for package
@@ -1405,9 +1457,6 @@ contains
     do n = 1, size(this%porosity)
       this%thetam(n) = this%porosity(n)
     end do
-    !
-    ! -- Return
-    return
   end subroutine read_data
 
   !> @ brief Add volfrac values to volfracim
@@ -1434,9 +1483,6 @@ contains
     do n = 1, this%dis%nodes
       this%thetam(n) = this%get_volfracm(n) * this%porosity(n)
     end do
-    !
-    ! -- Return
-    return
   end subroutine addto_volfracim
 
   !> @ brief Return mobile domain volume fraction
@@ -1453,9 +1499,6 @@ contains
     real(DP) :: volfracm
     !
     volfracm = DONE - this%volfracim(node)
-    !
-    ! -- Return
-    return
   end function get_volfracm
 
   !> @ brief Calculate sorption concentration using Freundlich
@@ -1476,7 +1519,6 @@ contains
     else
       cbar = DZERO
     end if
-    return
   end function
 
   !> @ brief Calculate sorption concentration using Langmuir
@@ -1497,7 +1539,6 @@ contains
     else
       cbar = DZERO
     end if
-    return
   end function
 
   !> @ brief Calculate sorption derivative using Freundlich
@@ -1518,7 +1559,6 @@ contains
     else
       derv = DZERO
     end if
-    return
   end function
 
   !> @ brief Calculate sorption derivative using Langmuir
@@ -1539,8 +1579,41 @@ contains
     else
       derv = DZERO
     end if
-    return
   end function
+
+  !> @ brief Get effective Freundlich distribution coefficient
+  !<
+  function get_freundlich_kd(conc, kf, a) result(kd)
+    ! -- dummy
+    real(DP), intent(in) :: conc !< solute concentration
+    real(DP), intent(in) :: kf !< freundlich constant
+    real(DP), intent(in) :: a !< freundlich exponent
+    ! -- return
+    real(DP) :: kd !< effective distribution coefficient
+    !
+    if (conc > DZERO) then
+      kd = kf * conc**(a - DONE)
+    else
+      kd = DZERO
+    end if
+  end function get_freundlich_kd
+
+  !> @ brief Get effective Langmuir distribution coefficient
+  !<
+  function get_langmuir_kd(conc, kl, sbar) result(kd)
+    ! -- dummy
+    real(DP), intent(in) :: conc !< solute concentration
+    real(DP), intent(in) :: kl !< langmuir constant
+    real(DP), intent(in) :: sbar !< langmuir sorption sites
+    ! -- return
+    real(DP) :: kd !< effective distribution coefficient
+    !
+    if (conc > DZERO) then
+      kd = (kl * sbar) / (DONE + kl * conc)
+    else
+      kd = DZERO
+    end if
+  end function get_langmuir_kd
 
   !> @ brief Calculate zero-order decay rate and constrain if necessary
   !!
@@ -1585,7 +1658,6 @@ contains
       end if
       decay_rate = max(decay_rate, DZERO)
     end if
-    return
   end function get_zero_order_decay
 
 end module GwtMstModule

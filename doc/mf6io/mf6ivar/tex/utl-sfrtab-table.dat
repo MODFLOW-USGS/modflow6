@@ -1,5 +1,0 @@
-BEGIN TABLE
-  <xfraction> <height> [<manfraction>]
-  <xfraction> <height> [<manfraction>]
-  ...
-END TABLE

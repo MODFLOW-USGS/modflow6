@@ -14,6 +14,9 @@ on:
       - '.hpc/**'
 env:
   PIXI_BETA_WARNING_OFF: true
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   lint:
     name: Check format
@@ -23,9 +26,9 @@ jobs:
       - name: Checkout modflow6
         uses: actions/checkout@v4
 
-      - uses: prefix-dev/setup-pixi@v0.7.0
+      - uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.19.1
+          pixi-version: v0.24.2
 
       - name: Check spelling
         run: pixi run check-spelling
@@ -60,19 +63,15 @@ jobs:
           path: usgslatex
 
       - name: Setup pixi
-        uses: prefix-dev/setup-pixi@v0.7.0
+        uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.19.1
+          pixi-version: v0.24.2
           manifest-path: "modflow6/pixi.toml"
 
       - name: Custom pixi install
         working-directory: modflow6
         run: pixi run install
   
-      - name: Install additional packages for Sphinx using pip
-        working-directory: modflow6/.build_rtd_docs
-        run: pixi run pip install -r requirements.rtd.txt
-
       - name: Print python package versions
         working-directory: modflow6
         run: pixi run pip list
@@ -80,15 +79,19 @@ jobs:
       - name: Install TeX Live
         run: |
           sudo apt-get update
-          sudo apt install texlive-latex-extra texlive-science texlive-font-utils
+          sudo apt install texlive-science \
+            texlive-latex-extra \
+            texlive-font-utils \
+            texlive-fonts-recommended \
+            texlive-fonts-extra
 
       - name: Install USGS LaTeX style files and Univers font
         working-directory: usgslatex/usgsLaTeX
         run: sudo ./install.sh --all-users
 
-      - name: Test building files from dfn's for LaTeX
-        working-directory: modflow6/distribution
-        run: pixi run pytest -v build_docs.py::test_build_mf6io_tex_from_dfn
+      - name: Build MF6IO files from DFNs
+        working-directory: modflow6
+        run: pixi run run-mf6ivar
 
       - name: Setup ${{ env.FC }} ${{ env.FC_V }}
         uses: fortran-lang/setup-fortran@v1
@@ -165,17 +168,34 @@ jobs:
         working-directory: modflow6
         run: pixi run sphinx
       
-      - name: Upload results
+      - name: Upload RTD files
         uses: actions/upload-artifact@v3
         with:
           name: rtd-files-for-${{ github.sha }}
           path: |
+            modflow6/.build_rtd_docs/dev.rst
             modflow6/.build_rtd_docs/index.rst
             modflow6/.build_rtd_docs/mf6io.rst
-            # run-time-comparison is moved to _mf6run by conf.py
-            modflow6/.build_rtd_docs/_mf6run/
+            modflow6/.build_rtd_docs/_dev/
             modflow6/.build_rtd_docs/_mf6io/
+            modflow6/.build_rtd_docs/_mf6run/
             modflow6/.build_rtd_docs/_static/
+
+      - name: Build PDF documents
+        working-directory: modflow6
+        run: pixi run build-docs
+
+      - name: Upload PDF documents
+        uses: actions/upload-artifact@v3
+        with:
+          name: mf6io.pdf
+          path: |
+            modflow6/mf6io.pdf
+            modflow6/ReleaseNotes.pdf
+            modflow6/zonebudget.pdf
+            modflow6/converter_mf5to6.pdf
+            modflow6/mf6suptechinfo.pdf
+            modflow6/mf6examples.pdf
 
   rtd_trigger:
     name: rtd-trigger
@@ -215,9 +235,9 @@ jobs:
           sudo apt-get install doxygen graphviz
 
       - name: Setup pixi
-        uses: prefix-dev/setup-pixi@v0.7.0
+        uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.19.1
+          pixi-version: v0.24.2
 
       - name: Custom pixi install
         run: pixi run install

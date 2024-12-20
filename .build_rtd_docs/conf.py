@@ -1,3 +1,4 @@
+# ruff: noqa: E402
 # Configuration file for the Sphinx documentation builder.
 #
 # This file only contains a selection of the most common options. For a full
@@ -14,7 +15,7 @@ import shutil
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import sys
-from subprocess import Popen, PIPE
+from subprocess import PIPE, Popen
 
 sys.path.insert(0, os.path.abspath(os.path.join("..", "doc")))
 sys.path.insert(0, os.path.abspath(os.path.join("..", "distribution")))
@@ -23,12 +24,12 @@ sys.path.insert(0, os.path.abspath(os.path.join("..", "distribution")))
 on_rtd = os.environ.get("READTHEDOCS") == "True"
 
 # -- print current directory
-print("Current Directory...'{}'".format(os.path.abspath(os.getcwd())))
+print(f"Current Directory...'{os.path.abspath(os.getcwd())}'")
 
 # -- clean up doxygen files -------------------------------------------------
 dox_pths = ("_mf6io",)
 for dox_pth in dox_pths:
-    print("cleaning....{}".format(dox_pth))
+    print(f"cleaning....{dox_pth}")
     for root, dirs, files in os.walk(dox_pth):
         for name in files:
             fpth = os.path.join(root, name)
@@ -37,6 +38,7 @@ for dox_pth in dox_pths:
 # -- Update the modflow 6 version -------------------------------------------
 print("Update the modflow6 version")
 from update_version import update_version
+
 update_version()
 
 # -- import version from doc/version.py -------------------------------------
@@ -55,6 +57,50 @@ if os.path.isdir(dstdir):
 os.makedirs(dstdir)
 # copy the file
 shutil.copy(src, dst)
+
+# -- copy developer docs
+dstdir = "_dev"
+fpth = "DEVELOPER.md"
+src = os.path.join("..", fpth)
+dst = os.path.join(dstdir, fpth.lower())
+# clean up an existing _mf6run directory
+if os.path.isdir(dstdir):
+    shutil.rmtree(dstdir)
+# make the directory
+os.makedirs(dstdir)
+# copy the file
+shutil.copy(src, dst)
+
+# -- copy contributor docs
+fpth = "CONTRIBUTING.md"
+src = os.path.join("..", fpth)
+dst = os.path.join(dstdir, fpth.lower())
+shutil.copy(src, dst)
+
+# -- copy style guide
+fpth = "styleguide.md"
+src = os.path.join(fpth)
+dst = os.path.join(dstdir, fpth)
+shutil.copy(src, dst)
+
+# -- copy DFN spec
+fpth = "readme.md"
+src = os.path.join("..", "doc", "mf6io", "mf6ivar", fpth)
+dst = os.path.join(dstdir, "dfn.md")
+shutil.copy(src, dst)
+
+# -- build the deprecations table --------------------------------------------
+print("Build the deprecations markdown table")
+pth = os.path.join("..", "doc", "mf6io", "mf6ivar")
+args = (sys.executable, "deprecations.py")
+# run the command
+proc = Popen(args, stdout=PIPE, stderr=PIPE, cwd=pth)
+stdout, stderr = proc.communicate()
+if stdout:
+    print(stdout.decode("utf-8"))
+if stderr:
+    print("Errors:")
+    print(stderr.decode("utf-8"))
 
 # -- copy deprecations markdown ---------------------------------------------
 print("Copy the deprecations table")
@@ -75,7 +121,8 @@ stdout, stderr = proc.communicate()
 if stdout:
     print(stdout.decode("utf-8"))
 if stderr:
-    print("Errors:\n{}".format(stderr.decode("utf-8")))
+    print("Errors:")
+    print(stderr.decode("utf-8"))
 
 # -- update the doxygen version number ---------------------------------------
 print("Update the Doxyfile with the latest version number")
@@ -86,13 +133,13 @@ tag = "PROJECT_NUMBER"
 with open("Doxyfile", "w") as fp:
     for line in lines:
         if tag in line:
-            line = '{}         = "version {}"\n'.format(tag, __version__)
+            line = f'{tag}         = "version {__version__}"\n'
         fp.write(line)
 
 # -- Project information -----------------------------------------------------
 
-project = "MODFLOW 6 Program Documentation"
-copyright = "2023, MODFLOW Development Team"
+project = "MODFLOW 6"
+copyright = "2024, MODFLOW Development Team"
 author = "MODFLOW Development Team"
 
 # -- Project version ---------------------------------------------------------
@@ -125,6 +172,8 @@ extensions = [
 
 # # Tell sphinx what the pygments highlight language should be.
 # highlight_language = 'fortran'
+
+source_suffix = {".rst": "restructuredtext", ".md": "markdown"}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

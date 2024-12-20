@@ -8,16 +8,17 @@ import shlex
 parser = argparse.ArgumentParser()
 parser.add_argument("--compiler", type=str)
 parser.add_argument("--buildtype", type=str)
+parser.add_argument("--pixi", action="store_true")
 parser.add_argument("action")
 args = parser.parse_args()
 
 os.environ["FC"] = args.compiler
-builddir = f"builddir_{platform.system()}_{args.compiler}_{args.buildtype}"
+builddir = f"_builddir_{platform.system()}_{args.compiler}_{args.buildtype}"
 
-arg_parallel = "-Dparallel=false"
-if os.getenv("BUILD_PARALLEL_MF6") is not None:
-    if os.environ["BUILD_PARALLEL_MF6"] == '1':
-        arg_parallel = "-Dparallel=true"
+arg_extended = "-Dextended=false"
+if os.getenv("BUILD_EXTENDED_MF6") is not None:
+    if os.environ["BUILD_EXTENDED_MF6"] == '1':
+        arg_extended = "-Dextended=true"
 
 if args.action == "rebuild" and os.path.isdir(builddir):
     shutil.rmtree(builddir)
@@ -28,15 +29,24 @@ elif args.buildtype == "debug":
     setup_flag = ["-Ddebug=true", "-Doptimization=0"]
 
 if not os.path.isdir(builddir):
-    command = [
-        "meson",
-        "setup",
+    if args.pixi:
+        command = [
+            "pixi",
+            "run",
+            "setup",
+        ]
+    else:
+        command = [
+            "meson",
+            "setup",
+        ]
+    command += [
         builddir,
         "--prefix",
         os.getcwd(),
         "--libdir",
         "bin",
-        arg_parallel,
+        arg_extended,
     ] + setup_flag
     print("Run:", shlex.join(command))
     subprocess.run(
@@ -52,6 +62,10 @@ if os.path.isdir(bin_dir):
         if os.path.isfile(path):
             os.remove(path)
 
-command = ["meson", "install", "-C", builddir]
+if args.pixi:
+    command = ["pixi", "run", "build",]
+else:
+    command = ["meson", "install", "-C"]    
+command += [builddir]
 print("Run:", shlex.join(command))
 subprocess.run(command, check=True)

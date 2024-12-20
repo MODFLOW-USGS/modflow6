@@ -38,7 +38,7 @@ module TdisModule
   real(DP), public, dimension(:), pointer, contiguous :: perlen => null() !< length of each stress period
   integer(I4B), public, dimension(:), pointer, contiguous :: nstp => null() !< number of time steps in each stress period
   real(DP), public, dimension(:), pointer, contiguous :: tsmult => null() !< time step multiplier for each stress period
-  character(len=LENDATETIME), pointer :: datetime0 => null() !< starting date and time for the simulation
+  character(len=LENDATETIME), public, pointer :: datetime0 => null() !< starting date and time for the simulation
   character(len=LENMEMPATH), pointer :: input_mempath => null() !< input context mempath for tdis
   character(len=LINELENGTH), pointer :: input_fname => null() !< input filename for tdis
   !
@@ -83,9 +83,6 @@ contains
     if (inats > 0) then
       call ats_cr(inats, nper)
     end if
-    !
-    ! -- Return
-    return
   end subroutine tdis_cr
 
   !> @brief Set kstp and kper
@@ -148,9 +145,6 @@ contains
         write (iout, fmtspits) nstp(kper), tsmult(kper)
       end if
     end if
-    !
-    ! -- Return
-    return
   end subroutine tdis_set_counters
 
   !> @brief Set time step length
@@ -208,9 +202,6 @@ contains
     if (endofperiod .and. kper == nper) then
       endofsimulation = .true.
     end if
-    !
-    ! -- Return
-    return
   end subroutine tdis_set_timestep
 
   !> @brief Reset delt and update timing variables and indicators
@@ -250,9 +241,6 @@ contains
       endofsimulation = .true.
       totim = totalsimtime
     end if
-    !
-    ! -- Return
-    return
   end subroutine tdis_delt_reset
 
   !> @brief Set time step length
@@ -278,70 +266,7 @@ contains
     else
       delt = tsmult(kper) * delt
     end if
-    !
-    ! -- Return
-    return
   end subroutine tdis_set_delt
-
-!  subroutine tdis_set_delt_std()
-!! ******************************************************************************
-!! tdis_tu_std -- Standard non-adaptive time update
-!! ******************************************************************************
-!!
-!!    SPECIFICATIONS:
-!! ------------------------------------------------------------------------------
-!    ! -- modules
-!    use ConstantsModule, only: DONE, DZERO
-!    ! -- formats
-!    character(len=*),parameter :: fmttsi = &
-!      "(28X,'INITIAL TIME STEP SIZE =',G15.7)"
-!! ------------------------------------------------------------------------------
-!    !
-!    ! -- Setup new stress period if kstp is 1
-!    if(kstp == 1) then
-!      !
-!      ! -- Calculate the first value of delt for this stress period
-!      delt = perlen(kper) / float(nstp(kper))
-!      if(tsmult(kper) /= DONE) &
-!          delt = perlen(kper) * (DONE-tsmult(kper)) / &
-!              (DONE - tsmult(kper) ** nstp(kper))
-!      !
-!      ! -- Print length of first time step
-!      write(iout, fmttsi) delt
-!      !
-!      ! -- Initialize pertim (Elapsed time within stress period)
-!      pertim = DZERO
-!      !
-!      ! -- Clear flag that indicates last time step of a stress period
-!      endofperiod = .false.
-!    endif
-!    !
-!    ! -- Calculate delt for kstp > 1
-!    if (kstp /= 1) then
-!      delt = tsmult(kper) * delt
-!    end if
-!    !
-!    ! -- Store totim and pertim, which are times at end of previous time step
-!    totimsav = totim
-!    pertimsav = pertim
-!    totimc = totim
-!    !
-!    ! -- Update totim and pertim
-!    totim = totimsav + delt
-!    pertim = pertimsav + delt
-!    !
-!    ! -- End of stress period and/or simulation?
-!    if (kstp == nstp(kper)) then
-!      endofperiod = .true.
-!    end if
-!    if (endofperiod .and. kper==nper) then
-!      endofsimulation = .true.
-!      totim = totalsimtime
-!    end if
-!    !
-!    ! -- Return
-!    return
-!  end subroutine tdis_set_delt_std
 
   !> @brief Print simulation time
   !<
@@ -412,9 +337,6 @@ contains
       write (iout, fmtpertm) persec, permn, perhr, perdy, peryr
       write (iout, fmttottm) totsec, totmn, tothr, totdy, totyr
     end if
-    !
-    ! -- Return
-    return
   end subroutine tdis_ot
 
   !> @brief Deallocate memory
@@ -455,9 +377,6 @@ contains
     call mem_deallocate(perlen)
     call mem_deallocate(nstp)
     call mem_deallocate(tsmult)
-    !
-    ! -- Return
-    return
   end subroutine tdis_da
 
   !> @brief Source the timing discretization options
@@ -531,9 +450,6 @@ contains
     end if
     !
     write (iout, '(1x,a)') 'END OF TDIS OPTIONS'
-    !
-    ! -- Return
-    return
   end subroutine tdis_source_options
 
   !> @brief Allocate tdis scalars
@@ -586,9 +502,6 @@ contains
     pertimsav = DZERO
     totalsimtime = DZERO
     datetime0 = ''
-    !
-    ! -- Return
-    return
   end subroutine tdis_allocate_scalars
 
   !> @brief Allocate tdis arrays
@@ -600,9 +513,6 @@ contains
     call mem_allocate(perlen, nper, 'PERLEN', 'TDIS')
     call mem_allocate(nstp, nper, 'NSTP', 'TDIS')
     call mem_allocate(tsmult, nper, 'TSMULT', 'TDIS')
-    !
-    ! -- Return
-    return
   end subroutine tdis_allocate_arrays
 
   !> @brief Source dimension NPER
@@ -630,9 +540,6 @@ contains
     end if
     !
     write (iout, '(1x,a)') 'END OF TDIS DIMENSIONS'
-    !
-    ! -- Return
-    return
   end subroutine tdis_source_dimensions
 
   !> @brief Source timing information
@@ -677,9 +584,6 @@ contains
     end do
     !
     write (iout, '(1x,a)') 'END OF TDIS PERIODDATA'
-    !
-    ! -- Return
-    return
   end subroutine tdis_source_timing
 
   !> @brief Check the tdis timing information
@@ -768,8 +672,6 @@ contains
       tstart = tend
       !
     end do
-    ! -- Return
-    return
   end subroutine check_tdis_timing
 
 end module TdisModule

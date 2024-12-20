@@ -1,13 +1,12 @@
 import argparse
 import os
 import platform
-import sys
 import textwrap
 from os import PathLike, environ
 from pathlib import Path
 from pprint import pprint
 from shutil import copy, copyfile, copytree, ignore_patterns, rmtree
-from typing import List, Optional
+from typing import Optional
 
 import pytest
 from build_docs import build_documentation
@@ -24,16 +23,16 @@ from modflow_devtools.misc import get_model_paths
 from utils import get_project_root_path
 
 # default paths
-_project_root_path = get_project_root_path()
-_build_path = _project_root_path / "builddir"
-_default_models = ["gwf", "gwt", "gwe", "prt", "swf"]
+PROJ_ROOT_PATH = get_project_root_path()
+BUILDDIR_PATH = PROJ_ROOT_PATH / "builddir"
+DEFAULT_MODELS = ["gwf", "gwt", "gwe", "prt", "swf"]
 
 # OS-specific extensions
-_system = platform.system()
-_eext = ".exe" if _system == "Windows" else ""
-_soext = ".dll" if _system == "Windows" else ".so" if _system == "Linux" else ".dylib"
-_scext = ".bat" if _system == "Windows" else ".sh"
-_executable = f"mf6{_eext}"
+SYSTEM = platform.system()
+EXE_EXT = ".exe" if SYSTEM == "Windows" else ""
+LIB_EXT = ".dll" if SYSTEM == "Windows" else ".so" if SYSTEM == "Linux" else ".dylib"
+SCR_EXT = ".bat" if SYSTEM == "Windows" else ".sh"
+MF6_EXE = f"mf6{EXE_EXT}"
 
 # Fortran and C compilers
 FC = environ.get("FC", "gfortran")
@@ -49,7 +48,7 @@ def copy_sources(output_path: PathLike):
     # Copy Visual Studio sln and project files
     print("Copying msvs files to output directory")
     (output_path / "msvs").mkdir(exist_ok=True)
-    source_msvs_path = _project_root_path / "msvs"
+    source_msvs_path = PROJ_ROOT_PATH / "msvs"
     for d in [
         str(source_msvs_path / "mf6.sln"),
         str(source_msvs_path / "mf6.vfproj"),
@@ -62,23 +61,23 @@ def copy_sources(output_path: PathLike):
     ignored = [".DS_Store"]
 
     # copy top-level meson.build and meson.options
-    copy(_project_root_path / "meson.build", output_path)
-    copy(_project_root_path / "meson.options", output_path)
+    copy(PROJ_ROOT_PATH / "meson.build", output_path)
+    copy(PROJ_ROOT_PATH / "meson.options", output_path)
 
     # copy source folder
-    src_path = _project_root_path / "src"
+    src_path = PROJ_ROOT_PATH / "src"
     dst_path = output_path / "src"
     print(f"Copying {src_path} to {dst_path}")
     copytree(src_path, dst_path, ignore=ignore_patterns(*ignored))
 
     # copy srcbmi folder
-    src_path = _project_root_path / "srcbmi"
+    src_path = PROJ_ROOT_PATH / "srcbmi"
     dst_path = output_path / "srcbmi"
     print(f"Copying {src_path} to {dst_path}")
     copytree(src_path, dst_path, ignore=ignore_patterns(*ignored))
 
     # copy utils folder
-    src_path = _project_root_path / "utils"
+    src_path = PROJ_ROOT_PATH / "utils"
     dst_path = output_path / "utils"
     print(f"Copying {src_path} to {dst_path}")
     ignored.extend(["idmloader"])
@@ -110,99 +109,106 @@ def test_copy_sources(tmp_path):
 def setup_examples(
     bin_path: PathLike,
     examples_path: PathLike,
-    overwrite: bool = False,
-    models: Optional[List[str]] = None,
+    force: bool = False,
+    models: Optional[list[str]] = None,
 ):
     examples_path = Path(examples_path).expanduser().absolute()
-    latest = get_release("MODFLOW-USGS/modflow6-examples", "latest")
+
+    # find and download example models distribution from latest examples release
+    latest = get_release("MODFLOW-USGS/modflow6-examples", tag="latest", verbose=True)
     assets = latest["assets"]
-    asset = next(
-        iter([a for a in assets if a["name"] == "modflow6-examples.zip"]), None
-    )
-    # download example models zip asset
+    print(f"Found {len(assets)} assets from the latest examples release:")
+    pprint([a["name"] for a in assets])
+    asset = next(iter([a for a in assets if a["name"].endswith("examples.zip")]), None)
     download_and_unzip(asset["browser_download_url"], examples_path, verbose=True)
 
     # filter examples for models selected for release
+    # and omit any excluded models
+    excluded = ["ex-prt-mp7-p02", "ex-prt-mp7-p04"]
     for p in examples_path.glob("*"):
         if not any(m in p.stem for m in models):
+            print(f"Omitting example due to model selection: {p.stem}")
+            rmtree(p)
+        if any(e in p.stem for e in excluded):
+            print(f"Omitting deliberately excluded example: {p.stem}")
             rmtree(p)
 
     # list folders with mfsim.nam (recursively)
     # and add run.sh/bat script to each folder
     model_paths = get_model_paths(examples_path)
     for mp in model_paths:
-        script_path = mp / f"run{_scext}"
-        if not overwrite and script_path.is_file():
+        script_path = mp / f"run{SCR_EXT}"
+        if not force and script_path.is_file():
             print(f"Script {script_path} already exists")
         else:
             print(f"Creating {script_path}")
             with open(script_path, "w") as f:
-                if _system == "Windows":
+                if SYSTEM == "Windows":
                     f.write("@echo off" + "\n")
                 else:
                     f.write("#!/bin/sh" + "\n")
-                runbatloc = os.path.relpath(bin_path / _executable, start=mp)
+                runbatloc = os.path.relpath(bin_path / MF6_EXE, start=mp)
                 f.write(runbatloc + "\n")
-                if _system == "Windows":
+                if SYSTEM == "Windows":
                     f.write("echo." + "\n")
                     f.write("echo Run complete.  Press any key to continue" + "\n")
                     f.write("pause>nul" + "\n")
 
-            if _system != "Windows":
+            if SYSTEM != "Windows":
                 script_path.chmod(script_path.stat().st_mode | 0o111)
                 print(f"Execute permission set for {script_path}")
 
     # add runall.sh/bat, which runs all examples
-    script_path = examples_path / f"runall{_scext}"
-    if not overwrite and script_path.is_file():
+    script_path = examples_path / f"runall{SCR_EXT}"
+    if not force and script_path.is_file():
         print(f"Script {script_path} already exists")
     else:
         print(f"Creating {script_path}")
         with open(script_path, "w") as f:
-            if _system != "Windows":
+            if SYSTEM != "Windows":
                 f.write("#!/bin/sh" + "\n")
             for mp in model_paths:
                 d = os.path.relpath(mp, start=examples_path)
                 s = f"cd {d}"
                 f.write(s + "\n")
-                runbatloc = os.path.relpath(bin_path / _executable, start=mp)
+                runbatloc = os.path.relpath(bin_path / MF6_EXE, start=mp)
                 f.write(runbatloc + "\n")
                 d = os.path.relpath(examples_path, start=mp)
                 s = f"cd {d}"
                 f.write(s + "\n")
                 s = ""
                 f.write(s + "\n")
-            if _system == "Windows":
+            if SYSTEM == "Windows":
                 f.write("pause" + "\n")
             else:
                 script_path.chmod(script_path.stat().st_mode | 0o111)
                 print(f"Execute permission set for {script_path}")
 
 
-def build_programs_meson(
-    build_path: PathLike, bin_path: PathLike, overwrite: bool = False
-):
+def build_programs_meson(build_path: PathLike, bin_path: PathLike, force: bool = False):
     build_path = Path(build_path).expanduser().absolute()
     bin_path = Path(bin_path).expanduser().absolute()
 
     exe_paths = [
-        bin_path / f"mf6{_eext}",
-        bin_path / f"zbud6{_eext}",
-        bin_path / f"mf5to6{_eext}",
+        bin_path / f"mf6{EXE_EXT}",
+        bin_path / f"zbud6{EXE_EXT}",
+        bin_path / f"mf5to6{EXE_EXT}",
     ]
-    lib_paths = [bin_path / f"libmf6{_soext}"]
+    lib_paths = [bin_path / f"libmf6{LIB_EXT}"]
 
     if (
-        not overwrite
+        not force
         and all(p.is_file() for p in exe_paths)
         and all(p.is_file() for p in lib_paths)
     ):
-        print(f"Binaries already exist:")
+        print("Binaries already exist:")
         pprint(exe_paths + lib_paths)
     else:
         print(f"Building binaries in {build_path}, installing to {bin_path}")
         meson_build(
-            project_path=_project_root_path, build_path=build_path, bin_path=bin_path
+            project_path=PROJ_ROOT_PATH,
+            build_path=build_path,
+            bin_path=bin_path,
         )
 
     for target in exe_paths + lib_paths:
@@ -223,10 +229,11 @@ def build_makefiles(output_path: PathLike):
     build_mf6_makefile()
     (output_path / "make").mkdir(parents=True, exist_ok=True)
     copyfile(
-        _project_root_path / "make" / "makefile", output_path / "make" / "makefile"
+        PROJ_ROOT_PATH / "make" / "makefile",
+        output_path / "make" / "makefile",
     )
     copyfile(
-        _project_root_path / "make" / "makedefaults",
+        PROJ_ROOT_PATH / "make" / "makedefaults",
         output_path / "make" / "makedefaults",
     )
 
@@ -235,10 +242,11 @@ def build_makefiles(output_path: PathLike):
     rel_path = Path("utils") / "zonebudget" / "make"
     (output_path / rel_path).mkdir(parents=True, exist_ok=True)
     copyfile(
-        _project_root_path / rel_path / "makefile", output_path / rel_path / "makefile"
+        PROJ_ROOT_PATH / rel_path / "makefile",
+        output_path / rel_path / "makefile",
     )
     copyfile(
-        _project_root_path / rel_path / "makedefaults",
+        PROJ_ROOT_PATH / rel_path / "makedefaults",
         output_path / rel_path / "makedefaults",
     )
 
@@ -247,10 +255,11 @@ def build_makefiles(output_path: PathLike):
     rel_path = Path("utils") / "mf5to6" / "make"
     (output_path / rel_path).mkdir(parents=True, exist_ok=True)
     copyfile(
-        _project_root_path / rel_path / "makefile", output_path / rel_path / "makefile"
+        PROJ_ROOT_PATH / rel_path / "makefile",
+        output_path / rel_path / "makefile",
     )
     copyfile(
-        _project_root_path / rel_path / "makedefaults",
+        PROJ_ROOT_PATH / rel_path / "makedefaults",
         output_path / rel_path / "makedefaults",
     )
 
@@ -275,8 +284,8 @@ def build_distribution(
     build_path: PathLike,
     output_path: PathLike,
     full: bool = False,
-    overwrite: bool = False,
-    models: Optional[List[str]] = None,
+    force: bool = False,
+    models: Optional[list[str]] = None,
 ):
     print(f"Building {'full' if full else 'minimal'} distribution")
 
@@ -285,11 +294,13 @@ def build_distribution(
 
     # binaries
     build_programs_meson(
-        build_path=build_path, bin_path=output_path / "bin", overwrite=overwrite
+        build_path=build_path,
+        bin_path=output_path / "bin",
+        force=force,
     )
 
     # code.json metadata
-    copy(_project_root_path / "code.json", output_path)
+    copy(PROJ_ROOT_PATH / "code.json", output_path)
 
     # full releases include examples, source code, makefiles and docs
     if not full:
@@ -299,7 +310,7 @@ def build_distribution(
     setup_examples(
         bin_path=output_path / "bin",
         examples_path=output_path / "examples",
-        overwrite=overwrite,
+        force=force,
         models=models,
     )
 
@@ -314,7 +325,7 @@ def build_distribution(
         bin_path=output_path / "bin",
         full=full,
         output_path=output_path / "doc",
-        overwrite=overwrite,
+        force=force,
     )
 
 
@@ -328,7 +339,7 @@ def test_build_distribution(tmp_path, full):
         build_path=tmp_path / "builddir",
         output_path=output_path,
         full=full,
-        overwrite=True,
+        force=True,
     )
 
     if full:
@@ -358,30 +369,34 @@ def test_build_distribution(tmp_path, full):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        prog="Create a Modflow 6 distribution directory for release",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent(
             """\
-            Create a distribution folder. If no output path is provided
-            distribution files are written to the distribution/ folder.
+            Create a MODFLOW 6 distribution. If output path is provided
+            distribution files are written to the selected path, if not
+            they are written to the distribution/ project subdirectory.
             By default a minimal distribution containing only binaries,
             mf6io documentation, release notes and metadata (code.json)
             is created. To create a full distribution including sources
-            and examples, use the --full flag.
+            and examples, use the --full flag. Models to be included in
+            the examples and documentation can be selected with --model
+            (or -m), which may be used multiple times. Use --force (-f)
+            to overwrite preexisting distribution artifacts; by default
+            the script is lazy and will only create what it can't find.
             """
         ),
     )
     parser.add_argument(
         "--build-path",
         required=False,
-        default=str(_build_path),
+        default=str(BUILDDIR_PATH),
         help="Path to the build workspace",
     )
     parser.add_argument(
         "-o",
         "--output-path",
         required=False,
-        default=str(_project_root_path / "distribution"),
+        default=str(PROJ_ROOT_PATH / "distribution"),
         help="Path to create distribution artifacts",
     )
     parser.add_argument(
@@ -410,12 +425,12 @@ if __name__ == "__main__":
     build_path = Path(args.build_path)
     out_path = Path(args.output_path)
     out_path.mkdir(parents=True, exist_ok=True)
-    models = args.model if args.model else _default_models
+    models = args.model if args.model else DEFAULT_MODELS
 
     build_distribution(
         build_path=build_path,
         output_path=out_path,
         full=args.full,
-        overwrite=args.force,
+        force=args.force,
         models=models,
     )

@@ -7,15 +7,12 @@
 module SwfStoModule
 
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: DZERO, DEM6, DEM4, DHALF, DONE, DTWO, &
-                             LENBUDTXT, LINELENGTH, LENMEMPATH
+  use ConstantsModule, only: DZERO, LENBUDTXT, LINELENGTH, LENMEMPATH
   use MemoryHelperModule, only: create_mem_path
   use SimVariablesModule, only: errmsg
-  use SimModule, only: store_error, count_errors
+  use SimModule, only: store_error, store_error_filename
   use BaseDisModule, only: DisBaseType
   use NumericalPackageModule, only: NumericalPackageType
-  use BlockParserModule, only: BlockParserType
-  use InputOutputModule, only: GetUnit, openfile
   use MatrixBaseModule
   use Disv1dModule, only: Disv1dType
   use SwfCxsModule, only: SwfCxsType
@@ -37,6 +34,9 @@ module SwfStoModule
     ! -- pointer to packages needed for calculations
     type(SwfCxsType), pointer :: cxs
 
+    ! -- input context pointers for read and prepare
+    integer(I4B), pointer :: iper => null() !< input context loaded period
+    character(len=:), pointer :: storage !< input context storage string
   contains
     procedure :: sto_ar
     procedure :: sto_rp
@@ -51,8 +51,9 @@ module SwfStoModule
     procedure :: sto_da
     procedure :: allocate_scalars
     procedure, private :: allocate_arrays
-    procedure, private :: read_options
-    procedure, private :: read_data
+    procedure, private :: source_options
+    procedure, private :: source_data
+    procedure, private :: log_options
     procedure, private :: set_dfw_pointers
     procedure, private :: reach_length_pointer
     procedure, private :: calc_storage_dis1d
@@ -66,10 +67,11 @@ contains
   !!  Create a new storage (STO) object
   !!
   !<
-  subroutine sto_cr(stoobj, name_model, inunit, iout, cxs)
+  subroutine sto_cr(stoobj, name_model, mempath, inunit, iout, cxs)
     ! -- dummy variables
     type(SwfStoType), pointer :: stoobj !< SwfStoType object
     character(len=*), intent(in) :: name_model !< name of model
+    character(len=*), intent(in) :: mempath !< input context mem path
     integer(I4B), intent(in) :: inunit !< package input file unit
     integer(I4B), intent(in) :: iout !< model listing file unit
     type(SwfCxsType), pointer, intent(in) :: cxs !< the pointer to the cxs package
@@ -78,7 +80,7 @@ contains
     allocate (stoobj)
     !
     ! -- create name and memory path
-    call stoobj%set_names(1, name_model, 'STO', 'STO')
+    call stoobj%set_names(1, name_model, 'STO', 'STO', mempath)
     !
     ! -- Allocate scalars
     call stoobj%allocate_scalars()
@@ -89,9 +91,6 @@ contains
 
     ! -- store pointers
     stoobj%cxs => cxs
-
-    ! -- Initialize block parser
-    call stoobj%parser%Initialize(stoobj%inunit, stoobj%iout)
 
   end subroutine sto_cr
 
@@ -132,14 +131,11 @@ contains
     call this%allocate_arrays(dis%nodes)
     !
     ! -- Read storage options
-    call this%read_options()
+    call this%source_options()
     !
     ! -- read the data block
     ! no griddata at the moment for SWF Storage Package
-    ! call this%read_data()
-    !
-    ! -- return
-    return
+    ! call this%source_data()
   end subroutine sto_ar
 
   !> @ brief Read and prepare method for package
@@ -149,77 +145,40 @@ contains
   !<
   subroutine sto_rp(this)
     ! -- modules
-    use TdisModule, only: kper, nper
+    use TdisModule, only: kper
     implicit none
     ! -- dummy variables
     class(SwfStoType) :: this !< SwfStoType object
     ! -- local variables
-    integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
     character(len=16) :: css(0:1)
-    character(len=LINELENGTH) :: line, keyword
-    ! -- formats
-    character(len=*), parameter :: fmtlsp = &
-      &"(1X,/1X,'REUSING ',A,' FROM LAST STRESS PERIOD')"
-    character(len=*), parameter :: fmtblkerr = &
-      &"('Error.  Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
     ! -- data
     data css(0)/'       TRANSIENT'/
     data css(1)/'    STEADY-STATE'/
     !
-    ! -- get stress period data
-    if (this%ionper < kper) then
-      !
-      ! -- get period block
-      call this%parser%GetBlock('PERIOD', isfound, ierr, &
-                                supportOpenClose=.true., &
-                                blockRequired=.false.)
-      if (isfound) then
-        !
-        ! -- read ionper and check for increasing period numbers
-        call this%read_check_ionper()
-      else
-        !
-        ! -- PERIOD block not found
-        if (ierr < 0) then
-          ! -- End of file found; data applies for remainder of simulation.
-          this%ionper = nper + 1
-        else
-          ! -- Found invalid block
-          call this%parser%GetCurrentLine(line)
-          write (errmsg, fmtblkerr) adjustl(trim(line))
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        end if
-      end if
+    ! -- confirm package is active
+    if (this%inunit <= 0) return
+    !
+    ! -- confirm loaded iper
+    if (this%iper /= kper) return
+    !
+    write (this%iout, '(//,1x,a)') 'PROCESSING STORAGE PERIOD DATA'
+    !
+    ! -- set period iss
+    if (this%storage == 'STEADY-STATE') then
+      this%iss = 1
+    else if (this%storage == 'TRANSIENT') then
+      this%iss = 0
+    else
+      write (errmsg, '(a,a)') 'Unknown STORAGE data tag: ', &
+        trim(this%storage)
+      call store_error(errmsg)
+      call store_error_filename(this%input_fname)
     end if
-
-    if (this%ionper == kper) then
-      write (this%iout, '(//,1x,a)') 'PROCESSING STORAGE PERIOD DATA'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-        case ('STEADY-STATE')
-          this%iss = 1
-        case ('TRANSIENT')
-          this%iss = 0
-        case default
-          write (errmsg, '(a,a)') 'Unknown STORAGE data tag: ', &
-            trim(keyword)
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        end select
-      end do
-      write (this%iout, '(1x,a)') 'END PROCESSING STORAGE PERIOD DATA'
-    end if
-
+    !
+    write (this%iout, '(1x,a)') 'END PROCESSING STORAGE PERIOD DATA'
+    !
     write (this%iout, '(//1X,A,I0,A,A,/)') &
       'STRESS PERIOD ', kper, ' IS ', trim(adjustl(css(this%iss)))
-    !
-    ! -- return
-    return
   end subroutine sto_rp
 
   !> @ brief Advance the package
@@ -231,9 +190,6 @@ contains
     ! -- modules
     ! -- dummy variables
     class(SwfStoType) :: this !< SwfStoType object
-    !
-    ! -- return
-    return
   end subroutine sto_ad
 
   !> @ brief Fill A and right-hand side for the package
@@ -317,9 +273,6 @@ contains
       rhs(n) = rhs(n) + qsto - derv * stage_new(n)
 
     end do
-    !
-    ! -- Return
-    return
   end subroutine sto_fc_dis1d
 
   !> @ brief Fill A and right-hand side for the package
@@ -402,9 +355,6 @@ contains
       flowja(idiag) = flowja(idiag) + this%qsto(n)
 
     end do
-    !
-    ! -- Return
-    return
   end subroutine sto_cq
 
   subroutine calc_storage_dis1d(this, n, stage_new, stage_old, dx, qsto, derv)
@@ -500,9 +450,6 @@ contains
     call rate_accumulator(this%qsto, rin, rout)
     call model_budget%addentry(rin, rout, delt, '             STO', &
                                isuppress_output, '         STORAGE')
-    !
-    ! -- return
-    return
   end subroutine sto_bd
 
   !> @ brief Save model flows for package
@@ -541,9 +488,6 @@ contains
                                  budtxt(1), cdatafmp, nvaluesp, &
                                  nwidthp, editdesc, dinact)
     end if
-    !
-    ! -- return
-    return
   end subroutine sto_save_model_flows
 
   !> @ brief Deallocate package memory
@@ -561,15 +505,14 @@ contains
     if (this%inunit > 0) then
       call mem_deallocate(this%qsto)
       nullify (this%idcxs)
+      nullify (this%iper)
+      nullify (this%storage)
     end if
     !
     ! -- Deallocate scalars
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
-    !
-    ! -- return
-    return
   end subroutine sto_da
 
   !> @ brief Allocate scalars
@@ -580,7 +523,7 @@ contains
   !<
   subroutine allocate_scalars(this)
     ! -- modules
-    use MemoryManagerModule, only: mem_allocate, mem_setptr
+    use MemoryManagerModule, only: mem_allocate
     ! -- dummy variables
     class(SwfStoType) :: this !< SwfStoType object
     !
@@ -592,9 +535,6 @@ contains
     !
     ! -- initialize scalars
     !this%xxx = 0
-    !
-    ! -- return
-    return
   end subroutine allocate_scalars
 
   !> @ brief Allocate package arrays
@@ -604,7 +544,7 @@ contains
   !<
   subroutine allocate_arrays(this, nodes)
     ! -- modules
-    use MemoryManagerModule, only: mem_allocate
+    use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy variables
     class(SwfStoType), target :: this !< SwfStoType object
     integer(I4B), intent(in) :: nodes !< active model nodes
@@ -614,118 +554,99 @@ contains
     ! -- Allocate arrays
     call mem_allocate(this%qsto, nodes, 'STRGSS', this%memoryPath)
     !
+    ! -- set input context pointers
+    if (this%inunit > 0) then
+      call mem_setptr(this%iper, 'IPER', this%input_mempath)
+      call mem_setptr(this%storage, 'STORAGE', this%input_mempath)
+    end if
+    !
     ! -- Initialize arrays
     this%iss = 0
     do n = 1, nodes
       this%qsto(n) = DZERO
     end do
-    !
-    ! -- return
-    return
   end subroutine allocate_arrays
 
-  !> @ brief Read options for package
+  !> @ brief Source input options for package
   !!
-  !!  Read options block for STO package.
+  !!  Source options block parameters for STO package.
   !!
   !<
-  subroutine read_options(this)
+  subroutine source_options(this)
     ! -- modules
+    use MemoryManagerExtModule, only: mem_set_value
+    use SourceCommonModule, only: filein_fname
+    use SwfStoInputModule, only: SwfStoParamFoundType
     ! -- dummy variables
     class(SwfStoType) :: this !< SwfStoType object
     ! -- local variables
-    character(len=LINELENGTH) :: keyword
-    integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
+    type(SwfStoParamFoundType) :: found
+    !
+    ! -- source package input
+    call mem_set_value(this%ipakcb, 'IPAKCB', this%input_mempath, found%ipakcb)
+    !
+    if (found%ipakcb) then
+      this%ipakcb = -1
+    end if
+    !
+    ! -- log found options
+    call this%log_options(found)
+  end subroutine source_options
+
+  !> @ brief Log found options for package
+  !!
+  !!  Log options block for STO package.
+  !!
+  !<
+  subroutine log_options(this, found)
+    ! -- modules
+    use MemoryManagerExtModule, only: mem_set_value
+    use SwfStoInputModule, only: SwfStoParamFoundType
+    ! -- dummy variables
+    class(SwfStoType) :: this !< SwfStoType object
+    type(SwfStoParamFoundType), intent(in) :: found
+    ! -- local variables
     ! -- formats
     character(len=*), parameter :: fmtisvflow = &
       "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE SAVED TO BINARY FILE &
       &WHENEVER ICBCFL IS NOT ZERO.')"
-    character(len=*), parameter :: fmtflow = &
-      &"(4x, 'FLOWS WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
     !
-    ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, &
-                              supportOpenClose=.true., blockRequired=.false.)
+    write (this%iout, '(1x,a)') 'PROCESSING STORAGE OPTIONS'
     !
-    ! -- parse options block if detected
-    if (isfound) then
-      write (this%iout, '(1x,a)') 'PROCESSING STORAGE OPTIONS'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-        case ('SAVE_FLOWS')
-          this%ipakcb = -1
-          write (this%iout, fmtisvflow)
-        case default
-          write (errmsg, '(a,a)') 'Unknown STO option: ', &
-            trim(keyword)
-          call store_error(errmsg, terminate=.TRUE.)
-        end select
-      end do
-      write (this%iout, '(1x,a)') 'END OF STORAGE OPTIONS'
+    if (found%ipakcb) then
+      write (this%iout, fmtisvflow)
     end if
     !
-    ! -- return
-    return
-  end subroutine read_options
+    write (this%iout, '(1x,a)') 'END OF STORAGE OPTIONS'
+  end subroutine log_options
 
-  !> @ brief Read data for package
+  !> @ brief Source input data for package
   !!
-  !!  Read griddata block for STO package.
+  !!  Source griddata block parameters for STO package.
   !!
   !<
-  subroutine read_data(this)
+  subroutine source_data(this)
     ! -- modules
+    use MemoryManagerExtModule, only: mem_set_value
+    use SwfStoInputModule, only: SwfStoParamFoundType
     ! -- dummy variables
     class(SwfStotype) :: this !< SwfStoType object
     ! -- local variables
-    character(len=LINELENGTH) :: keyword
-    character(len=:), allocatable :: line
-    integer(I4B) :: lloc, ierr
-    logical :: isfound, endOfBlock
     character(len=24), dimension(1) :: aname
-    ! -- formats
-    !data
+    integer(I4B), dimension(:), pointer, contiguous :: map
+    !type(SwfStoParamFoundType) :: found
+    !
+    ! -- initialize data
     data aname(1)/'                     XXX'/
     !
-    ! -- initialize
-    isfound = .false.
+    ! -- set map to reduce data input arrays
+    map => null()
+    if (this%dis%nodes < this%dis%nodesuser) map => this%dis%nodeuser
     !
-    ! -- get stodata block
-    call this%parser%GetBlock('GRIDDATA', isfound, ierr)
-    if (isfound) then
-      write (this%iout, '(1x,a)') 'PROCESSING GRIDDATA'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        call this%parser%GetRemainingLine(line)
-        lloc = 1
-        select case (keyword)
-        case default
-          write (errmsg, '(a,a)') 'Unknown GRIDDATA tag: ', &
-            trim(keyword)
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        end select
-      end do
-      write (this%iout, '(1x,a)') 'END PROCESSING GRIDDATA'
-    else
-      write (errmsg, '(a)') 'Required GRIDDATA block not found.'
-      call store_error(errmsg)
-      call this%parser%StoreErrorUnit()
-    end if
-    !
-    if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
-    end if
-    !
-    ! -- return
-    return
-  end subroutine read_data
+    ! -- log griddata
+    write (this%iout, '(1x,a)') 'PROCESSING GRIDDATA'
+    write (this%iout, '(1x,a)') 'END PROCESSING GRIDDATA'
+  end subroutine source_data
 
   !> @brief Set pointers to channel properties in DFW Package
   !<

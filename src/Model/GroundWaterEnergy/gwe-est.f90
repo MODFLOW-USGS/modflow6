@@ -13,7 +13,7 @@
 module GweEstModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DONE, DZERO, DTWO, DHALF, LENBUDTXT
+  use ConstantsModule, only: DONE, DZERO, DTWO, DHALF, LENBUDTXT, DEP3
   use SimVariablesModule, only: errmsg, warnmsg
   use SimModule, only: store_error, count_errors, &
                        store_warning
@@ -40,6 +40,7 @@ module GweEstModule
     ! -- storage
     real(DP), pointer :: cpw => null() !< heat capacity of water
     real(DP), pointer :: rhow => null() !< density of water
+    real(DP), pointer :: latheatvap => null() !< latent heat of vaporization
     real(DP), dimension(:), pointer, contiguous :: cps => null() !< heat capacity of solid
     real(DP), dimension(:), pointer, contiguous :: rhos => null() !< density of solid
     real(DP), dimension(:), pointer, contiguous :: porosity => null() !< porosity
@@ -47,7 +48,6 @@ module GweEstModule
     !
     ! -- decay
     integer(I4B), pointer :: idcy => null() !< order of decay rate (0:none, 1:first, 2:zero)
-    integer(I4B), pointer :: ilhv => null() !< latent heat of vaporization for calculating temperature change associated with evaporation (0: not specified, not 0: specified)
     real(DP), dimension(:), pointer, contiguous :: decay => null() !< first or zero order decay rate (aqueous)
     real(DP), dimension(:), pointer, contiguous :: ratedcy => null() !< rate of decay
     real(DP), dimension(:), pointer, contiguous :: decaylast => null() !< decay rate used for last iteration (needed for zero order decay)
@@ -56,7 +56,6 @@ module GweEstModule
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
     type(TspFmiType), pointer :: fmi => null() !< pointer to fmi object
     type(GweInputDataType), pointer :: gwecommon => null() !< pointer to shared gwe data used by multiple packages but set in est
-    real(DP), pointer :: latheatvap => null() !< latent heat of vaporization
     real(DP), pointer :: eqnsclfac => null() !< governing equation scale factor; =rhow*cpw for energy
 
   contains
@@ -75,7 +74,6 @@ module GweEstModule
     procedure, private :: allocate_arrays
     procedure, private :: read_options
     procedure, private :: read_data
-    procedure, private :: read_packagedata
 
   end type GweEstType
 
@@ -113,9 +111,6 @@ contains
     !
     ! -- Initialize block parser
     call estobj%parser%Initialize(estobj%inunit, estobj%iout)
-    !
-    ! -- Return
-    return
   end subroutine est_cr
 
   !> @ brief Allocate and read method for package
@@ -129,7 +124,6 @@ contains
     class(GweEstType), intent(inout) :: this !< GweEstType object
     class(DisBaseType), pointer, intent(in) :: dis !< pointer to dis package
     integer(I4B), dimension(:), pointer, contiguous :: ibound !< pointer to GWE ibound array
-    ! -- local
     ! -- formats
     character(len=*), parameter :: fmtest = &
       "(1x,/1x,'EST -- ENERGY STORAGE AND TRANSFER PACKAGE, VERSION 1, &
@@ -151,20 +145,9 @@ contains
     ! -- read the gridded data
     call this%read_data()
     !
-    ! -- read package data that is not gridded
-    call this%read_packagedata()
-    !
-    ! -- set pointers for data required by other packages
-    if (this%ilhv == 1) then
-      call this%gwecommon%set_gwe_dat_ptrs(this%rhow, this%cpw, this%rhow, &
-                                           this%cpw, this%latheatvap)
-    else
-      call this%gwecommon%set_gwe_dat_ptrs(this%rhow, this%cpw, this%rhow, &
-                                           this%cpw)
-    end if
-    !
-    ! -- Return
-    return
+    ! -- set data required by other packages
+    call this%gwecommon%set_gwe_dat_ptrs(this%rhow, this%cpw, this%latheatvap, &
+                                         this%rhos, this%cps)
   end subroutine est_ar
 
   !> @ brief Fill coefficient method for package
@@ -194,9 +177,6 @@ contains
       call this%est_fc_dcy(nodes, cold, cnew, nja, matrix_sln, idxglo, &
                            rhs, kiter)
     end if
-    !
-    ! -- Return
-    return
   end subroutine est_fc
 
   !> @ brief Fill storage coefficient method for package
@@ -245,9 +225,6 @@ contains
       call matrix_sln%add_value_pos(idxglo(idiag), hhcof)
       rhs(n) = rhs(n) + rrhs
     end do
-    !
-    ! -- Return
-    return
   end subroutine est_fc_sto
 
   !> @ brief Fill decay coefficient method for package
@@ -308,9 +285,6 @@ contains
       end if
       !
     end do
-    !
-    ! -- Return
-    return
   end subroutine est_fc_dcy
 
   !> @ brief Calculate flows for package
@@ -334,9 +308,6 @@ contains
     if (this%idcy /= 0) then
       call this%est_cq_dcy(nodes, cnew, cold, flowja)
     end if
-    !
-    ! -- Return
-    return
   end subroutine est_cq
 
   !> @ brief Calculate storage terms for package
@@ -389,9 +360,6 @@ contains
       idiag = this%dis%con%ia(n)
       flowja(idiag) = flowja(idiag) + rate
     end do
-    !
-    ! -- Return
-    return
   end subroutine est_cq_sto
 
   !> @ brief Calculate decay terms for package
@@ -447,9 +415,6 @@ contains
       flowja(idiag) = flowja(idiag) + rate
       !
     end do
-    !
-    ! -- Return
-    return
   end subroutine est_cq_dcy
 
   !> @ brief Calculate budget terms for package
@@ -479,9 +444,6 @@ contains
       call model_budget%addentry(rin, rout, delt, budtxt(2), &
                                  isuppress_output, rowlabel=this%packName)
     end if
-    !
-    ! -- Return
-    return
   end subroutine est_bd
 
   !> @ brief Output flow terms for package
@@ -526,9 +488,6 @@ contains
                                    budtxt(2), cdatafmp, nvaluesp, &
                                    nwidthp, editdesc, dinact)
     end if
-    !
-    ! -- Return
-    return
   end subroutine est_ot_flow
 
   !> @brief Deallocate memory
@@ -546,7 +505,6 @@ contains
       call mem_deallocate(this%porosity)
       call mem_deallocate(this%ratesto)
       call mem_deallocate(this%idcy)
-      call mem_deallocate(this%ilhv)
       call mem_deallocate(this%decay)
       call mem_deallocate(this%ratedcy)
       call mem_deallocate(this%decaylast)
@@ -563,9 +521,6 @@ contains
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
-    !
-    ! -- Return
-    return
   end subroutine est_da
 
   !> @ brief Allocate scalar variables for package
@@ -587,17 +542,12 @@ contains
     call mem_allocate(this%rhow, 'RHOW', this%memoryPath)
     call mem_allocate(this%latheatvap, 'LATHEATVAP', this%memoryPath)
     call mem_allocate(this%idcy, 'IDCY', this%memoryPath)
-    call mem_allocate(this%ilhv, 'ILHV', this%memoryPath)
     !
     ! -- Initialize
     this%cpw = DZERO
     this%rhow = DZERO
     this%latheatvap = DZERO
     this%idcy = 0
-    this%ilhv = 0
-    !
-    ! -- Return
-    return
   end subroutine allocate_scalars
 
   !> @ brief Allocate arrays for package
@@ -644,9 +594,6 @@ contains
       this%ratedcy(n) = DZERO
       this%decaylast(n) = DZERO
     end do
-    !
-    ! -- Return
-    return
   end subroutine allocate_arrays
 
   !> @ brief Read options for package
@@ -670,9 +617,6 @@ contains
                                    "(4x,'FIRST-ORDER DECAY IS ACTIVE. ')"
     character(len=*), parameter :: fmtidcy2 = &
                                    "(4x,'ZERO-ORDER DECAY IS ACTIVE. ')"
-    character(len=*), parameter :: fmtilhv = &
-                                   "(4x,'LATENT HEAT OF VAPORIZATION WILL BE &
-            &USED IN EVAPORATION CALCULATIONS.')"
     !
     ! -- get options block
     call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false., &
@@ -695,20 +639,43 @@ contains
         case ('ZERO_ORDER_DECAY')
           this%idcy = 2
           write (this%iout, fmtidcy2)
+        case ('HEAT_CAPACITY_WATER')
+          this%cpw = this%parser%GetDouble()
+          if (this%cpw <= 0.0) then
+            write (errmsg, '(a)') 'Specified value for the heat capacity of &
+              &water must be greater than 0.0.'
+            call store_error(errmsg)
+            call this%parser%StoreErrorUnit()
+          else
+            write (this%iout, '(4x,a,1pg15.6)') &
+              'Heat capacity of the water has been set to: ', &
+              this%cpw
+          end if
+        case ('DENSITY_WATER')
+          this%rhow = this%parser%GetDouble()
+          if (this%rhow <= 0.0) then
+            write (errmsg, '(a)') 'Specified value for the density of &
+              &water must be greater than 0.0.'
+            call store_error(errmsg)
+            call this%parser%StoreErrorUnit()
+          else
+            write (this%iout, '(4x,a,1pg15.6)') &
+              'Density of the water has been set to: ', &
+              this%rhow
+          end if
         case ('LATENT_HEAT_VAPORIZATION')
-          this%ilhv = 1
-          write (this%iout, fmtilhv)
+          this%latheatvap = this%parser%GetDouble()
+          write (this%iout, '(4x,a,1pg15.6)') &
+            'Latent heat of vaporization of the water has been set to: ', &
+            this%latheatvap
         case default
-          write (errmsg, '(a,a)') 'UNKNOWN EST OPTION: ', trim(keyword)
+          write (errmsg, '(a,a)') 'Unknown EST option: ', trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select
       end do
       write (this%iout, '(1x,a)') 'END OF ENERGY STORAGE AND TRANSFER OPTIONS'
     end if
-    !
-    ! -- Return
-    return
   end subroutine read_options
 
   !> @ brief Read data for package
@@ -763,56 +730,56 @@ contains
                                         this%parser%iuactive, this%decay, &
                                         aname(2))
           lname(2) = .true.
-        case ('CPS')
+        case ('HEAT_CAPACITY_SOLID')
           call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
                                         this%parser%iuactive, this%cps, &
                                         aname(3))
           lname(3) = .true.
-        case ('RHOS')
+        case ('DENSITY_SOLID')
           call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
                                         this%parser%iuactive, this%rhos, &
                                         aname(4))
           lname(4) = .true.
         case default
-          write (errmsg, '(a,a)') 'UNKNOWN GRIDDATA TAG: ', trim(keyword)
+          write (errmsg, '(a,a)') 'Unknown griddata tag: ', trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select
       end do
       write (this%iout, '(1x,a)') 'END PROCESSING GRIDDATA'
     else
-      write (errmsg, '(a)') 'REQUIRED GRIDDATA BLOCK NOT FOUND.'
+      write (errmsg, '(a)') 'Required griddata block not found.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if
     !
     ! -- Check for required porosity
     if (.not. lname(1)) then
-      write (errmsg, '(a)') 'POROSITY NOT SPECIFIED IN GRIDDATA BLOCK.'
+      write (errmsg, '(a)') 'Porosity not specified in griddata block.'
       call store_error(errmsg)
     end if
     if (.not. lname(3)) then
-      write (errmsg, '(a)') 'CPS NOT SPECIFIED IN GRIDDATA BLOCK.'
+      write (errmsg, '(a)') 'HEAT_CAPACITY_SOLID not specified in griddata block.'
       call store_error(errmsg)
     end if
     if (.not. lname(4)) then
-      write (errmsg, '(a)') 'RHOS NOT SPECIFIED IN GRIDDATA BLOCK.'
+      write (errmsg, '(a)') 'DENSITY_SOLID not specified in griddata block.'
       call store_error(errmsg)
     end if
     !
     ! -- Check for required decay/production rate coefficients
     if (this%idcy > 0) then
       if (.not. lname(2)) then
-        write (errmsg, '(a)') 'FIRST OR ZERO ORDER DECAY IS &
-          &ACTIVE BUT THE FIRST RATE COEFFICIENT IS NOT SPECIFIED.  DECAY &
-          &MUST BE SPECIFIED IN GRIDDATA BLOCK.'
+        write (errmsg, '(a)') 'First or zero order decay is &
+          &active but the first rate coefficient is not specified.  Decay &
+          &must be specified in griddata block.'
         call store_error(errmsg)
       end if
     else
       if (lname(2)) then
-        write (warnmsg, '(a)') 'FIRST OR ZERO ORER DECAY &
-          &IS NOT ACTIVE BUT DECAY WAS SPECIFIED.  DECAY WILL &
-          &HAVE NO AFFECT ON SIMULATION RESULTS.'
+        write (warnmsg, '(a)') 'First or zero orer decay &
+          &is not active but decay was specified.  Decay will &
+          &have no affect on simulation results.'
         call store_warning(warnmsg)
         write (this%iout, '(1x,a)') 'WARNING.  '//warnmsg
       end if
@@ -822,46 +789,7 @@ contains
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
     end if
-    !
-    ! -- Return
-    return
   end subroutine read_data
-
-  !> @ brief Read data for package
-  !!
-  !!  Method to read data for the package.
-  !<
-  subroutine read_packagedata(this)
-    ! -- modules
-    ! -- dummy
-    class(GweEstType) :: this !< GweEstType object
-    ! -- local
-    logical :: isfound
-    logical :: endOfBlock
-    integer(I4B) :: ierr
-    !
-    call this%parser%GetBlock('PACKAGEDATA', isfound, ierr, &
-                              supportopenclose=.true.)
-    !
-    ! -- parse locations block if detected
-    if (isfound) then
-      write (this%iout, '(/1x,a)') 'PROCESSING '//trim(adjustl(this%packName))// &
-        ' PACKAGEDATA'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) then
-          exit
-        end if
-        !
-        ! -- get fluid constants
-        this%cpw = this%parser%GetDouble()
-        this%rhow = this%parser%GetDouble()
-      end do
-    end if
-    !
-    ! -- Return
-    return
-  end subroutine read_packagedata
 
   !> @ brief Calculate zero-order decay rate and constrain if necessary
   !!
@@ -880,7 +808,7 @@ contains
     real(DP), intent(in) :: cold !< temperature at end of last time step
     real(DP), intent(in) :: cnew !< temperature at end of this time step
     real(DP), intent(in) :: delt !< length of time step
-    ! -- Return
+    ! -- return
     real(DP) :: decay_rate !< returned value for decay rate
     !
     ! -- Return user rate if production, otherwise constrain, if necessary
@@ -906,7 +834,6 @@ contains
       end if
       decay_rate = max(decay_rate, DZERO)
     end if
-    return
   end function get_zero_order_decay
 
 end module GweEstModule

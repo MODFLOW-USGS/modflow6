@@ -16,9 +16,8 @@ import os
 import flopy
 import numpy as np
 import pytest
-from flopy.utils.gridutil import get_disu_kwargs
-
 from conftest import project_root_path
+from flopy.utils.gridutil import get_disu_kwargs
 from framework import TestFramework
 
 data_path = project_root_path / "autotest" / "data" / "par_gwf_disu_exg"
@@ -98,9 +97,7 @@ def get_model(idx, dir):
         sim_ws=dir,
     )
 
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     ims = flopy.mf6.ModflowIms(
         sim,
@@ -193,36 +190,9 @@ def get_model(idx, dir):
         exchangedata = {
             "factor": 1.0,
             "filename": "exg.bin",
-            "data": None,
+            "data": gwfgwf_data,
             "binary": True,
         }
-        exg_fpath = data_path / f"par_gwf_disu{idx}_exg.txt"
-        exg_fdata = np.loadtxt(
-            exg_fpath,
-            dtype={
-                "names": (
-                    "c11",
-                    "c21",
-                    "ihc",
-                    "cl1",
-                    "cl2",
-                    "hwva",
-                    "aux1",
-                    "aux2",
-                ),
-                "formats": (
-                    "i4",
-                    "i4",
-                    "i4",
-                    "f8",
-                    "f8",
-                    "f8",
-                    "f8",
-                    "f8",
-                ),
-            },
-        )
-        exg_fdata.tofile(dir / "exg.bin")
     else:
         exchangedata = gwfgwf_data
 
@@ -256,12 +226,8 @@ def check_output(idx, test):
     fpth = os.path.join(test.workspace, f"{name_right}.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads_right = hds.get_data().flatten()
-    np.testing.assert_array_almost_equal(
-        heads_left[0:5], [1.0, 2.0, 3.0, 4.0, 5.0]
-    )
-    np.testing.assert_array_almost_equal(
-        heads_right[0:5], [6.0, 7.0, 8.0, 9.0, 10.0]
-    )
+    np.testing.assert_array_almost_equal(heads_left[0:5], [1.0, 2.0, 3.0, 4.0, 5.0])
+    np.testing.assert_array_almost_equal(heads_right[0:5], [6.0, 7.0, 8.0, 9.0, 10.0])
 
 
 @pytest.mark.parallel

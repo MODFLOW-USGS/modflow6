@@ -81,20 +81,15 @@ module TableModule
 
 contains
 
+  !< @brief Create a new table object
+  !<
   subroutine table_cr(this, name, title)
-! ******************************************************************************
-! table_cr -- Create a new table object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     type(TableType), pointer :: this
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: title
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- check if table already associated and reset if necessary
     if (associated(this)) then
@@ -109,19 +104,11 @@ contains
     ! -- initialize variables
     this%name = name
     this%title = title
-    !
-    ! -- Return
-    return
   end subroutine table_cr
 
+  !< @brief Define the new table object
   subroutine table_df(this, maxbound, ntableterm, iout, transient, &
                       lineseparator, separator, finalize)
-! ******************************************************************************
-! table_df -- Define the new table object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TableType) :: this
@@ -132,7 +119,6 @@ contains
     logical, intent(in), optional :: lineseparator
     character(len=1), intent(in), optional :: separator
     logical, intent(in), optional :: finalize
-! ------------------------------------------------------------------------------
     !
     ! -- allocate scalars
     allocate (this%sep)
@@ -190,18 +176,11 @@ contains
     this%ntableterm = ntableterm
     this%ientry = 0
     this%icount = 0
-    !
-    ! -- return
-    return
   end subroutine table_df
 
+  !< @brief Initialize data for a column
+  !<
   subroutine initialize_column(this, text, width, alignment)
-! ******************************************************************************
-! initialize_column -- Initialize data for a column
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TableType) :: this
@@ -211,7 +190,6 @@ contains
     ! -- local
     integer(I4B) :: idx
     integer(I4B) :: ialign
-! ------------------------------------------------------------------------------
     !
     ! -- process optional dummy variables
     if (present(alignment)) then
@@ -244,18 +222,11 @@ contains
       ! -- reset ientry
       this%ientry = 0
     end if
-    !
-    ! -- return
-    return
   end subroutine initialize_column
 
+  !< @brief Set the table object header
+  !<
   subroutine set_header(this)
-! ******************************************************************************
-! set_header -- Set the table object header
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TableType) :: this
@@ -270,7 +241,6 @@ contains
     integer(I4B) :: j
     integer(I4B) :: n
     integer(I4B) :: nn
-! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     width = 0
@@ -325,18 +295,11 @@ contains
         end if
       end do
     end do
-    !
-    ! -- return
-    return
   end subroutine set_header
 
+  !< @brief Allocate allocatable character arrays
+  !<
   subroutine allocate_strings(this, width, nlines)
-! ******************************************************************************
-! allocate_strings -- Allocate allocatable character arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TableType) :: this
@@ -346,7 +309,6 @@ contains
     character(len=width) :: string
     character(len=width) :: linesep
     integer(I4B) :: n
-! ------------------------------------------------------------------------------
     !
     ! -- initialize local variables
     string = ''
@@ -377,18 +339,11 @@ contains
       this%header(1) = linesep(1:width)
       this%header(nlines + 2) = linesep(1:width)
     end if
-    !
-    ! -- return
-    return
   end subroutine allocate_strings
 
+  !< @brief Write the table header
+  !<
   subroutine write_header(this)
-! ******************************************************************************
-! write_table -- Write the table header
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TableType) :: this
@@ -396,7 +351,6 @@ contains
     character(len=LINELENGTH) :: title
     integer(I4B) :: width
     integer(I4B) :: n
-! ------------------------------------------------------------------------------
     !
     ! -- initialize local variables
     width = this%nlinewidth
@@ -423,24 +377,16 @@ contains
     this%first_entry = .FALSE.
     this%ientry = 0
     this%icount = 0
-    !
-    ! -- return
-    return
   end subroutine write_header
 
+  !< @brief Write the data line
+  !<
   subroutine write_line(this)
-! ******************************************************************************
-! write_line -- Write the data line
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TableType) :: this
     ! -- local
     integer(I4B) :: width
-! ------------------------------------------------------------------------------
     !
     ! -- initialize local variables
     width = this%nlinewidth
@@ -452,46 +398,30 @@ contains
     this%ientry = 0
     this%iloc = 1
     this%icount = this%icount + 1
-    !
-    ! -- return
-    return
   end subroutine write_line
 
+  !< @brief Private method that test for last line. If last line the
+  !!        public finalize_table method is called
+  !<
   subroutine finalize(this)
-! ******************************************************************************
-! finalize -- Private method that test for last line. If last line the
-!             public finalize_table method is called
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TableType) :: this
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- finalize table if last entry
     if (this%icount == this%maxbound) then
       call this%finalize_table()
     end if
-    !
-    ! -- return
-    return
   end subroutine finalize
 
+  !< @brief Public method to finalize the table
+  !<
   subroutine finalize_table(this)
-! ******************************************************************************
-! finalize -- Public method to finalize the table
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TableType) :: this
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- write the final table separator
     call this%print_separator(iextralines=1)
@@ -501,24 +431,16 @@ contains
     !
     ! -- reinitialize variables
     call this%reset()
-    !
-    ! -- return
-    return
   end subroutine finalize_table
 
+  !< @brief deallocate
+  !<
   subroutine table_da(this)
-! ******************************************************************************
-! table_da -- deallocate
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TableType) :: this
     ! -- dummy
     integer(I4B) :: i
-! ------------------------------------------------------------------------------
     !
     ! -- deallocate each table term
     do i = 1, this%ntableterm
@@ -552,18 +474,11 @@ contains
     deallocate (this%ientry)
     deallocate (this%iloc)
     deallocate (this%icount)
-    !
-    ! -- Return
-    return
   end subroutine table_da
 
+  !< @brief convert a line to the correct number of columns
+  !<
   subroutine line_to_columns(this, line)
-! ******************************************************************************
-! line_to_columns -- convert a line to the correct number of columns
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TableType) :: this
@@ -573,7 +488,6 @@ contains
     integer(I4B) :: nwords
     integer(I4B) :: icols
     integer(I4B) :: i
-! ------------------------------------------------------------------------------
     !
     ! -- write header
     if (this%icount == 0 .and. this%ientry == 0) then
@@ -601,23 +515,15 @@ contains
     !
     ! -- clean up local allocatable array
     deallocate (words)
-    !
-    ! -- Return
-    return
   end subroutine line_to_columns
 
+  !< @brief evaluate if error condition occurs when adding data to dataline
+  !<
   subroutine add_error(this)
-! ******************************************************************************
-! add_error -- evaluate if error condition occurs when adding data to dataline
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TableType) :: this
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- check that ientry is within bounds
     if (this%ientry > this%ntableterm) then
@@ -627,18 +533,11 @@ contains
         ') that only has', this%ntableterm, 'columns.'
       call store_error(errmsg, terminate=.TRUE.)
     end if
-    !
-    ! -- Return
-    return
   end subroutine add_error
 
+  !< @brief add integer value to the dataline
+  !<
   subroutine add_integer(this, ival)
-! ******************************************************************************
-! add_integer -- add integer value to the dataline
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TableType) :: this
@@ -650,7 +549,6 @@ contains
     integer(I4B) :: width
     integer(I4B) :: alignment
     integer(I4B) :: j
-! ------------------------------------------------------------------------------
     !
     ! -- write header
     if (this%icount == 0 .and. this%ientry == 0) then
@@ -698,18 +596,11 @@ contains
     if (this%allow_finalization) then
       call this%finalize()
     end if
-    !
-    ! -- Return
-    return
   end subroutine add_integer
 
+  !< @brief add long integer value to the dataline
+  !<
   subroutine add_long_integer(this, long_ival)
-! ******************************************************************************
-! add_long_integer -- add long integer value to the dataline
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TableType) :: this
@@ -722,7 +613,6 @@ contains
     integer(I4B) :: width
     integer(I4B) :: alignment
     integer(I4B) :: j
-! ------------------------------------------------------------------------------
     !
     ! -- write header
     if (this%icount == 0 .and. this%ientry == 0) then
@@ -771,18 +661,11 @@ contains
     if (this%allow_finalization) then
       call this%finalize()
     end if
-    !
-    ! -- Return
-    return
   end subroutine add_long_integer
 
+  !< @brief add real value to the dataline
+  !<
   subroutine add_real(this, rval)
-! ******************************************************************************
-! add_real -- add real value to the dataline
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TableType) :: this
@@ -794,8 +677,7 @@ contains
     integer(I4B) :: j
     integer(I4B) :: width
     integer(I4B) :: alignment
-! ------------------------------------------------------------------------------
-!
+
     if (rval == DHNOFLO) then
       call this%add_string("INACTIVE")
     else if (rval == DHDRY) then
@@ -849,18 +731,11 @@ contains
         call this%finalize()
       end if
     end if
-    !
-    ! -- Return
-    return
   end subroutine add_real
 
+  !< @brief add string value to the dataline
+  !<
   subroutine add_string(this, cval)
-! ******************************************************************************
-! add_string -- add string value to the dataline
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TableType) :: this
@@ -872,7 +747,6 @@ contains
     real(DP) :: rval
     integer(I4B) :: width
     integer(I4B) :: alignment
-! ------------------------------------------------------------------------------
     !
     ! -- write header
     if (this%icount == 0 .and. this%ientry == 0) then
@@ -921,107 +795,68 @@ contains
     if (this%allow_finalization) then
       call this%finalize()
     end if
-    !
-    ! -- Return
-    return
   end subroutine add_string
 
+  !< @brief reset maxbound
+  !<
   subroutine set_maxbound(this, maxbound)
-! ******************************************************************************
-! set_maxbound -- reset maxbound
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TableType) :: this
     integer(I4B), intent(in) :: maxbound
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- set maxbound
     this%maxbound = maxbound
     !
     ! -- reset counters
     call this%reset()
-    !
-    ! -- return
-    return
   end subroutine set_maxbound
 
+  !< @brief reset kstp and kper
+  !<
   subroutine set_kstpkper(this, kstp, kper)
-! ******************************************************************************
-! set_kstpkper -- reset kstp and kper
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TableType) :: this
     integer(I4B), intent(in) :: kstp
     integer(I4B), intent(in) :: kper
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- set maxbound
     this%kstp = kstp
     this%kper = kper
-    !
-    ! -- return
-    return
   end subroutine set_kstpkper
 
+  !< @brief reset title
+  !<
   subroutine set_title(this, title)
-! ******************************************************************************
-! set_maxbound -- reset maxbound
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TableType) :: this
     character(len=*), intent(in) :: title
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- set maxbound
     this%title = title
-    !
-    ! -- return
-    return
   end subroutine set_title
 
+  !< @brief reset iout
+  !<
   subroutine set_iout(this, iout)
-! ******************************************************************************
-! set_iout -- reset iout
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TableType) :: this
     integer(I4B), intent(in) :: iout
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- set iout
     this%iout = iout
-    !
-    ! -- return
-    return
   end subroutine set_iout
 
+  !< @brief print list entry
+  !<
   subroutine print_list_entry(this, i, nodestr, q, bname)
-! ******************************************************************************
-! print_list_entry -- write flow term table values
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TableType) :: this
@@ -1030,7 +865,6 @@ contains
     real(DP), intent(in) :: q
     character(len=*), intent(in) :: bname
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- fill table terms
     call this%add_term(i)
@@ -1039,18 +873,11 @@ contains
     if (this%ntableterm > 3) then
       call this%add_term(bname)
     end if
-    !
-    ! -- return
-    return
   end subroutine print_list_entry
 
+  !< @brief print separator
+  !<
   subroutine print_separator(this, iextralines)
-! ******************************************************************************
-! print_separator -- print a line separator to the table
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TableType) :: this
@@ -1059,7 +886,6 @@ contains
     integer(I4B) :: i
     integer(I4B) :: iextra
     integer(I4B) :: width
-! ------------------------------------------------------------------------------
     !
     ! -- process optional variables
     if (present(iextralines)) then
@@ -1078,31 +904,20 @@ contains
         write (this%iout, '(/)')
       end do
     end if
-    !
-    ! -- return
-    return
   end subroutine print_separator
 
+  !< @brief Private method to reset table counters
+  !<
   subroutine reset(this)
-! ******************************************************************************
-! reset -- Private method to reset table counters
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TableType) :: this
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- reset counters
     this%ientry = 0
     this%icount = 0
     this%first_entry = .TRUE.
-    !
-    ! -- return
-    return
   end subroutine reset
 
 end module TableModule

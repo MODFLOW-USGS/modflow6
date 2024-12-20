@@ -1,7 +1,7 @@
 """
 Test for parallel MODFLOW running a simple
-multi-model setup with different numbers 
-of partitions 
+multi-model setup with different numbers
+of partitions
 
 
    [M1ny] |  ...  |   ...  | [Mnxny]
@@ -17,10 +17,11 @@ This constant head should reach all domains,
 no matter the topology of partitions
 """
 
+from platform import system
+
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = [
@@ -70,9 +71,7 @@ def get_simulation(idx, ws):
         sim_ws=ws,
     )
 
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     ims = flopy.mf6.ModflowIms(
         sim,
@@ -240,6 +239,9 @@ def check_output(idx, test):
 @pytest.mark.parallel
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
+    if system() == "Windows" and name.endswith(("d", "e", "f")):
+        pytest.skip("very slow on windows runners")
+
     ncpus = domain_grid[idx][0] * domain_grid[idx][1]
     test = TestFramework(
         name=name,

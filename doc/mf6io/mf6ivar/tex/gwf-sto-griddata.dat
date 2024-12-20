@@ -1,8 +1,0 @@
-BEGIN GRIDDATA
-  ICONVERT [LAYERED]
-    <iconvert(nodes)> -- READARRAY
-  SS [LAYERED]
-    <ss(nodes)> -- READARRAY
-  SY [LAYERED]
-    <sy(nodes)> -- READARRAY
-END GRIDDATA

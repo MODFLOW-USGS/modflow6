@@ -35,9 +35,8 @@ import os
 import flopy
 import numpy as np
 import pytest
-from flopy.utils.lgrutil import Lgr
-
 from conftest import project_root_path
+from flopy.utils.lgrutil import Lgr
 from framework import TestFramework
 
 data_path = project_root_path / "autotest" / "data"
@@ -99,16 +98,12 @@ def get_model(idx, test):
     # boundary stress period data
     left_chd = [
         [(ilay, irow, 0), h_left]
-        for ilay in range(
-            1
-        )  # apply chd only to top layer to drive vertical flow
+        for ilay in range(1)  # apply chd only to top layer to drive vertical flow
         for irow in range(nrow)
     ]
     right_chd = [
         [(ilay, irow, ncol - 1), h_right]
-        for ilay in range(
-            1
-        )  # apply chd only to top layer to drive vertical flow
+        for ilay in range(1)  # apply chd only to top layer to drive vertical flow
         for irow in range(nrow)
     ]
     chd_data = left_chd + right_chd
@@ -124,9 +119,7 @@ def get_model(idx, test):
         memory_print_option="ALL",
     )
 
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     ims = flopy.mf6.ModflowIms(
         sim,
@@ -233,44 +226,9 @@ def get_model(idx, test):
         exchangedata = {
             "factor": 1.0,
             "filename": "exg.bin",
-            "data": None,
+            "data": exgdata,
             "binary": True,
         }
-        exg_fpath = data_path / "gwfgwf_lgr_exg.txt"
-        exg_fdata = np.loadtxt(
-            exg_fpath,
-            dtype={
-                "names": (
-                    "c11",
-                    "c12",
-                    "c13",
-                    "c21",
-                    "c22",
-                    "c23",
-                    "ihc",
-                    "cl1",
-                    "cl2",
-                    "hwva",
-                    "aux1",
-                    "aux2",
-                ),
-                "formats": (
-                    "i4",
-                    "i4",
-                    "i4",
-                    "i4",
-                    "i4",
-                    "i4",
-                    "i4",
-                    "f8",
-                    "f8",
-                    "f8",
-                    "f8",
-                    "f8",
-                ),
-            },
-        )
-        exg_fdata.tofile(ws / "exg.bin")
     else:
         exchangedata = exgdata
 

@@ -7,7 +7,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["sfr-evap"]
@@ -73,7 +72,7 @@ def build_models(idx, test):
     ws = test.workspace
     name = cases[idx]
 
-    print("Building model...{}".format(name))
+    print(f"Building model...{name}")
 
     # generate names for each model
     gwfname_trapezoidal = "gwf-" + name + "-t"
@@ -113,7 +112,7 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname_trapezoidal),
+        filename=f"{gwfname_trapezoidal}.ims",
     )
     sim.register_ims_package(ims, [gwfname_trapezoidal])
 
@@ -183,9 +182,9 @@ def build_models(idx, test):
     x_coord = [0.0, 2.0, 4.0, 5.0, 7.0, 9.0]
     x_xsec = [val / rwid for val in x_coord]
     y_xsec = [0.66666667, 0.33333333, 0.0, 0.0, 0.33333333, 0.66666667]
-    x_sec_tab = [[x, h] for x, h, in zip(x_xsec, y_xsec)]
+    x_sec_tab = [[x, h] for x, h in zip(x_xsec, y_xsec)]
 
-    sfr_xsec_table_name = "{}.xsec.tab".format(gwfname_trapezoidal)
+    sfr_xsec_table_name = f"{gwfname_trapezoidal}.xsec.tab"
     crosssections = []
     for n in range(nreaches):
         crosssections.append([n, sfr_xsec_table_name])
@@ -196,7 +195,7 @@ def build_models(idx, test):
         ncol=2,
         table=x_sec_tab,
         filename=sfr_xsec_table_name,
-        pname=f"sfrxsectable",
+        pname="sfrxsectable",
     )
 
     packagedata = []
@@ -239,7 +238,7 @@ def build_models(idx, test):
 
     # Instantiate SFR observation points
     sfr_obs = {
-        "{}.sfrobs".format(gwfname_trapezoidal): [
+        f"{gwfname_trapezoidal}.sfrobs": [
             ("rch1_in", "ext-inflow", 1),  # For now, these need to be 1-based
             ("rch1_rain", "rainfall", 1),
             ("rch1_evap", "evaporation", 1),
@@ -274,7 +273,7 @@ def build_models(idx, test):
         perioddata=sfr_perioddata,
         observations=sfr_obs,
         pname="SFR-1",
-        filename="{}.sfr".format(gwfname_trapezoidal),
+        filename=f"{gwfname_trapezoidal}.sfr",
     )
 
     # ---------------------------------------------------------------------------
@@ -303,7 +302,7 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname_trapezoidal),
+        filename=f"{gwfname_trapezoidal}.ims",
     )
     sim.register_ims_package(ims2, [gwfname_rectangular])
 
@@ -370,7 +369,7 @@ def build_models(idx, test):
         connectiondata=connectiondata,
         perioddata=sfr_perioddata,
         pname="SFR-2",
-        filename="{}.sfr".format(gwfname_rectangular),
+        filename=f"{gwfname_rectangular}.sfr",
     )
 
     return sim, None
@@ -398,19 +397,14 @@ def check_output(idx, test):
 
     # Establish known answer:
     stored_strm_evap = np.array(
-        [
-            -62.17272623,
-            -62.15731943,
-            -62.14191043,
-            -62.12649925,
-            -62.11108587,
-        ]
+        [-62.17272623, -62.15731943, -62.14191043, -62.12649925, -62.11108587]
     )
 
     msg = "The SFR evaporation test with n-point x-section (trapezoid) is failing."
     assert np.allclose(stored_strm_evap, sim_evap, atol=1e-4), msg
 
-    # Now check results from standard rectangular x-section setup (not an n-point channel)
+    # Now check results from standard rectangular x-section setup
+    # (not an n-point channel)
     fname2 = gwfname_r + ".sfr.cbc"
     fname2 = os.path.join(test.workspace, fname2)
     assert os.path.isfile(fname2)

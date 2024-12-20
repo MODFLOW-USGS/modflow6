@@ -163,8 +163,6 @@ contains
     this%inunit = inunit
     this%iout = iout
     call this%parser%Initialize(this%inunit, this%iout)
-    !
-    return
   end subroutine init
 
   !> @brief Allocate scalar variables
@@ -181,8 +179,6 @@ contains
     !
     ! -- Allocate time series manager
     allocate (this%tsmanager)
-    !
-    return
   end subroutine tvbase_allocate_scalars
 
   !> @brief Allocate and read method for package
@@ -217,8 +213,6 @@ contains
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
-    !
-    return
   end subroutine ar
 
   !> @brief Read OPTIONS block of package input file
@@ -287,8 +281,6 @@ contains
       write (this%iout, '(1x,a)') &
         'END OF '//trim(adjustl(this%packName))//' OPTIONS'
     end if
-    !
-    return
   end subroutine read_options
 
   !> @brief Read and prepare method for package
@@ -410,8 +402,6 @@ contains
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
-    !
-    return
   end subroutine rp
 
   !> @brief Advance the package
@@ -459,8 +449,6 @@ contains
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
-    !
-    return
   end subroutine ad
 
   !> @brief Deallocate package memory
@@ -477,8 +465,6 @@ contains
     !
     ! -- Deallocate parent
     call this%NumericalPackageType%da()
-    !
-    return
   end subroutine tvbase_da
 
 end module TvBaseModule

@@ -26,7 +26,6 @@ from prt_test_utils import (
     get_model_name,
     get_partdata,
     has_default_boundnames,
-    DEFAULT_EXIT_SOLVE_TOL,
 )
 
 simname = "prtbud"
@@ -88,7 +87,7 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
         trackcsv_filerecord=[prp_track_csv_file],
         stop_at_weak_sink=False,
         boundnames=True,
-        exit_solve_tolerance=DEFAULT_EXIT_SOLVE_TOL,
+        extend_tracking=True,
     )
 
     # create output control package
@@ -160,9 +159,7 @@ def build_mp7_sim(name, ws, mp7, gwf):
 
 
 def build_models(idx, test):
-    gwf_sim = HorizontalCase.get_gwf_sim(
-        test.name, test.workspace, test.targets["mf6"]
-    )
+    gwf_sim = HorizontalCase.get_gwf_sim(test.name, test.workspace, test.targets["mf6"])
     prt_sim = build_prt_sim(
         test.name, test.workspace, test.workspace / "prt", test.targets["mf6"]
     )
@@ -196,16 +193,10 @@ def check_output(idx, test):
     prt_track_csv_file = f"{prt_name}.trk.csv"
     prp_track_file = f"{prt_name}.prp.trk"
     prp_track_csv_file = f"{prt_name}.prp.trk.csv"
-    assert (gwf_ws / gwf_budget_file).is_file()
-    assert (gwf_ws / gwf_head_file).is_file()
-    assert (prt_ws / prt_track_file).is_file()
-    assert (prt_ws / prt_track_csv_file).is_file()
-    assert (prt_ws / prp_track_file).is_file()
-    assert (prt_ws / prp_track_csv_file).is_file()
-
-    # check mp7 output files exist
     mp7_pathline_file = f"{mp7_name}.mppth"
-    assert (mp7_ws / mp7_pathline_file).is_file()
+
+    # load mf6 pathline results
+    mf6_pls = pd.read_csv(prt_ws / prt_track_csv_file, na_filter=False)
 
     # load mp7 pathline results
     plf = PathlineFile(mp7_ws / mp7_pathline_file)
@@ -217,8 +208,21 @@ def check_output(idx, test):
     mp7_pls["node"] = mp7_pls["node"] + 1
     mp7_pls["k"] = mp7_pls["k"] + 1
 
-    # load mf6 pathline results
-    mf6_pls = pd.read_csv(prt_ws / prt_track_csv_file, na_filter=False)
+    # extract head, budget, and specific discharge results from GWF model
+    hds = HeadFile(gwf_ws / gwf_head_file).get_data()
+    bud = gwf.output.budget()
+    spdis = bud.get_data(text="DATA-SPDIS")[0]
+    qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
+
+    assert (gwf_ws / gwf_budget_file).is_file()
+    assert (gwf_ws / gwf_head_file).is_file()
+    assert (prt_ws / prt_track_file).is_file()
+    assert (prt_ws / prt_track_csv_file).is_file()
+    assert (prt_ws / prp_track_file).is_file()
+    assert (prt_ws / prp_track_csv_file).is_file()
+
+    # check mp7 output files exist
+    assert (mp7_ws / mp7_pathline_file).is_file()
 
     # make sure pathline df has "name" (boundname) column and default values
     assert "name" in mf6_pls
@@ -254,67 +258,12 @@ def check_output(idx, test):
 
     # check mf6 prt particle track data were written to binary/CSV files
     # and that different formats are equal
-    for track_csv in [
-        prt_ws / prt_track_csv_file,
-        prt_ws / prp_track_csv_file,
-    ]:
+    for track_csv in [prt_ws / prt_track_csv_file, prt_ws / prp_track_csv_file]:
         check_track_data(
             track_bin=prt_ws / prt_track_file,
-            track_hdr=prt_ws
-            / Path(prt_track_file.replace(".trk", ".trk.hdr")),
+            track_hdr=prt_ws / Path(prt_track_file.replace(".trk", ".trk.hdr")),
             track_csv=track_csv,
         )
-
-    # extract head, budget, and specific discharge results from GWF model
-    hds = HeadFile(gwf_ws / gwf_head_file).get_data()
-    bud = gwf.output.budget()
-    spdis = bud.get_data(text="DATA-SPDIS")[0]
-    qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
-
-    # setup plot
-    plot_results = False
-    if plot_results:
-        fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 10))
-        for a in ax:
-            a.set_aspect("equal")
-
-        # plot mf6 pathlines in map view
-        pmv = flopy.plot.PlotMapView(modelgrid=mg, ax=ax[0])
-        pmv.plot_grid()
-        pmv.plot_array(hds[0], alpha=0.1)
-        pmv.plot_vector(qx, qy, normalize=True, color="white")
-        mf6_plines = mf6_pls.groupby(["iprp", "irpt", "trelease"])
-        for ipl, ((iprp, irpt, trelease), pl) in enumerate(mf6_plines):
-            pl.plot(
-                title="MF6 pathlines",
-                kind="line",
-                x="x",
-                y="y",
-                ax=ax[0],
-                legend=False,
-                color=cm.plasma(ipl / len(mf6_plines)),
-            )
-
-        # plot mp7 pathlines in map view
-        pmv = flopy.plot.PlotMapView(modelgrid=mg, ax=ax[1])
-        pmv.plot_grid()
-        pmv.plot_array(hds[0], alpha=0.1)
-        pmv.plot_vector(qx, qy, normalize=True, color="white")
-        mp7_plines = mp7_pls.groupby(["particleid"])
-        for ipl, (pid, pl) in enumerate(mp7_plines):
-            pl.plot(
-                title="MP7 pathlines",
-                kind="line",
-                x="x",
-                y="y",
-                ax=ax[1],
-                legend=False,
-                color=cm.plasma(ipl / len(mp7_plines)),
-            )
-
-        # view/save plot
-        plt.show()
-        plt.savefig(gwf_ws / f"test_{simname}.png")
 
     # convert mf6 pathlines to mp7 format
     mf6_pls = to_mp7_pathlines(mf6_pls)
@@ -340,13 +289,94 @@ def check_output(idx, test):
     assert np.allclose(mf6_pls, mp7_pls, atol=1e-3)
 
 
+def plot_output(idx, test):
+    name = test.name
+    gwf_ws = test.workspace
+    prt_ws = test.workspace / "prt"
+    mp7_ws = test.workspace / "mp7"
+    gwf_name = get_model_name(name, "gwf")
+    prt_name = get_model_name(name, "prt")
+    mp7_name = get_model_name(name, "mp7")
+    gwf_sim = test.sims[0]
+    gwf = gwf_sim.get_model(gwf_name)
+    mg = gwf.modelgrid
+
+    # check mf6 output files exist
+    gwf_head_file = f"{gwf_name}.hds"
+    prt_track_csv_file = f"{prt_name}.trk.csv"
+    mp7_pathline_file = f"{mp7_name}.mppth"
+
+    # load mf6 pathline results
+    mf6_pls = pd.read_csv(prt_ws / prt_track_csv_file, na_filter=False)
+
+    # load mp7 pathline results
+    plf = PathlineFile(mp7_ws / mp7_pathline_file)
+    mp7_pls = pd.DataFrame(
+        plf.get_destination_pathline_data(range(mg.nnodes), to_recarray=True)
+    )
+    # convert zero-based to one-based indexing in mp7 results
+    mp7_pls["particlegroup"] = mp7_pls["particlegroup"] + 1
+    mp7_pls["node"] = mp7_pls["node"] + 1
+    mp7_pls["k"] = mp7_pls["k"] + 1
+
+    # extract head, budget, and specific discharge results from GWF model
+    hds = HeadFile(gwf_ws / gwf_head_file).get_data()
+    bud = gwf.output.budget()
+    spdis = bud.get_data(text="DATA-SPDIS")[0]
+    qx, qy, qz = flopy.utils.postprocessing.get_specific_discharge(spdis, gwf)
+
+    # set up plot
+    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 10))
+    for a in ax:
+        a.set_aspect("equal")
+
+    # plot mf6 pathlines in map view
+    pmv = flopy.plot.PlotMapView(modelgrid=mg, ax=ax[0])
+    pmv.plot_grid()
+    pmv.plot_array(hds[0], alpha=0.1)
+    pmv.plot_vector(qx, qy, normalize=True, color="white")
+    mf6_plines = mf6_pls.groupby(["iprp", "irpt", "trelease"])
+    for ipl, ((iprp, irpt, trelease), pl) in enumerate(mf6_plines):
+        pl.plot(
+            title="MF6 pathlines",
+            kind="line",
+            x="x",
+            y="y",
+            ax=ax[0],
+            legend=False,
+            color=cm.plasma(ipl / len(mf6_plines)),
+        )
+
+    # plot mp7 pathlines in map view
+    pmv = flopy.plot.PlotMapView(modelgrid=mg, ax=ax[1])
+    pmv.plot_grid()
+    pmv.plot_array(hds[0], alpha=0.1)
+    pmv.plot_vector(qx, qy, normalize=True, color="white")
+    mp7_plines = mp7_pls.groupby(["particleid"])
+    for ipl, (pid, pl) in enumerate(mp7_plines):
+        pl.plot(
+            title="MP7 pathlines",
+            kind="line",
+            x="x",
+            y="y",
+            ax=ax[1],
+            legend=False,
+            color=cm.plasma(ipl / len(mp7_plines)),
+        )
+
+    # view/save plot
+    plt.show()
+    plt.savefig(prt_ws / f"test_{simname}.png")
+
+
 @pytest.mark.parametrize("idx, name", enumerate(cases))
-def test_mf6model(idx, name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets, plot):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
+        plot=lambda t: plot_output(idx, t) if plot else None,
         targets=targets,
         compare=None,
     )

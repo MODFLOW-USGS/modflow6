@@ -1,5 +1,5 @@
 """
-This test confirms that there is no difference in 
+This test confirms that there is no difference in
 steady-state Newton-Raphson simulations with PTC
 if a storage package is included in the model
 name file.
@@ -9,7 +9,6 @@ import os
 
 import flopy
 import pytest
-
 from framework import TestFramework
 
 cases = ["ptc01"]
@@ -62,9 +61,7 @@ def build_mf6(idx, ws, storage=True):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
     # create iterative model solution and register the gwf model with it
     ims = flopy.mf6.ModflowIms(
         sim,
@@ -105,9 +102,7 @@ def build_mf6(idx, ws, storage=True):
 
     # storage
     if storage:
-        flopy.mf6.ModflowGwfsto(
-            gwf, iconvert=1, ss=ss, sy=sy, steady_state={0: True}
-        )
+        flopy.mf6.ModflowGwfsto(gwf, iconvert=1, ss=ss, sy=sy, steady_state={0: True})
 
     # recharge
     rch = flopy.mf6.ModflowGwfrcha(gwf, readasarrays=True, recharge=rech)

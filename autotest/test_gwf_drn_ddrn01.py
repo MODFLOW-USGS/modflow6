@@ -3,7 +3,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["drn_ddrn01a", "drn_ddrn01b"]
@@ -67,9 +66,7 @@ def get_model(idx, ws, name):
         inner_dvclose=1e-9,
         rcloserecord=[0.01, "strict"],
     )
-    gwf = flopy.mf6.ModflowGwf(
-        sim, modelname=name, newtonoptions=newtonoptions
-    )
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=name, newtonoptions=newtonoptions)
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
         nlay=nlay,
@@ -81,9 +78,7 @@ def get_model(idx, ws, name):
         botm=botm,
     )
     npf = flopy.mf6.ModflowGwfnpf(gwf, k=kh, icelltype=1)
-    sto = flopy.mf6.ModflowGwfsto(
-        gwf, sy=sy, ss=ss, transient={0: True}, iconvert=1
-    )
+    sto = flopy.mf6.ModflowGwfsto(gwf, sy=sy, ss=ss, transient={0: True}, iconvert=1)
     drn = flopy.mf6.ModflowGwfdrn(
         gwf,
         auxiliary=["ddrn"],
@@ -148,9 +143,7 @@ def check_output(idx, test):
     msg = f"maximum absolute discharge difference ({diffmax}) "
 
     # write summary
-    fpth = os.path.join(
-        test.workspace, f"{os.path.basename(test.name)}.disc.cmp.out"
-    )
+    fpth = os.path.join(test.workspace, f"{os.path.basename(test.name)}.disc.cmp.out")
     with open(fpth, "w") as f:
         line = f"{'TOTIM':>15s}"
         line += f" {'DRN':>15s}"

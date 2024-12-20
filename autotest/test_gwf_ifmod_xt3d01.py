@@ -30,7 +30,6 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.lgrutil import Lgr
-
 from framework import TestFramework
 
 cases = ["ifmod_xt3d01"]
@@ -99,9 +98,7 @@ def get_model(idx, dir):
 
     # boundary stress period data
     left_chd = [
-        [(ilay, irow, 0), h_left]
-        for ilay in range(nlay)
-        for irow in range(nrow)
+        [(ilay, irow, 0), h_left] for ilay in range(nlay) for irow in range(nrow)
     ]
     right_chd = [
         [(ilay, irow, ncol - 1), h_right]
@@ -121,9 +118,7 @@ def get_model(idx, dir):
         memory_print_option="ALL",
     )
 
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     ims = flopy.mf6.ModflowIms(
         sim,
@@ -212,16 +207,7 @@ def get_model(idx, dir):
     idomainp = gwf.dis.idomain.array
 
     lgr = Lgr(
-        nlay,
-        nrowp,
-        ncolp,
-        delrp,
-        delcp,
-        topp,
-        botmp,
-        idomainp,
-        ncpp=ref_fct,
-        ncppl=1,
+        nlay, nrowp, ncolp, delrp, delcp, topp, botmp, idomainp, ncpp=ref_fct, ncppl=1
     )
 
     exgdata = lgr.get_exchange_data(angldegx=True, cdist=True)
@@ -348,12 +334,10 @@ def check_output(idx, test):
             if h != 1e30:
                 diff = abs(h - exact(xc))
                 assert diff < 10 * hclose, (
-                    "head difference in parent model {}"
-                    " exceeds solver tolerance (x10) {}"
-                    " for row {} and col {}\n"
-                    "(should be {}, was {})".format(
-                        diff, 10 * hclose, irow + 1, icol + 1, exact(xc), h
-                    )
+                    f"head difference in parent model {diff}"
+                    f" exceeds solver tolerance (x10) {10 * hclose}"
+                    f" for row {irow + 1} and col {icol + 1}\n"
+                    f"(should be {exact(xc)}, was {h})"
                 )
 
     for irow in range(mg.nrow):
@@ -366,11 +350,9 @@ def check_output(idx, test):
             if qxb[0, irow, icol] != "--":
                 diff = abs(qxb[0, irow, icol] - qx_exact)
                 assert diff < 10 * hclose, (
-                    "Difference in spec. dis. for parent {}"
-                    " exceeds solver tolerance (x10) {}"
-                    " for row {} and col {}".format(
-                        diff, 10 * hclose, irow + 1, icol + 1
-                    )
+                    f"Difference in spec. dis. for parent {diff}"
+                    f" exceeds solver tolerance (x10) {10 * hclose}"
+                    f" for row {irow + 1} and col {icol + 1}"
                 )
 
     # and now the child
@@ -381,11 +363,9 @@ def check_output(idx, test):
             if h != 1e30:
                 diff = abs(h - exact(xc))
                 assert diff < 10 * hclose, (
-                    "Head difference in child model {}"
-                    " exceeds solver tolerance (x10) {}"
-                    " for row {} and col {}".format(
-                        diff, 10 * hclose, irow + 1, icol + 1
-                    )
+                    f"Head difference in child model {diff}"
+                    f" exceeds solver tolerance (x10) {10 * hclose}"
+                    f" for row {irow + 1} and col {icol + 1}"
                 )
 
     for irow in range(mg_c.nrow):
@@ -398,11 +378,9 @@ def check_output(idx, test):
             if qxb_c[0, irow, icol] != "--":
                 diff = abs(qxb_c[0, irow, icol] - qx_exact)
                 assert diff < 10 * hclose, (
-                    "Difference in spec. dis. for child {}"
-                    " exceeds solver tolerance (x10) {}"
-                    " for row {} and col {}".format(
-                        diff, 10 * hclose, irow + 1, icol + 1
-                    )
+                    f"Difference in spec. dis. for child {diff}"
+                    f" exceeds solver tolerance (x10) {10 * hclose}"
+                    f" for row {irow + 1} and col {icol + 1}"
                 )
 
     # todo: mflistbudget
@@ -412,10 +390,9 @@ def check_output(idx, test):
         for line in open(fpth):
             if line.lstrip().startswith("PERCENT"):
                 cumul_balance_error = float(line.split()[3])
-                assert (
-                    abs(cumul_balance_error) < 0.00001
-                ), "Cumulative balance error = {} for {}, should equal 0.0".format(
-                    cumul_balance_error, mname
+                assert abs(cumul_balance_error) < 0.00001, (
+                    f"Cumulative balance error = {cumul_balance_error} for {mname}, "
+                    "should equal 0.0"
                 )
 
     # Check on residual, which is stored in diagonal position of
@@ -457,7 +434,8 @@ def check_output(idx, test):
     )[0]
     child_exchange_flows = child_exchange_flows["q"]
 
-    # Ensure observations are the same as parent exchange flows and negative child exchange flows
+    # Ensure observations are the same as parent exchange flows
+    # and negative child exchange flows
     assert np.allclose(
         obsvalues, parent_exchange_flows
     ), "exchange observations do not match parent exchange flows"

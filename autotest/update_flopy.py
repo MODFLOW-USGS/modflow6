@@ -8,7 +8,6 @@ from pathlib import Path
 
 import flopy
 import pytest
-
 from conftest import project_root_path
 
 dfn_path = project_root_path / "doc" / "mf6io" / "mf6ivar" / "dfn"
@@ -19,9 +18,7 @@ print(f"flopy is installed in {fpy_path}")
 def test_delete_mf6():
     pth = os.path.join(fpy_path, "mf6", "modflow")
     files = [
-        entry
-        for entry in os.listdir(pth)
-        if os.path.isfile(os.path.join(pth, entry))
+        entry for entry in os.listdir(pth) if os.path.isfile(os.path.join(pth, entry))
     ]
     delete_files(files, pth, exclude="mfsimulation.py")
 
@@ -30,9 +27,7 @@ def test_delete_mf6():
 def test_delete_dfn():
     pth = os.path.join(fpy_path, "mf6", "data", "dfn")
     files = [
-        entry
-        for entry in os.listdir(pth)
-        if os.path.isfile(os.path.join(pth, entry))
+        entry for entry in os.listdir(pth) if os.path.isfile(os.path.join(pth, entry))
     ]
     delete_files(files, pth, exclude="flopy.dfn")
 
@@ -41,9 +36,7 @@ def test_delete_dfn():
 @pytest.mark.parametrize("path", [dfn_path])
 def test_copy_dfn(path):
     files = [
-        entry
-        for entry in os.listdir(path)
-        if os.path.isfile(os.path.join(path, entry))
+        entry for entry in os.listdir(path) if os.path.isfile(os.path.join(path, entry))
     ]
     pth1 = os.path.join(fpy_path, "mf6", "data", "dfn")
     for fn in files:
@@ -86,9 +79,7 @@ def test_create_packages():
 def list_files(pth, exts=["py"]):
     print(f"\nLIST OF FILES IN {pth}")
     files = [
-        entry
-        for entry in os.listdir(pth)
-        if os.path.isfile(os.path.join(pth, entry))
+        entry for entry in os.listdir(pth) if os.path.isfile(os.path.join(pth, entry))
     ]
     idx = 0
     for fn in files:
@@ -121,9 +112,7 @@ def delete_files(files, pth, allow_failure=False, exclude=None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Update flopy from DFN files")
-    parser.add_argument(
-        "-p", "--path", help="path to DFN files", default=str(dfn_path)
-    )
+    parser.add_argument("-p", "--path", help="path to DFN files", default=str(dfn_path))
     args = parser.parse_args()
 
     path = Path(args.path).expanduser().resolve()

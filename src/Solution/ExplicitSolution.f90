@@ -47,7 +47,7 @@ module ExplicitSolutionModule
   contains
     procedure :: sln_df
     procedure :: sln_ar
-    procedure :: sln_calculate_delt
+    procedure :: sln_dt
     procedure :: sln_ad
     procedure :: sln_ot
     procedure :: sln_ca
@@ -147,9 +147,9 @@ contains
 
   !> @ brief Calculate time step length
   !<
-  subroutine sln_calculate_delt(this)
+  subroutine sln_dt(this)
     class(ExplicitSolutionType) :: this !< ExplicitSolutionType instance
-  end subroutine sln_calculate_delt
+  end subroutine sln_dt
 
   !> @ brief Advance the solution
   !<
@@ -198,6 +198,9 @@ contains
     character(len=LINELENGTH) :: line
     character(len=LINELENGTH) :: fmt
     integer(I4B) :: im
+    integer(I4B) :: kiter
+
+    kiter = 1
 
     ! advance the models and solution
     call this%prepareSolve()
@@ -213,10 +216,10 @@ contains
     case (MNORMAL)
 
       ! solve the models
-      call this%solve()
+      call this%solve(kiter)
 
       ! finish up
-      call this%finalizeSolve(isgcnvg, isuppress_output)
+      call this%finalizeSolve(kiter, isgcnvg, isuppress_output)
     end select
   end subroutine sln_ca
 
@@ -241,9 +244,10 @@ contains
 
   !> @ brief Solve each model
   !<
-  subroutine solve(this)
+  subroutine solve(this, kiter)
     ! -- dummy variables
     class(ExplicitSolutionType) :: this !< ExplicitSolutionType instance
+    integer(I4B), intent(in) :: kiter !< Picard iteration (1 for explicit)
     ! -- local variables
     class(NumericalModelType), pointer :: mp => null()
     integer(I4B) :: im
@@ -260,9 +264,10 @@ contains
 
   !> @ brief Finalize solve
   !<
-  subroutine finalizeSolve(this, isgcnvg, isuppress_output)
+  subroutine finalizeSolve(this, kiter, isgcnvg, isuppress_output)
     ! -- dummy variables
     class(ExplicitSolutionType) :: this !< ExplicitSolutionType instance
+    integer(I4B), intent(in) :: kiter !< Picard iteration number (always 1 for explicit)
     integer(I4B), intent(inout) :: isgcnvg !< solution group convergence flag
     integer(I4B), intent(in) :: isuppress_output !< flag for suppressing output
     ! -- local variables

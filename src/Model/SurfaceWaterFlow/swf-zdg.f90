@@ -7,20 +7,16 @@
 module SwfZdgModule
   ! -- modules
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, DEM1, DONE, LENFTYPE, DNODATA, &
-                             LINELENGTH, DHALF, DTWOTHIRDS
+  use ConstantsModule, only: DZERO, LENFTYPE, DNODATA, DHALF
   use SimVariablesModule, only: errmsg
   use SimModule, only: store_error, store_error_filename
   use MemoryHelperModule, only: create_mem_path
   use BndModule, only: BndType
   use BndExtModule, only: BndExtType
   use ObsModule, only: DefaultObsIdProcessor
-  use SmoothingModule, only: sQSaturation, sQSaturationDerivative
   use ObserveModule, only: ObserveType
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
-  use BlockParserModule, only: BlockParserType
-  use InputOutputModule, only: GetUnit, openfile
   use MatrixBaseModule
   use BaseDisModule, only: DisBaseType
   use Disv1dModule, only: Disv1dType
@@ -64,7 +60,7 @@ module SwfZdgModule
     ! -- methods for time series
     procedure, public :: bnd_rp_ts => zdg_rp_ts
     ! -- private
-    procedure, private :: get_cond
+    procedure, private :: qcalc
   end type SwfZdgType
 
 contains
@@ -124,9 +120,6 @@ contains
     !
     ! -- store unit conversion
     zdgobj%unitconv = unitconv
-    !
-    ! -- return
-    return
   end subroutine zdg_create
 
   !> @ brief Allocate scalars
@@ -149,9 +142,6 @@ contains
     !
     ! -- Set values
     this%unitconv = DZERO
-    !
-    ! -- return
-    return
   end subroutine zdg_allocate_scalars
 
   !> @ brief Allocate arrays
@@ -186,9 +176,6 @@ contains
                      'SLOPE', this%input_mempath)
     call mem_checkin(this%rough, 'ROUGH', this%memoryPath, &
                      'ROUGH', this%input_mempath)
-    !
-    ! -- return
-    return
   end subroutine zdg_allocate_arrays
 
   !> @ brief Deallocate package memory
@@ -213,9 +200,6 @@ contains
     !
     ! -- scalars
     call mem_deallocate(this%unitconv)
-    !
-    ! -- return
-    return
   end subroutine zdg_da
 
   !> @ brief Source additional options for package
@@ -242,9 +226,6 @@ contains
     !
     ! -- log SWF specific options
     call this%log_zdg_options(found)
-    !
-    ! -- return
-    return
   end subroutine zdg_options
 
   !> @ brief Log SWF specific package options
@@ -269,9 +250,6 @@ contains
     ! -- close logging block
     write (this%iout, '(1x,a)') &
       'END OF '//trim(adjustl(this%text))//' OPTIONS'
-    !
-    ! -- return
-    return
   end subroutine log_zdg_options
 
   !> @ brief SWF read and prepare
@@ -292,9 +270,6 @@ contains
     if (this%iprpak /= 0) then
       call this%write_list()
     end if
-    !
-    ! -- return
-    return
   end subroutine zdg_rp
 
   !> @ brief Formulate the package hcof and rhs terms.
@@ -306,17 +281,20 @@ contains
   subroutine zdg_cf(this)
     ! modules
     use MathUtilModule, only: get_perturbation
-    ! -- dummy variables
+    use SmoothingModule, only: sQuadratic
+    ! dummy variables
     class(SwfZdgType) :: this !< SwfZdgType  object
-    ! -- local variables
+    ! local variables
     integer(I4B) :: i, node
     real(DP) :: q
     real(DP) :: qeps
     real(DP) :: absdhdxsq
     real(DP) :: depth
-    real(DP) :: cond
     real(DP) :: derv
     real(DP) :: eps
+    real(DP) :: range = 1.d-6
+    real(DP) :: dydx
+    real(DP) :: smooth_factor
     !
     ! -- Return if no inflows
     if (this%nbound == 0) return
@@ -335,15 +313,16 @@ contains
       absdhdxsq = this%slope(i)**DHALF
       depth = this%xnew(node) - this%dis%bot(node)
 
+      ! smooth the depth
+      call sQuadratic(depth, range, dydx, smooth_factor)
+      depth = depth * smooth_factor
+
       ! -- calculate unperturbed q
-      ! TODO: UNITCONV?!
-      cond = this%get_cond(i, depth, absdhdxsq, this%unitconv)
-      q = -cond * this%slope(i)
+      q = -this%qcalc(i, depth, this%unitconv)
 
       ! -- calculate perturbed q
       eps = get_perturbation(depth)
-      cond = this%get_cond(i, depth + eps, absdhdxsq, this%unitconv)
-      qeps = -cond * this%slope(i)
+      qeps = -this%qcalc(i, depth + eps, this%unitconv)
 
       ! -- calculate derivative
       derv = (qeps - q) / eps
@@ -353,51 +332,36 @@ contains
       this%rhs(i) = -q + derv * this%xnew(node)
 
     end do
-    !
-    return
   end subroutine zdg_cf
 
-  !> @brief Calculate conductance-like term
+  ! !> @brief Calculate flow
   !!
-  !! Conductance normally has a dx term in the denominator
-  !! but that is not included here, as the flow is calculated
-  !! using Q = C * slope.  The returned c value from this
-  !! function has dimensions of L3/T.
-  !!
-  !<
-  function get_cond(this, i, depth, absdhdxsq, unitconv) result(c)
-    ! -- modules
-    ! -- dummy
+  !! Calculate volumetric flow rate for the zero-depth gradient
+  !! condition.  Flow is positive.
+  ! !<
+  function qcalc(this, i, depth, unitconv) result(q)
+    ! dummy
     class(SwfZdgType) :: this
     integer(I4B), intent(in) :: i !< boundary number
     real(DP), intent(in) :: depth !< simulated depth (stage - elevation) in reach n for this iteration
-    real(DP), intent(in) :: absdhdxsq !< absolute value of simulated hydraulic gradient
     real(DP), intent(in) :: unitconv !< conversion factor for roughness to length and time units of meters and seconds
-    ! -- local
+    ! return
+    real(DP) :: q
+    ! local
     integer(I4B) :: idcxs
-    real(DP) :: c
     real(DP) :: width
     real(DP) :: rough
     real(DP) :: slope
-    real(DP) :: roughc
-    real(DP) :: a
-    real(DP) :: r
     real(DP) :: conveyance
-    !
+
     idcxs = this%idcxs(i)
     width = this%width(i)
     rough = this%rough(i)
     slope = this%slope(i)
-    roughc = this%cxs%get_roughness(idcxs, width, depth, rough, &
-                                    slope)
-    a = this%cxs%get_area(idcxs, width, depth)
-    r = this%cxs%get_hydraulic_radius(idcxs, width, depth, area=a)
-
-    !conveyance = a * r**DTWOTHIRDS / roughc
     conveyance = this%cxs%get_conveyance(idcxs, width, depth, rough)
-    c = conveyance / absdhdxsq
+    q = conveyance * slope**DHALF * unitconv
 
-  end function get_cond
+  end function qcalc
 
   !> @ brief Copy hcof and rhs terms into solution.
   !!
@@ -435,9 +399,6 @@ contains
         call this%pakmvrobj%accumulate_qformvr(i, this%rhs(i))
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine zdg_fc
 
   !> @ brief Define the list label for the package
@@ -466,9 +427,6 @@ contains
     if (this%inamedbound == 1) then
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
-    !
-    ! -- return
-    return
   end subroutine define_listlabel
 
   ! -- Procedures related to observations
@@ -487,9 +445,6 @@ contains
     !
     ! -- set boolean
     zdg_obs_supported = .true.
-    !
-    ! -- return
-    return
   end function zdg_obs_supported
 
   !> @brief Define the observation types available in the package
@@ -511,9 +466,6 @@ contains
     !    for to-mvr observation type.
     call this%obs%StoreObsType('to-mvr', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
-    !
-    ! -- return
-    return
   end subroutine zdg_df_obs
 
   !> @brief Save observations for the package
@@ -561,9 +513,6 @@ contains
         call this%obs%SaveOneSimval(obsrv, DNODATA)
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine zdg_bd_obs
 
   ! -- Procedure related to time series
@@ -591,9 +540,6 @@ contains
         end if
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine zdg_rp_ts
 
   !> @ brief Return a bound value
@@ -627,9 +573,6 @@ contains
       call store_error(errmsg)
       call store_error_filename(this%input_fname)
     end select
-    !
-    ! -- return
-    return
   end function zdg_bound_value
 
 end module SwfZdgModule

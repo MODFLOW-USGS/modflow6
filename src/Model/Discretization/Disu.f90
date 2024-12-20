@@ -13,7 +13,7 @@ module DisuModule
   use BaseDisModule, only: DisBaseType
   use MemoryManagerModule, only: mem_allocate, mem_deallocate, &
                                  mem_reallocate, mem_setptr
-  use MemoryManagerExtModule, only: mem_set_value, memorylist_remove
+  use MemoryManagerExtModule, only: mem_set_value, memorystore_remove
   use TdisModule, only: kstp, kper, pertim, totim, delt
   use DisvGeom, only: line_unit_vector
 
@@ -433,9 +433,9 @@ contains
     class(DisuType) :: this
     !
     ! -- Deallocate idm memory
-    call memorylist_remove(this%name_model, 'DISU', idm_context)
-    call memorylist_remove(component=this%name_model, &
-                           context=idm_context)
+    call memorystore_remove(this%name_model, 'DISU', idm_context)
+    call memorystore_remove(component=this%name_model, &
+                            context=idm_context)
     !
     ! -- scalars
     call mem_deallocate(this%njausr)

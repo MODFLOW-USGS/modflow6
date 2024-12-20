@@ -148,7 +148,7 @@ module NumericalSolutionModule
   contains
     procedure :: sln_df
     procedure :: sln_ar
-    procedure :: sln_calculate_delt
+    procedure :: sln_dt
     procedure :: sln_ad
     procedure :: sln_ot
     procedure :: sln_ca
@@ -258,9 +258,6 @@ contains
     !
     ! -- Initialize block parser
     call num_sol%parser%Initialize(num_sol%iu, iout)
-    !
-    ! -- return
-    return
   end subroutine create_numerical_solution
 
   !> @ brief Allocate scalars
@@ -359,9 +356,6 @@ contains
     this%ptcdel0 = DZERO
     this%ptcexp = done
     this%atsfrac = DONETHIRD
-    !
-    ! -- return
-    return
   end subroutine allocate_scalars
 
   !> @ brief Allocate arrays
@@ -409,9 +403,6 @@ contains
       ieq = ieq + mp%neq
       this%convmodstart(i + 1) = ieq
     end do
-    !
-    ! -- return
-    return
   end subroutine allocate_arrays
 
   !> @ brief Define the solution
@@ -502,9 +493,6 @@ contains
     !
     ! -- Assign connections, fill ia/ja, map connections
     call this%sln_connect()
-    !
-    ! -- return
-    return
   end subroutine sln_df
 
   !> @ brief Allocate and read data
@@ -749,7 +737,7 @@ contains
 00021 FORMAT(1X, 'SIMPLE OPTION:', /, &
            1X, 'DEFAULT SOLVER INPUT VALUES FOR FAST SOLUTIONS')
 00023 FORMAT(1X, 'MODERATE OPTION:', /, 1X, 'DEFAULT SOLVER', &
-           ' INPUT VALUES REFLECT MODERETELY NONLINEAR MODEL')
+           ' INPUT VALUES REFLECT MODERATELY NONLINEAR MODEL')
 00025 FORMAT(1X, 'COMPLEX OPTION:', /, 1X, 'DEFAULT SOLVER', &
            ' INPUT VALUES REFLECT STRONGLY NONLINEAR MODEL')
 
@@ -1050,9 +1038,6 @@ contains
     !
     ! -- close ims input file
     call this%parser%Clear()
-    !
-    ! -- return
-    return
   end subroutine sln_ar
 
   !> @ brief Calculate delt
@@ -1060,7 +1045,7 @@ contains
   !!  Calculate time step length.
   !!
   !<
-  subroutine sln_calculate_delt(this)
+  subroutine sln_dt(this)
     ! -- modules
     use TdisModule, only: kstp, kper, delt
     use AdaptiveTimeStepModule, only: ats_submit_delt
@@ -1095,9 +1080,7 @@ contains
       ! -- submit stable dt for upcoming step
       call ats_submit_delt(kstp, kper, delt_temp, this%memory_path, idir=idir)
     end if
-    !
-    return
-  end subroutine sln_calculate_delt
+  end subroutine sln_dt
 
   !> @ brief Advance solution
   !!
@@ -1122,8 +1105,6 @@ contains
     this%icnvg = 0
     this%itertot_timestep = 0
     this%iouttot_timestep = 0
-
-    return
   end subroutine sln_ad
 
   !> @ brief Output solution
@@ -1136,9 +1117,6 @@ contains
     class(NumericalSolutionType) :: this !< NumericalSolutionType instance
     !
     ! -- Nothing to do here
-    !
-    ! -- return
-    return
   end subroutine sln_ot
 
   !> @ brief Finalize solution
@@ -1161,9 +1139,6 @@ contains
       write (iout, '(1x,a,1x,g0,1x,a,/)') &
         'Total solution time:  ', this%ttsoln, 'seconds'
     end if
-    !
-    ! -- return
-    return
   end subroutine sln_fp
 
   !> @ brief Deallocate solution
@@ -1280,9 +1255,6 @@ contains
     call mem_deallocate(this%ptcdel0)
     call mem_deallocate(this%ptcexp)
     call mem_deallocate(this%atsfrac)
-    !
-    ! -- return
-    return
   end subroutine sln_da
 
   !> @ brief Solve solution
@@ -1301,7 +1273,6 @@ contains
     character(len=LINELENGTH) :: fmt
     integer(I4B) :: im
     integer(I4B) :: kiter ! non-linear iteration counter
-! ------------------------------------------------------------------------------
 
     ! advance the models, exchanges, and solution
     call this%prepareSolve()
@@ -1331,10 +1302,6 @@ contains
       ! finish up, write convergence info, CSV file, budgets and flows, ...
       call this%finalizeSolve(kiter, isgcnvg, isuppress_output)
     end select
-    !
-    ! -- return
-    return
-
   end subroutine sln_ca
 
   !> @ brief CSV header
@@ -1376,7 +1343,7 @@ contains
         end if
       end if
       ! -- check for more than one model - ims only
-      if (this%convnmod > 1) then
+      if (this%convnmod > 1 .or. simulation_mode == "PARALLEL") then
         do im = 1, this%modellist%Count()
           mp => GetNumericalModelFromList(this%modellist, im)
           write (this%icsvinnerout, '(*(G0,:,","))', advance='NO') &
@@ -1388,9 +1355,6 @@ contains
       end if
       write (this%icsvinnerout, '(a)') ''
     end if
-    !
-    ! -- return
-    return
   end subroutine writeCSVHeader
 
   !> @ brief PTC header
@@ -2083,9 +2047,6 @@ contains
       ! -- update i0
       i0 = iinner
     end do
-    !
-    ! -- return
-    return
   end subroutine convergence_summary
 
   !> @ brief Solution convergence CSV summary
@@ -2117,7 +2078,6 @@ contains
     real(DP) :: dvmax !< maximum dependent variable change
     real(DP) :: rmax !< maximum residual
     class(NumericalModelType), pointer :: num_mod => null()
-! ------------------------------------------------------------------------------
     !
     ! -- initialize local variables
     itot = istart
@@ -2175,7 +2135,7 @@ contains
       end if
       !
       ! -- write information for each model
-      if (this%convnmod > 1) then
+      if (this%convnmod > 1 .or. simulation_mode == "PARALLEL") then
         do j = 1, this%cnvg_summary%convnmod
           loc_dvmax = this%cnvg_summary%convlocdv(j, kpos)
           dvmax = this%cnvg_summary%convdvmax(j, kpos)
@@ -2209,9 +2169,6 @@ contains
     !
     ! -- flush file
     flush (iu)
-    !
-    ! -- return
-    return
   end subroutine csv_convergence_summary
 
   !> @ brief Save solution data to a file
@@ -2229,7 +2186,6 @@ contains
     character(len=*), intent(in) :: filename !< filename to save solution data
     ! -- local variables
     integer(I4B) :: inunit
-! ------------------------------------------------------------------------------
     !
     select type (spm => this%system_matrix)
     class is (SparseMatrixType)
@@ -2247,9 +2203,6 @@ contains
       write (inunit, *) this%x
       close (inunit)
     end select
-    !
-    ! -- return
-    return
   end subroutine save
 
   !> @ brief Add a model
@@ -2270,9 +2223,6 @@ contains
       m => mp
       call AddNumericalModelToList(this%modellist, m)
     end select
-    !
-    ! -- return
-    return
   end subroutine add_model
 
   !> @brief Get a list of models
@@ -2308,9 +2258,6 @@ contains
       num_ex => exchange
       call AddNumericalExchangeToList(this%exchangelist, num_ex)
     end select
-    !
-    ! -- return
-    return
   end subroutine add_exchange
 
   !> @brief Returns a pointer to the list of exchanges in this solution
@@ -2377,9 +2324,6 @@ contains
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
       call cp%exg_mc(this%system_matrix)
     end do
-    !
-    ! -- return
-    return
   end subroutine sln_connect
 
   !> @ brief Reset the solution
@@ -2395,9 +2339,6 @@ contains
     ! -- reset the solution
     call this%system_matrix%zero_entries()
     call this%vec_rhs%zero_entries()
-    !
-    ! -- return
-    return
   end subroutine sln_reset
 
   !> @ brief Solve the linear system of equations
@@ -2617,9 +2558,6 @@ contains
       in_iter = this%linear_solver%iteration_number
       this%icnvg = this%linear_solver%is_converged
     end if
-    !
-    ! -- return
-    return
   end subroutine sln_ls
 
   !
@@ -2676,9 +2614,6 @@ contains
       this%breduc = 0.1d0
       this%res_lim = 0.002d0
     end select
-    !
-    ! -- return
-    return
   end subroutine sln_setouter
 
   !> @ brief Perform backtracking
@@ -2784,9 +2719,6 @@ contains
       call this%outertab%add_term(cmsg)
       call this%outertab%add_term(' ')
     end if
-    !
-    ! -- return
-    return
   end subroutine sln_backtracking
 
   !> @ brief Backtracking update of the dependent variable
@@ -2882,8 +2814,6 @@ contains
     ! clean up temp. vector
     call vec_resid%destroy()
     deallocate (vec_resid)
-
-    return
   end subroutine sln_l2norm
 
   !> @ brief Get the maximum value from a vector
@@ -2918,9 +2848,6 @@ contains
         vmax = d
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine sln_maxval
 
   !> @ brief Calculate dependent-variable change
@@ -2948,9 +2875,6 @@ contains
         dx(n) = x(n) - xtemp(n)
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine sln_calcdx
 
   !> @brief Calculate pseudo-transient continuation factor
@@ -3025,7 +2949,6 @@ contains
     real(DP) :: es
     real(DP) :: aes
     real(DP) :: amom
-! ------------------------------------------------------------------------------
     !
     ! -- option for using simple dampening (as done by MODFLOW-2005 PCG)
     if (this%nonmeth == 1) then
@@ -3134,9 +3057,6 @@ contains
       end do
       !
     end if
-    !
-    ! -- return
-    return
   end subroutine sln_underrelax
 
   !> @ brief Determine maximum dependent-variable change
@@ -3176,9 +3096,6 @@ contains
     !-----store maximum change value and location
     hncg = bigch
     lrch = nb
-    !
-    ! -- return
-    return
   end subroutine sln_get_dxmax
 
   function sln_has_converged(this, max_dvc) result(has_converged)
@@ -3284,9 +3201,6 @@ contains
         exit
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine sln_get_loc
 
   !> @ brief Get user node number
@@ -3326,9 +3240,6 @@ contains
         exit
       end if
     end do
-    !
-    ! -- return
-    return
   end subroutine sln_get_nodeu
 
   !> @ brief Cast a object as a Numerical Solution
@@ -3353,9 +3264,6 @@ contains
     class is (NumericalSolutionType)
       res => obj
     end select
-    !
-    ! -- return
-    return
   end function CastAsNumericalSolutionClass
 
   !> @ brief Get a numerical solution
@@ -3374,7 +3282,5 @@ contains
     !
     obj => list%GetItem(idx)
     res => CastAsNumericalSolutionClass(obj)
-    !
-    return
   end function GetNumericalSolutionFromList
 end module NumericalSolutionModule

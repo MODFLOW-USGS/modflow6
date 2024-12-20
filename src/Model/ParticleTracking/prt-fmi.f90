@@ -191,13 +191,15 @@ contains
       end if
       do ib = 1, this%gwfpackages(ip)%nbound
         i = this%gwfpackages(ip)%nodelist(ib)
+        if (i <= 0) cycle
         if (this%ibound(i) <= 0) cycle
         qbnd = this%gwfpackages(ip)%get_flow(ib)
         ! todo, after initial release: default iflowface values for different packages
         iflowface = 0
         if (iauxiflowface > 0) then
           iflowface = NINT(this%gwfpackages(ip)%auxvar(iauxiflowface, ib))
-          if (iflowface < 0) iflowface = iflowface + MAX_POLY_CELLS + 1 ! bot -> 9, top -> 10; see note re: max faces below
+          ! this maps bot -2 -> 9, top -1 -> 10; see note re: max faces below
+          if (iflowface < 0) iflowface = iflowface + MAX_POLY_CELLS + 1
         end if
         if (iflowface .gt. 0) then
           ioffset = (i - 1) * MAX_POLY_CELLS

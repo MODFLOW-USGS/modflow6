@@ -1,7 +1,0 @@
-BEGIN TIMESERIES
-  <ts_time> <ts_arraytime_series_names>
-  <ts_time> <ts_arraytime_series_names>
-  ...
-   <ts_time>
-   <ts_arraytime_series_names>
-END TIMESERIES

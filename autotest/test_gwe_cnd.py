@@ -14,11 +14,12 @@ future.
 # Imports
 
 import os
+
 import numpy as np
 import pytest
 
 try:
-    import pymake
+    pass
 except:
     msg = "Error. Pymake package is not available.\n"
     msg += "Try installing using the following command:\n"
@@ -92,6 +93,8 @@ dmcoef = 3.2519e-7  # Molecular diffusion coefficient
 cpw = 4183.0
 rhow = 1000.0
 lhv = 2454.0
+cps = 760.0
+rhos = 1500.0
 
 # Set solver parameter values (and related)
 nouter, ninner = 100, 300
@@ -125,7 +128,7 @@ def build_models(idx, test):
     ws = test.workspace
     name = cases[idx]
 
-    print("Building MF6 model...()".format(name))
+    print(f"Building MF6 model...{name}")
 
     # generate names for each model
     gwfname = "gwf-" + name
@@ -137,16 +140,14 @@ def build_models(idx, test):
     )
 
     # Instantiating MODFLOW 6 time discretization
-    flopy.mf6.ModflowTdis(
-        sim, nper=nper, perioddata=tdis_rc, time_units=time_units
-    )
+    flopy.mf6.ModflowTdis(sim, nper=nper, perioddata=tdis_rc, time_units=time_units)
 
     # Instantiating MODFLOW 6 groundwater flow model
     gwf = flopy.mf6.ModflowGwf(
         sim,
         modelname=gwfname,
         save_flows=True,
-        model_nam_file="{}.nam".format(gwfname),
+        model_nam_file=f"{gwfname}.nam",
     )
 
     # Instantiating MODFLOW 6 solver for flow model
@@ -163,7 +164,7 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
     sim.register_ims_package(imsgwf, [gwfname])
 
@@ -179,7 +180,7 @@ def build_models(idx, test):
         top=top,
         botm=botm,
         idomain=np.ones((nlay, nrow, ncol), dtype=int),
-        filename="{}.dis".format(gwfname),
+        filename=f"{gwfname}.dis",
     )
 
     # Instantiating MODFLOW 6 node-property flow package
@@ -190,16 +191,16 @@ def build_models(idx, test):
         k=k11,
         k33=k33,
         save_specific_discharge=True,
-        filename="{}.npf".format(gwfname),
+        filename=f"{gwfname}.npf",
     )
 
     # Instantiating MODFLOW 6 initial conditions package for flow model
-    flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(gwfname))
+    flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{gwfname}.ic")
 
     # Instantiating VSC
     if viscosity_on[idx]:
         # Instantiate viscosity (VSC) package
-        vsc_filerecord = "{}.vsc.bin".format(gwfname)
+        vsc_filerecord = f"{gwfname}.vsc.bin"
         vsc_pd = [(0, 0.0, 20.0, gwename, "temperature")]
         flopy.mf6.ModflowGwfvsc(
             gwf,
@@ -212,7 +213,7 @@ def build_models(idx, test):
             nviscspecies=len(vsc_pd),
             packagedata=vsc_pd,
             pname="vsc",
-            filename="{}.vsc".format(gwfname),
+            filename=f"{gwfname}.vsc",
         )
 
     # Instantiating MODFLOW 6 constant head package
@@ -222,14 +223,14 @@ def build_models(idx, test):
         stress_period_data=chdspd,
         save_flows=False,
         pname="CHD-1",
-        filename="{}.chd".format(gwfname),
+        filename=f"{gwfname}.chd",
     )
 
     # Instantiating MODFLOW 6 output control package for flow model
     flopy.mf6.ModflowGwfoc(
         gwf,
-        head_filerecord="{}.hds".format(gwfname),
-        budget_filerecord="{}.cbc".format(gwfname),
+        head_filerecord=f"{gwfname}.hds",
+        budget_filerecord=f"{gwfname}.cbc",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
@@ -240,7 +241,7 @@ def build_models(idx, test):
         sim,
         model_type="gwe6",
         modelname=gwename,
-        model_nam_file="{}.nam".format(gwename),
+        model_nam_file=f"{gwename}.nam",
     )
     gwe.name_file.save_flows = True
     imsgwe = flopy.mf6.ModflowIms(
@@ -256,7 +257,7 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwename),
+        filename=f"{gwename}.ims",
     )
     sim.register_ims_package(imsgwe, [gwe.name])
 
@@ -272,13 +273,11 @@ def build_models(idx, test):
         top=top,
         botm=botm,
         idomain=1,
-        filename="{}.dis".format(gwename),
+        filename=f"{gwename}.dis",
     )
 
     # Instantiating MODFLOW 6 transport initial concentrations
-    flopy.mf6.ModflowGweic(
-        gwe, strt=strt_temp, filename="{}.ic".format(gwename)
-    )
+    flopy.mf6.ModflowGweic(gwe, strt=strt_temp, filename=f"{gwename}.ic")
 
     # Instantiating MODFLOW 6 transport advection package
     if mixelm == 0:
@@ -287,9 +286,7 @@ def build_models(idx, test):
         scheme = "TVD"
     else:
         raise Exception()
-    flopy.mf6.ModflowGweadv(
-        gwe, scheme=scheme, filename="{}.adv".format(gwename)
-    )
+    flopy.mf6.ModflowGweadv(gwe, scheme=scheme, filename=f"{gwename}.adv")
 
     # Instantiating MODFLOW 6 transport dispersion package
     if dispersivity != 0:
@@ -300,18 +297,20 @@ def build_models(idx, test):
             ath1=dispersivity,
             ktw=0.5918,
             kts=0.2700,
-            filename="{}.cnd".format(gwename),
+            filename=f"{gwename}.cnd",
         )
 
-    # Instantiating MODFLOW 6 transport mass storage package (formerly "reaction" package in MT3DMS)
+    # Instantiating MODFLOW 6 transport mass storage package
+    # (formerly "reaction" package in MT3DMS)
     flopy.mf6.ModflowGweest(
         gwe,
         save_flows=True,
+        heat_capacity_water=cpw,
+        density_water=rhow,
         porosity=prsity,
-        cps=760.0,
-        rhos=1500.0,
-        packagedata=[cpw, rhow, lhv],
-        filename="{}.est".format(gwename),
+        heat_capacity_solid=cps,
+        density_solid=rhos,
+        filename=f"{gwename}.est",
     )
 
     # Instantiating MODFLOW 6 transport constant concentration package
@@ -321,22 +320,18 @@ def build_models(idx, test):
         stress_period_data=ctpspd,
         save_flows=False,
         pname="CTP-1",
-        filename="{}.ctp".format(gwename),
+        filename=f"{gwename}.ctp",
     )
 
     # Instantiating MODFLOW 6 transport source-sink mixing package
-    flopy.mf6.ModflowGwessm(
-        gwe, sources=[[]], filename="{}.ssm".format(gwename)
-    )
+    flopy.mf6.ModflowGwessm(gwe, sources=[[]], filename=f"{gwename}.ssm")
 
     # Instantiate MODFLOW 6 heat transport output control package
     flopy.mf6.ModflowGweoc(
         gwe,
-        budget_filerecord="{}.cbc".format(gwename),
-        temperature_filerecord="{}.ucn".format(gwename),
-        temperatureprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        budget_filerecord=f"{gwename}.cbc",
+        temperature_filerecord=f"{gwename}.ucn",
+        temperatureprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("TEMPERATURE", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("TEMPERATURE", "ALL"), ("BUDGET", "ALL")],
     )
@@ -347,7 +342,7 @@ def build_models(idx, test):
         exgtype="GWF6-GWE6",
         exgmnamea=gwfname,
         exgmnameb=gwename,
-        filename="{}.gwfgwe".format(name),
+        filename=f"{name}.gwfgwe",
     )
 
     return sim, None
@@ -363,9 +358,7 @@ def check_output(idx, test):
     fpth = os.path.join(test.workspace, f"{gwename}.ucn")
     try:
         # load temperatures
-        cobj = flopy.utils.HeadFile(
-            fpth, precision="double", text="TEMPERATURE"
-        )
+        cobj = flopy.utils.HeadFile(fpth, precision="double", text="TEMPERATURE")
         conc1 = cobj.get_alldata()
     except:
         assert False, f'could not load concentration data from "{fpth}"'
@@ -475,7 +468,7 @@ def check_output(idx, test):
         5.01900830e-17,
     ]
 
-    msg = f"gwe temperatures do not match stored concentrations"
+    msg = "gwe temperatures do not match stored concentrations"
     assert np.allclose(conc1[-1, 0, 0, :], c_ans, atol=1e-5), msg
 
 

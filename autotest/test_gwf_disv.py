@@ -13,7 +13,6 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.gridutil import get_disv_kwargs
-
 from framework import TestFramework
 
 cases = ["disv01a", "disv01b"]
@@ -31,17 +30,7 @@ def build_models(idx, test):
     botm = [-10, -20, -30]
     xoff = 100000000.0
     yoff = 100000000.0
-    disvkwargs = get_disv_kwargs(
-        nlay,
-        nrow,
-        ncol,
-        delr,
-        delc,
-        top,
-        botm,
-        xoff,
-        yoff,
-    )
+    disvkwargs = get_disv_kwargs(nlay, nrow, ncol, delr, delc, top, botm, xoff, yoff)
     if idx == 1:
         # for the second test, set one cell to idomain = 0
         idomain = np.ones((nlay, nrow * ncol), dtype=int)

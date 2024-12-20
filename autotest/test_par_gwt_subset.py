@@ -7,9 +7,8 @@ transport model ends up on the right process to be
 coupled to flow by using the HPC subpackage.
 """
 
-import pytest
 import flopy
-
+import pytest
 from framework import TestFramework
 
 cases = ["par_gwt_subset"]

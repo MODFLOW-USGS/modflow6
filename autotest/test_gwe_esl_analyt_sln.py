@@ -1,10 +1,10 @@
 r"""
-An analytical solution provided by Carslaw & Jaeger (1947) and discussed in 
+An analytical solution provided by Carslaw & Jaeger (1947) and discussed in
 accompanying Techniques & Methods report.
 
 Energy is added to the right hand side boundary using the energy source loading
-(ESL) package.  Basic model set up is below, with a slab of unit thickness 
-(1.0 m) that is 100 m "deep" with energy being loaded on right side.  
+(ESL) package.  Basic model set up is below, with a slab of unit thickness
+(1.0 m) that is 100 m "deep" with energy being loaded on right side.
 Temperature will begin to rise on the right and propagate to the left. There are
 no sinks in this first example.  The titles that follow, for example
 "Section 43, case x" refer to specific analytical solutions found in Carslaw &
@@ -14,7 +14,7 @@ Section 43, case i:
 -------------------
 
        | <--------------------------   10 m   --------------------------> |
-     
+
        +------------------------------------------------------------------+
        |                      Initial temperature = T_0                   | <-- *ESL
        +------------------------------------------------------------------+
@@ -29,33 +29,32 @@ Section 43, case ii:
        +------------------------------------------------------------------+
        |                     Initial temperature = 0.0                    | <-- *ESL
        +------------------------------------------------------------------+
-       ^                                     
+       ^
        |
        Specified temperature boundary, T_0
 
 
 Section 43, case iii:
 ---------------------
-        
+
         +------------------------------------------------------------------+
 CTP ->  |                                                                  | <- CTP = T_0
   = T_0 +------------------------------------------------------------------+
          \-------------------------------------------------------------/
                                    |
               Uniform, constant heat production throughout the slab
-     
-     
+
+
   Specified temperature boundary, T_0
 
-"""
+"""  # noqa
 
-import os
 import math
-import pytest
+import os
+
 import flopy
 import numpy as np
-import matplotlib.pyplot as plt
-
+import pytest
 from framework import TestFramework
 
 # Parameters that vary by scenario
@@ -144,6 +143,7 @@ rho_C_bulk = Sw * theta * rhow * Cpw + (1 - theta) * rhos * Cps
 # Eqn 7-3: Bulk thermal diffusivity
 D = K_t_bulk / rho_C_bulk
 
+
 # Energy input to boundary (q_x term in the documentation)
 def calc_ener_input(primer_val):
     ener_add_rate = delr * delc * delz * rho_C_bulk * primer_val
@@ -155,7 +155,6 @@ def calc_ener_input(primer_val):
 
 
 def build_models(idx, test, ener_input):
-
     name = cases[idx]
 
     # Build MODFLOW 6 files
@@ -217,9 +216,7 @@ def build_models(idx, test, ener_input):
     )
 
     # Initial conditions
-    flopy.mf6.ModflowGwfic(
-        gwf, strt=strt, pname="IC-HD", filename=f"{gwfname}.ic"
-    )
+    flopy.mf6.ModflowGwfic(gwf, strt=strt, pname="IC-HD", filename=f"{gwfname}.ic")
 
     # Node property flow
     flopy.mf6.ModflowGwfnpf(
@@ -240,7 +237,7 @@ def build_models(idx, test, ener_input):
         steady_state=False,
         transient=True,
         pname="STO",
-        filename="{}.sto".format(gwfname),
+        filename=f"{gwfname}.sto",
     )
 
     # Constant head files
@@ -309,9 +306,7 @@ def build_models(idx, test, ener_input):
     )
 
     # Initial conditions
-    flopy.mf6.ModflowGweic(
-        gwe, strt=T_0, pname="IC-1", filename=f"{gwename}.ic"
-    )
+    flopy.mf6.ModflowGweic(gwe, strt=T_0, pname="IC-1", filename=f"{gwename}.ic")
 
     # Advection
     flopy.mf6.ModflowGweadv(
@@ -328,21 +323,24 @@ def build_models(idx, test, ener_input):
         ktw=Ktw,
         kts=Kts,
         pname="CND-1",
-        filename="{}.cnd".format(gwename),
+        filename=f"{gwename}.cnd",
     )
 
     flopy.mf6.ModflowGweest(
         gwe,
         porosity=theta,
-        cps=Cps,
-        rhos=rhos,
-        packagedata=[Cpw, rhow, lhv],
+        heat_capacity_water=Cpw,
+        density_water=rhow,
+        latent_heat_vaporization=lhv,
+        heat_capacity_solid=Cps,
+        density_solid=rhos,
         pname="EST-1",
-        filename="{}.est".format(gwename),
+        filename=f"{gwename}.est",
     )
 
     # Constant temperature
-    # Note: Implementation of the CTP boundary depends on which analytical sln is in view
+    # Note: Implementation of the CTP boundary depends on which analytical sln
+    #       is in view
     #       See notes at top of script regarding scenarios
     if idx > 0:
         if idx == 1:
@@ -388,9 +386,7 @@ def build_models(idx, test, ener_input):
         gwe,
         budget_filerecord=f"{gwename}.cbc",
         temperature_filerecord=f"{gwename}.ucn",
-        temperatureprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        temperatureprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("TEMPERATURE", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("TEMPERATURE", "LAST"), ("BUDGET", "LAST")],
     )
@@ -412,18 +408,18 @@ def eq7_24(x, t, l, D, T_0, ener_add_rate):
     x_hat = x / l  # Dimensionless distance
 
     # Compute corresponding t_hat term
-    t_hat = D * t / l ** 2  # Dimensionless time
+    t_hat = D * t / l**2  # Dimensionless time
 
     # Solve equation 7-24
-    term1 = (1 / 2) * (x_hat ** 2 - 1 / 3)
+    term1 = (1 / 2) * (x_hat**2 - 1 / 3)
     summation_terms = [
         ((-1) ** n)
-        / n ** 2
-        * math.exp(-1 * n ** 2 * math.pi ** 2 * t_hat)
+        / n**2
+        * math.exp(-1 * n**2 * math.pi**2 * t_hat)
         * math.cos(n * math.pi * x_hat)
         for n in np.arange(1, 1000)
     ]
-    term2 = 2 / (math.pi ** 2) * np.sum(summation_terms)
+    term2 = 2 / (math.pi**2) * np.sum(summation_terms)
     T = T_0 + ener_add_rate * l / K_t_bulk * (t_hat + term1 - term2)
 
     return T
@@ -434,17 +430,17 @@ def eq7_25(x, t, l, D, T_0, ener_add_rate):
     x_hat = x / l  # Dimensionless distance
 
     # Compute corresponding t_hat term
-    t_hat = D * t / l ** 2  # Dimensionless time
+    t_hat = D * t / l**2  # Dimensionless time
 
     # Solve equation 7-25
     summation_terms = [
         ((-1) ** n)
         / (2 * n + 1) ** 2
-        * math.exp(-1 * (2 * n + 1) ** 2 * math.pi ** 2 * t_hat / 4)
+        * math.exp(-1 * (2 * n + 1) ** 2 * math.pi**2 * t_hat / 4)
         * math.sin((2 * n + 1) * math.pi * x_hat / 2)
         for n in np.arange(0, 1000)
     ]
-    term1 = (8 / math.pi ** 2) * np.sum(summation_terms)
+    term1 = (8 / math.pi**2) * np.sum(summation_terms)
 
     T = T_0 + ener_add_rate * l / K_t_bulk * (x_hat - term1)
 
@@ -456,19 +452,19 @@ def eq7_26(x, t, el, D, T_0, ener_add_rate):
     x_hat = x / el  # Dimensionless distance
 
     # Compute corresponding t_hat term
-    t_hat = D * t / el ** 2  # Dimensionless time
+    t_hat = D * t / el**2  # Dimensionless time
 
     # Solve equation 7-26
     term1 = x_hat * (1 - x_hat)
     summation_terms = [
         1
         / (2 * n + 1) ** 3
-        * math.exp(-1 * (2 * n + 1) ** 2 * math.pi ** 2 * t_hat)
+        * math.exp(-1 * (2 * n + 1) ** 2 * math.pi**2 * t_hat)
         * math.sin((2 * n + 1) * math.pi * x_hat)
         for n in np.arange(0, 1000)
     ]
-    term2 = (8 / math.pi ** 3) * np.sum(summation_terms)
-    T = T_0 + 0.5 * ener_add_rate * el ** 2 / K_t_bulk * (term1 - term2)
+    term2 = (8 / math.pi**3) * np.sum(summation_terms)
+    T = T_0 + 0.5 * ener_add_rate * el**2 / K_t_bulk * (term1 - term2)
 
     return T
 
@@ -507,14 +503,13 @@ def check_output(idx, test, ener_input):
             assert np.allclose(
                 analytical_temps, sim_temps[sp, 0, 0, :], atol=0.005
             ), "simulated solution is whacked"
-            # plt.plot(cell_centroids, analytical_temps, "r-", label="Analytical Solution")
+            # plt.plot(cell_centroids, analytical_temps, "r-", label="Analytical Solution")  # noqa
             # plt.plot(cell_centroids, sim_temps[sp, 0, 0, :], "b--", label="GWE")
             # plt.axhline(0.0, color='black')
             # plt.legend()
             # plt.show()
 
     elif idx == 2:
-
         t_accumulate = 0.0
         ener_src = ener_input / (delr * delc * delz)
 
@@ -539,7 +534,7 @@ def check_output(idx, test, ener_input):
                 analytical_temps, sim_temps[sp, 0, 0, :], atol=atol
             ), "simulated solution is whacked"
 
-            # plt.plot(cell_centroids, analytical_temps, "r-", label="Analytical Solution")
+            # plt.plot(cell_centroids, analytical_temps, "r-", label="Analytical Solution")  # noqa
             # plt.plot(cell_centroids, sim_temps[sp, 0, 0, :], "b--", label="GWE")
             # plt.axhline(0.0, color='black')
             # plt.legend()

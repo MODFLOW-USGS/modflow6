@@ -1,18 +1,13 @@
 """
-Test for lake package outlet observations.  
+Test for lake package outlet observations.
 
 The test evaluates the total outlet flow calculated using lake boundname
 with EXT-OUTFLOW and OUTLET flow for all three outlets.
 """
 
-
-import os
-
 import flopy
 import numpy as np
-import pathlib as pl
 import pytest
-
 from framework import DNODATA, TestFramework
 
 cases = ["lakoutlet_obs"]
@@ -26,7 +21,7 @@ def build_models(idx, test):
     delc = 1000.0
     delr = 1000.0
     top = 5.0
-    botm = [-5.0, -10.]
+    botm = [-5.0, -10.0]
 
     perlen = [1.0]
     nstp = [1]
@@ -53,7 +48,7 @@ def build_models(idx, test):
     )
 
     # create gwf model
-    gwf = flopy.mf6.ModflowGwf(sim, modelname=name) #, newtonoptions="newton")
+    gwf = flopy.mf6.ModflowGwf(sim, modelname=name)  # , newtonoptions="newton")
 
     imsgwf = flopy.mf6.ModflowIms(
         sim,
@@ -94,47 +89,19 @@ def build_models(idx, test):
     ss = 0.0
     sto = flopy.mf6.ModflowGwfsto(gwf, sy=sy, ss=ss, iconvert=1)
 
-    lake_connect = [
-        (0, 1),
-        (1, 0),
-        (1, 2),
-        (2, 1),
-    ]
+    lake_connect = [(0, 1), (1, 0), (1, 2), (2, 1)]
     nlakeconn = len(lake_connect) + 1
 
     # pak_data = [ifno, strt, nlakeconn]
     pak_data = [(0, strt, nlakeconn, "LAKE1")]
 
-    bedleak =  DNODATA
+    bedleak = DNODATA
     belev = botm[0]
     con_data = [
-        (
-            0,
-            idx,
-            (0, i, j),
-            "HORIZONTAL",
-            bedleak,
-            belev,
-            top,
-            delr / 2.0,
-            delr,
-        )
+        (0, idx, (0, i, j), "HORIZONTAL", bedleak, belev, top, delr / 2.0, delr)
         for idx, (i, j) in enumerate(lake_connect)
     ]
-    con_data.append(
-        (
-            0,
-            4,
-            (1, 1, 1),
-            "VERTICAL",
-            bedleak,
-            belev,
-            top,
-            0.0,
-            0.0,
-        )
-        
-    )
+    con_data.append((0, 4, (1, 1, 1), "VERTICAL", bedleak, belev, top, 0.0, 0.0))
 
     # outlet data
     outlet_data = [
@@ -188,7 +155,10 @@ def build_models(idx, test):
 
     rech = 6.0 / (8.0 * delr * delc)
     rch = flopy.mf6.modflow.ModflowGwfrcha(
-        gwf, print_flows=True, save_flows=True, recharge=rech,
+        gwf,
+        print_flows=True,
+        save_flows=True,
+        recharge=rech,
     )
 
     # output control

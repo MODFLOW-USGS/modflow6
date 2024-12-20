@@ -1,5 +1,0 @@
-BEGIN CROSSSECTIONS
-  <ifno> TAB6 FILEIN <tab6_filename>
-  <ifno> TAB6 FILEIN <tab6_filename>
-  ...
-END CROSSSECTIONS

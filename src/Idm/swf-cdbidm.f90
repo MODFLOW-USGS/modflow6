@@ -9,6 +9,7 @@ module SwfCdbInputModule
   public swf_cdb_block_definitions
   public SwfCdbParamFoundType
   public swf_cdb_multi_package
+  public swf_cdb_subpackages
 
   type SwfCdbParamFoundType
     logical :: auxiliary = .false.
@@ -30,6 +31,12 @@ module SwfCdbInputModule
 
   logical :: swf_cdb_multi_package = .true.
 
+  character(len=16), parameter :: &
+    swf_cdb_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
+
   type(InputParamDefinitionType), parameter :: &
     swfcdb_auxiliary = InputParamDefinitionType &
     ( &
@@ -40,6 +47,7 @@ module SwfCdbInputModule
     'AUXILIARY', & ! fortran variable
     'STRING', & ! type
     'NAUX', & ! shape
+    'keyword to specify aux variables', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -57,6 +65,7 @@ module SwfCdbInputModule
     'BOUNDNAMES', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -74,6 +83,7 @@ module SwfCdbInputModule
     'IPRPAK', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print input to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -91,6 +101,7 @@ module SwfCdbInputModule
     'IPRFLOW', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print calculated flows to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -108,6 +119,7 @@ module SwfCdbInputModule
     'IPAKCB', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'save flows to budget file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -125,6 +137,7 @@ module SwfCdbInputModule
     'FILEIN', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'file keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -142,6 +155,7 @@ module SwfCdbInputModule
     'OBS_FILERECORD', & ! fortran variable
     'RECORD OBS6 FILEIN OBS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -159,6 +173,7 @@ module SwfCdbInputModule
     'OBS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'obs keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -176,6 +191,7 @@ module SwfCdbInputModule
     'OBS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'obs6 input filename', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -193,6 +209,7 @@ module SwfCdbInputModule
     'MAXBOUND', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'maximum number of critical depth boundaries', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -210,6 +227,7 @@ module SwfCdbInputModule
     'CELLID', & ! fortran variable
     'INTEGER1D', & ! type
     'NCELLDIM', & ! shape
+    'cell identifier', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -227,6 +245,7 @@ module SwfCdbInputModule
     'IDCXS', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
+    'cross section identifier', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -244,6 +263,7 @@ module SwfCdbInputModule
     'WIDTH', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
+    'width of the zero-depth gradient boundary', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -261,6 +281,7 @@ module SwfCdbInputModule
     'AUXVAR', & ! fortran variable
     'DOUBLE1D', & ! type
     'NAUX', & ! shape
+    'auxiliary variables', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -278,6 +299,7 @@ module SwfCdbInputModule
     'BOUNDNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'zero-depth-gradient boundary name', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -315,6 +337,7 @@ module SwfCdbInputModule
     'SPD', & ! fortran variable
     'RECARRAY CELLID IDCXS WIDTH AUX BOUNDNAME', & ! type
     'MAXBOUND', & ! shape
+    '', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

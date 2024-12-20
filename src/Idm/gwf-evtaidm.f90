@@ -9,6 +9,7 @@ module GwfEvtaInputModule
   public gwf_evta_block_definitions
   public GwfEvtaParamFoundType
   public gwf_evta_multi_package
+  public gwf_evta_subpackages
 
   type GwfEvtaParamFoundType
     logical :: readasarrays = .false.
@@ -25,6 +26,7 @@ module GwfEvtaInputModule
     logical :: obs_filerecord = .false.
     logical :: obs6 = .false.
     logical :: obs6_filename = .false.
+    logical :: export_nc = .false.
     logical :: ievt = .false.
     logical :: surface = .false.
     logical :: rate = .false.
@@ -33,6 +35,12 @@ module GwfEvtaInputModule
   end type GwfEvtaParamFoundType
 
   logical :: gwf_evta_multi_package = .true.
+
+  character(len=16), parameter :: &
+    gwf_evta_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     gwfevta_readasarrays = InputParamDefinitionType &
@@ -44,6 +52,7 @@ module GwfEvtaInputModule
     'READASARRAYS', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'use array-based input', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -61,6 +70,7 @@ module GwfEvtaInputModule
     'FIXED_CELL', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'if cell is dry do not apply evapotranspiration to underlying cell', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -78,6 +88,7 @@ module GwfEvtaInputModule
     'AUXILIARY', & ! fortran variable
     'STRING', & ! type
     'NAUX', & ! shape
+    'keyword to specify aux variables', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -95,6 +106,7 @@ module GwfEvtaInputModule
     'AUXMULTNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'name of auxiliary variable for multiplier', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -112,6 +124,7 @@ module GwfEvtaInputModule
     'IPRPAK', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print input to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -129,6 +142,7 @@ module GwfEvtaInputModule
     'IPRFLOW', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print evapotranspiration rates to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -146,6 +160,7 @@ module GwfEvtaInputModule
     'IPAKCB', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'save CHD flows to budget file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -163,6 +178,7 @@ module GwfEvtaInputModule
     'TAS_FILERECORD', & ! fortran variable
     'RECORD TAS6 FILEIN TAS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -180,6 +196,7 @@ module GwfEvtaInputModule
     'TAS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'head keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -197,6 +214,7 @@ module GwfEvtaInputModule
     'FILEIN', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'file keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -214,6 +232,7 @@ module GwfEvtaInputModule
     'TAS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'file name of time series information', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -231,6 +250,7 @@ module GwfEvtaInputModule
     'OBS_FILERECORD', & ! fortran variable
     'RECORD OBS6 FILEIN OBS6_FILENAME', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -248,6 +268,7 @@ module GwfEvtaInputModule
     'OBS6', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'obs keyword', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -265,9 +286,28 @@ module GwfEvtaInputModule
     'OBS6_FILENAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'obs6 input filename', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfevta_export_nc = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'EVTA', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_ARRAY_NETCDF', & ! tag name
+    'EXPORT_NC', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'export array variables to netcdf output files.', & ! longname
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
     .false., & ! layered
     .false. & ! timeseries
     )
@@ -282,6 +322,7 @@ module GwfEvtaInputModule
     'IEVT', & ! fortran variable
     'INTEGER1D', & ! type
     'NCPL', & ! shape
+    'layer number for evapotranspiration', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -299,6 +340,7 @@ module GwfEvtaInputModule
     'SURFACE', & ! fortran variable
     'DOUBLE1D', & ! type
     'NCPL', & ! shape
+    'evapotranspiration surface', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -316,6 +358,7 @@ module GwfEvtaInputModule
     'RATE', & ! fortran variable
     'DOUBLE1D', & ! type
     'NCPL', & ! shape
+    'evapotranspiration surface', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -333,6 +376,7 @@ module GwfEvtaInputModule
     'DEPTH', & ! fortran variable
     'DOUBLE1D', & ! type
     'NCPL', & ! shape
+    'extinction depth', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -350,6 +394,7 @@ module GwfEvtaInputModule
     'AUXVAR', & ! fortran variable
     'DOUBLE2D', & ! type
     'NAUX NCPL', & ! shape
+    'evapotranspiration auxiliary variable iaux', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -374,6 +419,7 @@ module GwfEvtaInputModule
     gwfevta_obs_filerecord, &
     gwfevta_obs6, &
     gwfevta_obs6_filename, &
+    gwfevta_export_nc, &
     gwfevta_ievt, &
     gwfevta_surface, &
     gwfevta_rate, &
@@ -393,6 +439,7 @@ module GwfEvtaInputModule
     '', & ! fortran variable
     '', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

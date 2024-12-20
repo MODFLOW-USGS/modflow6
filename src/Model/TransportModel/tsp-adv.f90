@@ -1,7 +1,8 @@
 module TspAdvModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DONE, DZERO, DHALF, DTWO
+  use ConstantsModule, only: DONE, DZERO, DHALF, DTWO, DNODATA, DPREC, &
+                             LINELENGTH
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule, only: DisBaseType
   use TspFmiModule, only: TspFmiType
@@ -16,6 +17,7 @@ module TspAdvModule
   type, extends(NumericalPackageType) :: TspAdvType
 
     integer(I4B), pointer :: iadvwt => null() !< advection scheme (0 up, 1 central, 2 tvd)
+    real(DP), pointer :: ats_percel => null() !< user-specified fractional number of cells advection can move a particle during one time step
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
     type(TspFmiType), pointer :: fmi => null() !< pointer to fmi object
     real(DP), pointer :: eqnsclfac => null() !< governing equation scale factor; =1. for solute; =rhow*cpw for energy
@@ -24,6 +26,7 @@ module TspAdvModule
 
     procedure :: adv_df
     procedure :: adv_ar
+    procedure :: adv_dt
     procedure :: adv_fc
     procedure :: adv_cq
     procedure :: adv_da
@@ -66,9 +69,6 @@ contains
     advobj%iout = iout
     advobj%fmi => fmi
     advobj%eqnsclfac => eqnsclfac
-    !
-    ! -- Return
-    return
   end subroutine adv_cr
 
   !> @brief Define ADV object
@@ -101,9 +101,6 @@ contains
       ! --set options from input arg
       this%iadvwt = adv_options%iAdvScheme
     end if
-    !
-    ! -- Return
-    return
   end subroutine adv_df
 
   !> @brief Allocate and read method for package
@@ -122,10 +119,72 @@ contains
     ! -- adv pointers to arguments that were passed in
     this%dis => dis
     this%ibound => ibound
-    !
-    ! -- Return
-    return
   end subroutine adv_ar
+
+  !> @brief  Calculate maximum time step length
+  !!
+  !!  Return the largest time step that meets stability constraints
+  !<
+  subroutine adv_dt(this, dtmax, msg, thetam)
+    ! dummy
+    class(TspAdvType) :: this !< this instance
+    real(DP), intent(out) :: dtmax !< maximum allowable dt subject to stability constraint
+    character(len=*), intent(inout) :: msg !< package/cell dt constraint message
+    real(DP), dimension(:), intent(in) :: thetam !< porosity
+    ! local
+    integer(I4B) :: n
+    integer(I4B) :: m
+    integer(I4B) :: ipos
+    integer(I4B) :: nrmax
+    character(len=LINELENGTH) :: cellstr
+    real(DP) :: dt
+    real(DP) :: flowmax
+    real(DP) :: flowsumpos
+    real(DP) :: flowsumneg
+    real(DP) :: flownm
+    real(DP) :: cell_volume
+    dtmax = DNODATA
+    nrmax = 0
+    msg = ''
+
+    ! If ats_percel not specified by user, then return without making
+    ! the courant time step calculation
+    if (this%ats_percel == DNODATA) then
+      return
+    end if
+
+    ! Calculate time step lengths based on stability constraint for each cell
+    ! and store the smallest one
+    do n = 1, this%dis%nodes
+      if (this%ibound(n) == 0) cycle
+      flowsumneg = DZERO
+      flowsumpos = DZERO
+      do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+        if (this%dis%con%mask(ipos) == 0) cycle
+        m = this%dis%con%ja(ipos)
+        if (this%ibound(m) == 0) cycle
+        flownm = this%fmi%gwfflowja(ipos)
+        if (flownm < DZERO) then
+          flowsumneg = flowsumneg - flownm
+        else
+          flowsumpos = flowsumpos + flownm
+        end if
+      end do
+      flowmax = max(flowsumneg, flowsumpos)
+      if (flowmax < DPREC) cycle
+      cell_volume = this%dis%get_cell_volume(n, this%dis%top(n))
+      dt = cell_volume * this%fmi%gwfsat(n) * thetam(n) / flowmax
+      dt = dt * this%ats_percel
+      if (dt < dtmax) then
+        dtmax = dt
+        nrmax = n
+      end if
+    end do
+    if (nrmax > 0) then
+      call this%dis%noder_to_string(nrmax, cellstr)
+      write (msg, *) adjustl(trim(this%memoryPath))//'-'//trim(cellstr)
+    end if
+  end subroutine adv_dt
 
   !> @brief  Fill coefficient method for ADV package
   !!
@@ -167,9 +226,6 @@ contains
         call this%advtvd(n, cnew, rhs)
       end do
     end if
-    !
-    ! -- Return
-    return
   end subroutine adv_fc
 
   !> @brief  Calculate TVD
@@ -198,9 +254,6 @@ contains
         rhs(m) = rhs(m) + qtvd
       end if
     end do
-    !
-    ! -- Return
-    return
   end subroutine advtvd
 
   !> @brief  Calculate TVD
@@ -269,9 +322,6 @@ contains
         qtvd = qtvd * this%eqnsclfac
       end if
     end if
-    !
-    ! -- Return
-    return
   end function advqtvd
 
   !> @brief Calculate advection contribution to flowja
@@ -305,9 +355,6 @@ contains
     !
     ! -- TVD
     if (this%iadvwt == 2) call this%advtvd_bd(cnew, flowja)
-    !
-    ! -- Return
-    return
   end subroutine adv_cq
 
   !> @brief Add TVD contribution to flowja
@@ -333,9 +380,6 @@ contains
         end if
       end do
     end do
-    !
-    ! -- Return
-    return
   end subroutine advtvd_bd
 
   !> @brief Deallocate memory
@@ -355,12 +399,10 @@ contains
     !
     ! -- Scalars
     call mem_deallocate(this%iadvwt)
+    call mem_deallocate(this%ats_percel)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
-    !
-    ! -- Return
-    return
   end subroutine adv_da
 
   !> @brief Allocate scalars specific to the streamflow energy transport (SFE)
@@ -372,22 +414,20 @@ contains
     ! -- dummy
     class(TspAdvType) :: this
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- allocate scalars in NumericalPackageType
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- Allocate
     call mem_allocate(this%iadvwt, 'IADVWT', this%memoryPath)
+    call mem_allocate(this%ats_percel, 'ATS_PERCEL', this%memoryPath)
     !
     ! -- Initialize
     this%iadvwt = 0
+    this%ats_percel = DNODATA
     !
     ! -- Advection creates an asymmetric coefficient matrix
     this%iasym = 1
-    !
-    ! -- Return
-    return
   end subroutine allocate_scalars
 
   !> @brief Read options
@@ -441,6 +481,12 @@ contains
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
           end select
+        case ('ATS_PERCEL')
+          this%ats_percel = this%parser%GetDouble()
+          if (this%ats_percel == DZERO) this%ats_percel = DNODATA
+          write (this%iout, '(4x,a,1pg15.6)') &
+            'User-specified fractional cell distance for adaptive time &
+            &steps: ', this%ats_percel
         case default
           write (errmsg, '(a,a)') 'Unknown ADVECTION option: ', &
             trim(keyword)
@@ -449,9 +495,6 @@ contains
       end do
       write (this%iout, '(1x,a)') 'END OF ADVECTION OPTIONS'
     end if
-    !
-    ! -- Return
-    return
   end subroutine read_options
 
   !> @ brief Advection weight
@@ -470,7 +513,7 @@ contains
     real(DP), intent(in) :: qnm
     ! -- local
     real(DP) :: lnm, lmn
-! ------------------------------------------------------------------------------
+
     select case (iadvwt)
     case (1)
       ! -- calculate weight based on distances between nodes and the shared
@@ -493,9 +536,6 @@ contains
         omega = DONE
       end if
     end select
-    !
-    ! -- return
-    return
   end function adv_weight
 
 end module TspAdvModule

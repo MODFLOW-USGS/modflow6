@@ -303,5 +303,322 @@
             },
             "problemMatcher": []
         },
+        {
+            "label": "Pixi - Rebuild MF6 (gfortran, release)",
+            "command": "${workspaceFolder}/.vscode/run_python.sh",
+            "windows": {
+                "command": "${workspaceFolder}/.vscode/run_python.cmd",
+                "args": [
+                    "${workspaceFolder}/.vscode/build_vscode.py",
+                    "--compiler",
+                    "gfortran",
+                    "--buildtype",
+                    "release",
+                    "--pixi",
+                    "rebuild",
+                ],
+            },
+            "args": [
+                "${workspaceFolder}/.vscode/build_vscode.py",
+                "--compiler",
+                "gfortran",
+                "--buildtype",
+                "release",
+                "--pixi",
+                "rebuild",
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "Pixi - Build MF6 (gfortran, release)",
+            "command": "${workspaceFolder}/.vscode/run_python.sh",
+            "windows": {
+                "command": "${workspaceFolder}/.vscode/run_python.cmd",
+                "args": [
+                    "${workspaceFolder}/.vscode/build_vscode.py",
+                    "--compiler",
+                    "gfortran",
+                    "--buildtype",
+                    "release",
+                    "--pixi",
+                    "build",
+                ],
+                "problemMatcher": "$msCompile"
+            },
+            "args": [
+                "${workspaceFolder}/.vscode/build_vscode.py",
+                "--compiler",
+                "gfortran",
+                "--buildtype",
+                "release",
+                "--pixi",
+                "build",
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "Pixi - Build MF6 (gfortran, debug)",
+            "command": "${workspaceFolder}/.vscode/run_python.sh",
+            "windows": {
+                "command": "${workspaceFolder}/.vscode/run_python.cmd",
+                "args": [
+                    "${workspaceFolder}/.vscode/build_vscode.py",
+                    "--compiler",
+                    "gfortran",
+                    "--buildtype",
+                    "debug",
+                    "--pixi",
+                    "build",
+                ],
+                "problemMatcher": "$msCompile"
+            },
+            "args": [
+                "${workspaceFolder}/.vscode/build_vscode.py",
+                "--compiler",
+                "gfortran",
+                "--buildtype",
+                "debug",
+                "--pixi",
+                "build",
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "Pixi - Rebuild MF6 (gfortran, debug)",
+            "command": "${workspaceFolder}/.vscode/run_python.sh",
+            "windows": {
+                "command": "${workspaceFolder}/.vscode/run_python.cmd",
+                "args": [
+                    "${workspaceFolder}/.vscode/build_vscode.py",
+                    "--compiler",
+                    "gfortran",
+                    "--buildtype",
+                    "debug",
+                    "--pixi",
+                    "rebuild",
+                ],
+            },
+            "args": [
+                "${workspaceFolder}/.vscode/build_vscode.py",
+                "--compiler",
+                "gfortran",
+                "--buildtype",
+                "debug",
+                "--pixi",
+                "rebuild",
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "Pixi - Build MF6 (ifort, release)",
+            "command": "${workspaceFolder}/.vscode/run_python.sh",
+            "windows": {
+                "command": "${workspaceFolder}/.vscode/run_python.cmd",
+                "args": [
+                    "${workspaceFolder}/.vscode/build_vscode.py",
+                    "--compiler",
+                    "ifort",
+                    "--buildtype",
+                    "release",
+                    "--pixi",
+                    "build",
+                ],
+                "problemMatcher": "$msCompile"
+            },
+            "args": [
+                "${workspaceFolder}/.vscode/build_vscode.py",
+                "--compiler",
+                "ifort",
+                "--buildtype",
+                "release",
+                "--pixi",
+                "build",
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "Pixi - Rebuild MF6 (ifort, release)",
+            "command": "${workspaceFolder}/.vscode/run_python.sh",
+            "windows": {
+                "command": "${workspaceFolder}/.vscode/run_python.cmd",
+                "args": [
+                    "${workspaceFolder}/.vscode/build_vscode.py",
+                    "--compiler",
+                    "ifort",
+                    "--buildtype",
+                    "release",
+                    "--pixi",
+                    "rebuild",
+                ],
+            },
+            "args": [
+                "${workspaceFolder}/.vscode/build_vscode.py",
+                "--compiler",
+                "ifort",
+                "--buildtype",
+                "release",
+                "--pixi"
+                "rebuild",
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "Pixi - Build MF6 (ifort, debug)",
+            "command": "${workspaceFolder}/.vscode/run_python.sh",
+            "windows": {
+                "command": "${workspaceFolder}/.vscode/run_python.cmd",
+                "args": [
+                    "${workspaceFolder}/.vscode/build_vscode.py",
+                    "--compiler",
+                    "ifort",
+                    "--buildtype",
+                    "debug",
+                    "--pixi",
+                    "build",
+                ],
+                "problemMatcher": "$msCompile"
+            },
+            "args": [
+                "${workspaceFolder}/.vscode/build_vscode.py",
+                "--compiler",
+                "ifort",
+                "--buildtype",
+                "debug",
+                "--pixi",
+                "build",
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "Pixi - Rebuild MF6 (ifort, debug)",
+            "command": "${workspaceFolder}/.vscode/run_python.sh",
+            "windows": {
+                "command": "${workspaceFolder}/.vscode/run_python.cmd",
+                "args": [
+                    "${workspaceFolder}/.vscode/build_vscode.py",
+                    "--compiler",
+                    "ifort",
+                    "--buildtype",
+                    "debug",
+                    "--pixi",
+                    "rebuild",
+                ],
+            },
+            "args": [
+                "${workspaceFolder}/.vscode/build_vscode.py",
+                "--compiler",
+                "ifort",
+                "--buildtype",
+                "debug",
+                "--pixi",
+                "rebuild",
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "Check spelling",
+            "type": "shell",
+            "command": "codespell",
+            "options": {"cwd": "${workspaceFolder}"},
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "clear": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Check Fortran format",
+            "type": "shell",
+            "command": "python .github/common/check_format.py",
+            "options": {"cwd": "${workspaceFolder}"},
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "clear": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Check python format",
+            "type": "shell",
+            "command": "ruff format --config .github/common/ruff.toml --check .",
+            "options": {"cwd": "${workspaceFolder}"},
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "clear": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Check python lint",
+            "type": "shell",
+            "command": "ruff check --config .github/common/ruff.toml .",
+            "options": {"cwd": "${workspaceFolder}"},
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "clear": true
+            },
+            "problemMatcher": []
+        },
+
     ]
 }

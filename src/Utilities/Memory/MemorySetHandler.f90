@@ -2,7 +2,7 @@ module MemorySetHandlerModule
   use KindModule, only: I4B, LGP
   use ListModule, only: ListType
   use MemoryTypeModule, only: MemoryType
-  use MemoryManagerModule, only: get_from_memorylist
+  use MemoryManagerModule, only: get_from_memorystore
   use ConstantsModule, only: LENMEMPATH, LENVARNAME
 
   implicit none
@@ -62,7 +62,7 @@ contains
     ! now set it to the memory item
     mt => null()
     found = .false.
-    call get_from_memorylist(var_name, mem_path, mt, found)
+    call get_from_memorystore(var_name, mem_path, mt, found)
     mt%set_handler_idx = handler_idx
 
   end subroutine
@@ -86,7 +86,7 @@ contains
     ! get the handler data and cast
     mt => null()
     found = .false.
-    call get_from_memorylist(var_name, mem_path, mt, found)
+    call get_from_memorystore(var_name, mem_path, mt, found)
     if (mt%set_handler_idx == 0) then
       ! nothing to be done
       status = 0

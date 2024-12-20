@@ -6,12 +6,10 @@ See table in LAK Package section of mf6io.pdf for an explanation of ID,
 ID2, and Observation Type.
 """
 
-
 import os
 
 import flopy
 import numpy as np
-import pytest
 
 cases = "gwf_lakobs_01a"
 gwf = None
@@ -63,9 +61,7 @@ def build_model(dir, exe):
     )
 
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     gwfname = name
@@ -223,9 +219,7 @@ def test_mf6model(function_tmpdir, targets):
             expected_msg = True
             error_count += 1
 
-    assert error_count == 1, (
-        "error count = " + str(error_count) + "but should equal 1"
-    )
+    assert error_count == 1, "error count = " + str(error_count) + "but should equal 1"
 
     # fix the error and attempt to rerun model
     orig_fl = str(function_tmpdir / (cases + ".lak.obs"))

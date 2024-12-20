@@ -29,9 +29,9 @@ if not on_rtd:
         src = os.path.join(src_pth, on_dir)
         dst = os.path.join(".", on_dir)
         if os.path.exists(dst):
-            print("deleting...{}".format(dst))
+            print(f"deleting...{dst}")
             shutil.rmtree(dst)
-        print("copying {} -> {}".format(src, dst))
+        print(f"copying {src} -> {dst}")
         shutil.copytree(src, dst)
 
     # copy files
@@ -40,16 +40,16 @@ if not on_rtd:
         src = os.path.join(src_pth, file_name)
         dst = os.path.join(".", file_name)
         if os.path.exists(dst):
-            print("deleting...{}".format(dst))
+            print(f"deleting...{dst}")
             os.remove(dst)
-        print("copying {} -> {}".format(src, dst))
+        print(f"copying {src} -> {dst}")
         shutil.copy(src, dst)
 
 
 # -- Project information -----------------------------------------------------
 
-project = "MODFLOW 6 Program Documentation"
-copyright = "2023, MODFLOW Development Team"
+project = "MODFLOW 6"
+copyright = "2024, MODFLOW Development Team"
 author = "MODFLOW Development Team"
 
 # -- General configuration ---------------------------------------------------
@@ -88,7 +88,7 @@ if on_rtd:
     rtds_action_github_token = os.environ.get("GITHUB_TOKEN", None)
 
 # set master doc for readthedoce
-master_doc = 'index'
+master_doc = "index"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

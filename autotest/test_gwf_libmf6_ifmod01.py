@@ -11,13 +11,13 @@ not present in any of the output. The setup is two coupled
     1  1  1  1  1         1  1  1  1  1
 
 """
+
 import os
 
 import flopy
 import pytest
-from modflowapi import ModflowApi
-
 from framework import TestFramework
+from modflow_devtools.markers import requires_pkg
 
 cases = ["libgwf_ifmod01"]
 name_left = "leftmodel"
@@ -69,9 +69,7 @@ def get_model(dir, name):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=dir
     )
 
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     ims = flopy.mf6.ModflowIms(
         sim,
@@ -88,9 +86,7 @@ def get_model(dir, name):
 
     # submodel on the left:
     left_chd = [
-        [(ilay, irow, 0), h_left]
-        for irow in range(nrow)
-        for ilay in range(nlay)
+        [(ilay, irow, 0), h_left] for irow in range(nrow) for ilay in range(nlay)
     ]
     chd_spd_left = {0: left_chd}
 
@@ -207,6 +203,8 @@ def build_models(idx, test):
 
 
 def api_func(exe, idx, model_ws=None):
+    from modflowapi import ModflowApi
+
     if model_ws is None:
         model_ws = "."
     output_file_path = os.path.join(model_ws, "mfsim.stdout")
@@ -214,7 +212,7 @@ def api_func(exe, idx, model_ws=None):
     try:
         mf6 = ModflowApi(exe, working_directory=model_ws)
     except Exception as e:
-        print("Failed to load " + exe)
+        print("Failed to load " + str(exe))
         print("with message: " + str(e))
         return False, open(output_file_path).readlines()
 
@@ -255,9 +253,7 @@ def check_interface_models(mf6):
     # XT3D flag should be set to 1
     mem_addr = mf6.get_var_address("IXT3D", ifm_name_left, "NPF")
     ixt3d = mf6.get_value_ptr(mem_addr)[0]
-    assert (
-        ixt3d == 1
-    ), f"Interface model for {name_left} should have XT3D enabled"
+    assert ixt3d == 1, f"Interface model for {name_left} should have XT3D enabled"
 
     # check if n2 > n1, then cell 1 is below 2
     mem_addr = mf6.get_var_address("TOP", ifm_name_left, "DIS")
@@ -303,6 +299,7 @@ def check_interface_models(mf6):
                 ), "AREA in interface model does not match"
 
 
+@requires_pkg("modflowapi")
 @pytest.mark.parametrize("idx, name", enumerate(cases))
 def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(

@@ -14,9 +14,9 @@
 
 import os
 
+import flopy
 import numpy as np
 import pytest
-import flopy
 from framework import TestFramework
 
 
@@ -42,7 +42,7 @@ def get_bud(fname, srchStr):
             if srchStr in line:
                 # Read the package budget
                 line = next(f)
-                while not "TOTAL IN =" in line:
+                while "TOTAL IN =" not in line:
                     if "=" in line:
                         in_bud_lst.update(process_line(line))
 
@@ -53,7 +53,7 @@ def get_bud(fname, srchStr):
                 T_in = dct["IN"]
 
                 line = next(f)
-                while not "TOTAL OUT =" in line:
+                while "TOTAL OUT =" not in line:
                     if "=" in line:
                         out_bud_lst.update(process_line(line))
 
@@ -86,11 +86,7 @@ strt_gw_temp = [4.0, 4.0, 20.0]
 strt_lk_temp = [20.0, 20.0, 4.0]
 lak_leakance = [0.0, 1.0, 1.0]
 strt_lk_stg = [33.75, 33.75, 33.75]
-lkbdthkcnd = [
-    0.0001,
-    0.0001,
-    0.0001,
-]  # Thickness to consider for feature/gw conduction
+lkbdthkcnd = [0.0001, 0.0001, 0.0001]  # Thickness to consider for feature/gw conduction
 
 # Model units
 length_units = "m"
@@ -232,7 +228,7 @@ def build_models(idx, test):
     ws = test.workspace
     name = cases[idx]
 
-    print("Building model...{}".format(name))
+    print(f"Building model...{name}")
 
     # generate names for each model
     gwfname = "gwf-" + name
@@ -268,7 +264,7 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
     sim.register_ims_package(ims, [gwfname])
 
@@ -284,7 +280,7 @@ def build_models(idx, test):
         top=top,
         botm=botm,
         idomain=ibound,
-        filename="{}.dis".format(gwfname),
+        filename=f"{gwfname}.dis",
     )
 
     # Instantiate node property flow package
@@ -368,10 +364,7 @@ def build_models(idx, test):
                     ilak = int(lakibnd[k, i, j] - 1)
                     # back
                     if i > 0:
-                        if (
-                            lakibnd[k, i - 1, j] == 0
-                            and ibound[k, i - 1, j] == 1
-                        ):
+                        if lakibnd[k, i - 1, j] == 0 and ibound[k, i - 1, j] == 1:
                             ilakconn += 1
                             # by setting belev==telev, MF6 will automatically
                             # re-assign elevations based on cell dimensions
@@ -391,10 +384,7 @@ def build_models(idx, test):
 
                     # left
                     if j > 0:
-                        if (
-                            lakibnd[k, i, j - 1] == 0
-                            and ibound[k, i, j - 1] == 1
-                        ):
+                        if lakibnd[k, i, j - 1] == 0 and ibound[k, i, j - 1] == 1:
                             ilakconn += 1
                             h = [
                                 ilak,
@@ -412,10 +402,7 @@ def build_models(idx, test):
 
                     # right
                     if j < ncol - 1:
-                        if (
-                            lakibnd[k, i, j + 1] == 0
-                            and ibound[k, i, j + 1] == 1
-                        ):
+                        if lakibnd[k, i, j + 1] == 0 and ibound[k, i, j + 1] == 1:
                             ilakconn += 1
                             h = [
                                 ilak,
@@ -433,10 +420,7 @@ def build_models(idx, test):
 
                     # front
                     if i < nrow - 1:
-                        if (
-                            lakibnd[k, i + 1, j] == 0
-                            and ibound[k, i + 1, j] == 1
-                        ):
+                        if lakibnd[k, i + 1, j] == 0 and ibound[k, i + 1, j] == 1:
                             ilakconn += 1
                             h = [
                                 ilak,
@@ -470,15 +454,13 @@ def build_models(idx, test):
                     lak_lkup_dict.update({ilakconn: (k, i, j)})
 
     strtStg = strt_lk_stg[idx]
-    lakpackagedata = [
-        [0, strtStg, len(lakeconnectiondata), strt_lk_temp[idx], "lake1"]
-    ]
+    lakpackagedata = [[0, strtStg, len(lakeconnectiondata), strt_lk_temp[idx], "lake1"]]
     lak_pkdat_dict = {"filename": "lak_pakdata.in", "data": lakpackagedata}
 
     lakeperioddata = {0: []}
 
     lak_obs = {
-        "{}.lakeobs".format(gwfname): [
+        f"{gwfname}.lakeobs": [
             ("lakestage", "stage", "lake1"),
             ("gwexchng", "lak", "lake1"),
         ]
@@ -500,7 +482,7 @@ def build_models(idx, test):
         connectiondata=lakeconnectiondata,
         perioddata=lakeperioddata,
         observations=lak_obs,
-        filename="{}.lak".format(gwfname),
+        filename=f"{gwfname}.lak",
     )
 
     # pull in the tabfile defining the lake stage, vol, & surface area
@@ -514,7 +496,7 @@ def build_models(idx, test):
             #                        <stage>, <volume>,  <sarea>,
             tabinput.append([float(m_arr[0]), m_arr[1], m_arr[2]])
 
-    tab6_filename = "{}.laktab".format(gwfname)
+    tab6_filename = f"{gwfname}.laktab"
     flopy.mf6.ModflowUtllaktab(
         gwf,
         nrow=len(tabinput),
@@ -529,9 +511,7 @@ def build_models(idx, test):
     # Create GWE model
     # -----------------
 
-    gwe = flopy.mf6.ModflowGwe(
-        sim, modelname=gwename, model_nam_file="{}.nam".format(gwename)
-    )
+    gwe = flopy.mf6.ModflowGwe(sim, modelname=gwename, model_nam_file=f"{gwename}.nam")
     gwe.name_file.save_flows = True
 
     imsgwe = flopy.mf6.ModflowIms(
@@ -562,22 +542,22 @@ def build_models(idx, test):
         top=top,
         botm=botm,
         idomain=ibound,
-        filename="{}.dis".format(gwename),
+        filename=f"{gwename}.dis",
     )
 
     # Instantiating MODFLOW 6 energy transport initial temperatures
     strttemp = strt_gw_temp[idx]
-    flopy.mf6.ModflowGweic(
-        gwe, strt=strttemp, filename="{}.ic".format(gwename)
-    )
+    flopy.mf6.ModflowGweic(gwe, strt=strttemp, filename=f"{gwename}.ic")
 
     # Instantiate mobile storage and transfer package
     flopy.mf6.ModflowGweest(
         gwe,
         porosity=porosity,
-        cps=Cps,
-        rhos=rhos,
-        packagedata=[Cpw, rhow, lhv],
+        heat_capacity_water=Cpw,
+        density_water=rhow,
+        latent_heat_vaporization=lhv,
+        heat_capacity_solid=Cps,
+        density_solid=rhos,
         pname="MST-1",
         filename=f"{gwename}.mst",
     )
@@ -591,9 +571,7 @@ def build_models(idx, test):
         raise Exception()
 
     # Instantiate advection package
-    flopy.mf6.ModflowGweadv(
-        gwe, scheme=scheme, filename="{}.adv".format(gwename)
-    )
+    flopy.mf6.ModflowGweadv(gwe, scheme=scheme, filename=f"{gwename}.adv")
 
     # Instantiate dispersion package
     flopy.mf6.ModflowGwecnd(
@@ -601,7 +579,7 @@ def build_models(idx, test):
         xt3d_off=True,
         ktw=0.5918,
         kts=0.2700,
-        filename="{}.dsp".format(gwename),
+        filename=f"{gwename}.dsp",
     )
 
     # Instantiate source/sink mixing package
@@ -609,33 +587,27 @@ def build_models(idx, test):
         ("CHD-L", "AUX", "TEMPERATURE"),
         ("CHD-R", "AUX", "TEMPERATURE"),
     ]
-    flopy.mf6.ModflowGwessm(
-        gwe, sources=sourcerecarray, filename=f"{gwename}.ssm"
-    )
+    flopy.mf6.ModflowGwessm(gwe, sources=sourcerecarray, filename=f"{gwename}.ssm")
 
     # Instantiating MODFLOW 6 transport output control package
     flopy.mf6.ModflowGweoc(
         gwe,
-        budget_filerecord="{}.cbc".format(gwename),
-        temperature_filerecord="{}.ucn".format(gwename),
-        temperatureprintrecord=[
-            ("COLUMNS", 17, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        budget_filerecord=f"{gwename}.cbc",
+        temperature_filerecord=f"{gwename}.ucn",
+        temperatureprintrecord=[("COLUMNS", 17, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("TEMPERATURE", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("TEMPERATURE", "ALL"), ("BUDGET", "ALL")],
-        filename="{}.oc".format(gwename),
+        filename=f"{gwename}.oc",
     )
 
     # Instantiating MODFLOW 6 lake energy transport (lke) package
-    lkepackagedata = [
-        (0, strt_lk_temp[idx], K_therm_lakebed, lkbdthkcnd[idx], "lake1")
-    ]
+    lkepackagedata = [(0, strt_lk_temp[idx], K_therm_lakebed, lkbdthkcnd[idx], "lake1")]
 
     # lkeperioddata = {0: [(0, "STATUS", "CONSTANT"), (0, "TEMPERATURE", 4.0)]}
 
     # note: for specifying lake number, use fortran indexing!
     lke_obs = {
-        "{}.lakobs".format(gwename): [
+        f"{gwename}.lakobs": [
             ("resTemp", "temperature", 1),
             ("resGwEnerExchng", "lke", "lake1"),
         ]
@@ -655,7 +627,7 @@ def build_models(idx, test):
         # lakeperioddata=lkeperioddata,
         observations=lke_obs,
         pname="LKE-1",
-        filename="{}.lke".format(gwename),
+        filename=f"{gwename}.lke",
     )
 
     # GWF-GWE exchange
@@ -687,13 +659,13 @@ def check_output(idx, test):
     fname = gwename + ".ucn"
     fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
-    gwtempobj = flopy.utils.HeadFile(
-        fname, precision="double", text="TEMPERATURE"
-    )
+    gwtempobj = flopy.utils.HeadFile(fname, precision="double", text="TEMPERATURE")
     gwe_temps = gwtempobj.get_alldata()
 
     # gw exchng (item 'GWF') should be zero in heat transport budget
-    srchStr = "LKE-1 BUDGET FOR ENTIRE MODEL AT END OF TIME STEP    1, STRESS PERIOD   1"
+    srchStr = (
+        "LKE-1 BUDGET FOR ENTIRE MODEL AT END OF TIME STEP    1, STRESS PERIOD   1"
+    )
     fname = gwename + ".lst"
     fname = os.path.join(test.workspace, fname)
 
@@ -712,26 +684,18 @@ def check_output(idx, test):
         "There should be a cooling trend in the lake based on heat loss "
         "to the groundwater system"
     )
-    msg4 = (
-        "There should be a warming trend in the groundwater adjacent "
-        "to the lake"
-    )
+    msg4 = "There should be a warming trend in the groundwater adjacent to the lake"
     msg5 = (
         "Budget item 'GWF' should reflect heat entering the lake "
         "(via gw/sw exchange)"
     )
-    msg6 = (
-        "Budget item 'GWF' should reflect heat exiting the lake "
-        "(via gw/sw exchange)"
-    )
+    msg6 = "Budget item 'GWF' should reflect heat exiting the lake (via gw/sw exchange)"
 
     if name[-1] == "n":
-
         assert in_bud_lst["GWF"] == 0.0, msg1
         assert out_bud_lst["GWF"] == 0.0, msg1
 
     if name[-1] != "n":
-
         assert in_bud_lst["GWF"] > 0.0, msg5
         assert out_bud_lst["GWF"] > 0.0, msg6
 
@@ -750,7 +714,6 @@ def check_output(idx, test):
         assert slp > 0.0, msg4
 
     else:  # thermally reversed scenario (cold lake, warm gw)
-
         # conduction will be from gw cells to lake
         assert in_bud_lst["LAKEBED-COND"] > 0.0, msg2
         assert out_bud_lst["LAKEBED-COND"] == 0.0, msg2

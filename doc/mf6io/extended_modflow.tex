@@ -1,0 +1,14 @@
+Next to the standard \mf executable, a second, extended program executable is made available. This extended executable comes with additional functionality for which it partially relies on third-party libraries. Extended functionality includes the parallel computing capability and the use of NetCDF4 for input and output data. Because the external dependencies increase the complexity of the installation procedure, \mf will remain available in its standard set of functionality.
+
+Extended \mf contains all features available in the standard executable, runs on the same input configuration, and produces the same results. Conversely, when running with the standard executable, some features described in this document (HPC Utility and NetCDF4 input and output, for example) will not be available and their configuration will be ignored or the program will terminate with an error. These features will be labeled accordingly below.
+
+This sections describes input files that are only available with Extended \mf.  For more information on using Extended \mf, refer to the \href{https://github.com/MODFLOW-USGS/modflow6/wiki}{MODFLOW 6 Wiki} on the version-controlled \href{https://github.com/MODFLOW-USGS/modflow6}{MODFLOW 6 repository}.
+
+\newpage
+\subsection{NetCDF (NCF) Configuration Utility}
+\input{utl_ncf.tex}
+
+\newpage
+\subsection{High Performance Computing (HPC) Utility}
+\input{utl_hpc.tex}
+

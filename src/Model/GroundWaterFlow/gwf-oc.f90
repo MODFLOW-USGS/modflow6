@@ -47,9 +47,6 @@ contains
     !
     ! -- Initialize block parser
     call ocobj%parser%Initialize(inunit, iout)
-    !
-    ! -- Return
-    return
   end subroutine oc_cr
 
   !> @ brief Allocate and read GwfOcType
@@ -71,7 +68,7 @@ contains
     ! -- Initialize variables
     inodata = 0
     nocdobj = 2
-    allocate (this%ocdobj(nocdobj))
+    allocate (this%ocds(nocdobj))
     do i = 1, nocdobj
       call ocd_cr(ocdobjptr)
       select case (i)
@@ -84,7 +81,7 @@ contains
                                 'COLUMNS 10 WIDTH 11 DIGITS 4 GENERAL ', &
                                 this%iout, dnodata)
       end select
-      this%ocdobj(i) = ocdobjptr
+      this%ocds(i) = ocdobjptr
       deallocate (ocdobjptr)
     end do
     !
@@ -92,9 +89,6 @@ contains
     if (this%inunit > 0) then
       call this%read_options()
     end if
-    !
-    ! -- Return
-    return
   end subroutine oc_ar
 
 end module GwfOcModule

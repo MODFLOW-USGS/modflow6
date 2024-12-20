@@ -113,33 +113,51 @@
 		<Filter Name="Exchange">
 		<File RelativePath="..\src\Exchange\BaseExchange.f90"/>
 		<File RelativePath="..\src\Exchange\DisConnExchange.f90"/>
+		<File RelativePath="..\src\Exchange\exg-chfgwf.f90"/>
 		<File RelativePath="..\src\Exchange\exg-gwegwe.f90"/>
 		<File RelativePath="..\src\Exchange\exg-gwfgwe.f90"/>
 		<File RelativePath="..\src\Exchange\exg-gwfgwf.f90"/>
 		<File RelativePath="..\src\Exchange\exg-gwfgwt.f90"/>
 		<File RelativePath="..\src\Exchange\exg-gwfprt.f90"/>
 		<File RelativePath="..\src\Exchange\exg-gwtgwt.f90"/>
+		<File RelativePath="..\src\Exchange\exg-olfgwf.f90"/>
 		<File RelativePath="..\src\Exchange\exg-swfgwf.f90"/>
 		<File RelativePath="..\src\Exchange\GhostNode.f90"/>
 		<File RelativePath="..\src\Exchange\GwfExchangeMover.f90"/>
 		<File RelativePath="..\src\Exchange\NumericalExchange.f90"/></Filter>
 		<Filter Name="Idm">
 		<Filter Name="selector">
+		<File RelativePath="..\src\Idm\selector\IdmChfDfnSelector.f90"/>
 		<File RelativePath="..\src\Idm\selector\IdmDfnSelector.f90"/>
 		<File RelativePath="..\src\Idm\selector\IdmExgDfnSelector.f90"/>
 		<File RelativePath="..\src\Idm\selector\IdmGweDfnSelector.f90"/>
 		<File RelativePath="..\src\Idm\selector\IdmGwfDfnSelector.f90"/>
 		<File RelativePath="..\src\Idm\selector\IdmGwtDfnSelector.f90"/>
+		<File RelativePath="..\src\Idm\selector\IdmOlfDfnSelector.f90"/>
 		<File RelativePath="..\src\Idm\selector\IdmPrtDfnSelector.f90"/>
 		<File RelativePath="..\src\Idm\selector\IdmSimDfnSelector.f90"/>
 		<File RelativePath="..\src\Idm\selector\IdmSwfDfnSelector.f90"/>
 		<File RelativePath="..\src\Idm\selector\IdmUtlDfnSelector.f90"/></Filter>
+		<File RelativePath="..\src\Idm\chf-cdbidm.f90"/>
+		<File RelativePath="..\src\Idm\chf-chdidm.f90"/>
+		<File RelativePath="..\src\Idm\chf-cxsidm.f90"/>
+		<File RelativePath="..\src\Idm\chf-dfwidm.f90"/>
+		<File RelativePath="..\src\Idm\chf-dis2didm.f90"/>
+		<File RelativePath="..\src\Idm\chf-disv1didm.f90"/>
+		<File RelativePath="..\src\Idm\chf-disv2didm.f90"/>
+		<File RelativePath="..\src\Idm\chf-flwidm.f90"/>
+		<File RelativePath="..\src\Idm\chf-icidm.f90"/>
+		<File RelativePath="..\src\Idm\chf-namidm.f90"/>
+		<File RelativePath="..\src\Idm\chf-stoidm.f90"/>
+		<File RelativePath="..\src\Idm\chf-zdgidm.f90"/>
+		<File RelativePath="..\src\Idm\exg-chfgwfidm.f90"/>
 		<File RelativePath="..\src\Idm\exg-gwegweidm.f90"/>
 		<File RelativePath="..\src\Idm\exg-gwfgweidm.f90"/>
 		<File RelativePath="..\src\Idm\exg-gwfgwfidm.f90"/>
 		<File RelativePath="..\src\Idm\exg-gwfgwtidm.f90"/>
 		<File RelativePath="..\src\Idm\exg-gwfprtidm.f90"/>
 		<File RelativePath="..\src\Idm\exg-gwtgwtidm.f90"/>
+		<File RelativePath="..\src\Idm\exg-olfgwfidm.f90"/>
 		<File RelativePath="..\src\Idm\exg-swfgwfidm.f90"/>
 		<File RelativePath="..\src\Idm\gwe-cndidm.f90"/>
 		<File RelativePath="..\src\Idm\gwe-ctpidm.f90"/>
@@ -162,6 +180,7 @@
 		<File RelativePath="..\src\Idm\gwf-rchaidm.f90"/>
 		<File RelativePath="..\src\Idm\gwf-rchidm.f90"/>
 		<File RelativePath="..\src\Idm\gwf-rividm.f90"/>
+		<File RelativePath="..\src\Idm\gwf-stoidm.f90"/>
 		<File RelativePath="..\src\Idm\gwf-welidm.f90"/>
 		<File RelativePath="..\src\Idm\gwt-cncidm.f90"/>
 		<File RelativePath="..\src\Idm\gwt-disidm.f90"/>
@@ -170,6 +189,18 @@
 		<File RelativePath="..\src\Idm\gwt-dspidm.f90"/>
 		<File RelativePath="..\src\Idm\gwt-icidm.f90"/>
 		<File RelativePath="..\src\Idm\gwt-namidm.f90"/>
+		<File RelativePath="..\src\Idm\olf-cdbidm.f90"/>
+		<File RelativePath="..\src\Idm\olf-chdidm.f90"/>
+		<File RelativePath="..\src\Idm\olf-cxsidm.f90"/>
+		<File RelativePath="..\src\Idm\olf-dfwidm.f90"/>
+		<File RelativePath="..\src\Idm\olf-dis2didm.f90"/>
+		<File RelativePath="..\src\Idm\olf-disv1didm.f90"/>
+		<File RelativePath="..\src\Idm\olf-disv2didm.f90"/>
+		<File RelativePath="..\src\Idm\olf-flwidm.f90"/>
+		<File RelativePath="..\src\Idm\olf-icidm.f90"/>
+		<File RelativePath="..\src\Idm\olf-namidm.f90"/>
+		<File RelativePath="..\src\Idm\olf-stoidm.f90"/>
+		<File RelativePath="..\src\Idm\olf-zdgidm.f90"/>
 		<File RelativePath="..\src\Idm\prt-disidm.f90"/>
 		<File RelativePath="..\src\Idm\prt-disvidm.f90"/>
 		<File RelativePath="..\src\Idm\prt-mipidm.f90"/>
@@ -181,14 +212,15 @@
 		<File RelativePath="..\src\Idm\swf-cxsidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-dfwidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-dis2didm.f90"/>
-		<File RelativePath="..\src\Idm\swf-disidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-disv1didm.f90"/>
 		<File RelativePath="..\src\Idm\swf-disv2didm.f90"/>
 		<File RelativePath="..\src\Idm\swf-flwidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-icidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-namidm.f90"/>
+		<File RelativePath="..\src\Idm\swf-stoidm.f90"/>
 		<File RelativePath="..\src\Idm\swf-zdgidm.f90"/>
-		<File RelativePath="..\src\Idm\utl-hpcidm.f90"/></Filter>
+		<File RelativePath="..\src\Idm\utl-hpcidm.f90"/>
+		<File RelativePath="..\src\Idm\utl-ncfidm.f90"/></Filter>
 		<Filter Name="Model">
 		<Filter Name="Connection">
 		<File RelativePath="..\src\Model\Connection\CellWithNbrs.f90"/>
@@ -227,6 +259,10 @@
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe-uze.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe.f90"/></Filter>
 		<Filter Name="GroundWaterFlow">
+		<Filter Name="submodules">
+		<File RelativePath="..\src\Model\GroundWaterFlow\submodules\gwf-sfr-constant.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\submodules\gwf-sfr-steady.f90"/>
+	    <File RelativePath="..\src\Model\GroundWaterFlow\submodules\gwf-sfr-transient.f90"/></Filter>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf-api.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf-buy.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf-chd.f90"/>
@@ -278,23 +314,32 @@
 		<File RelativePath="..\src\Model\ModelUtilities\GwfConductanceUtils.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwfMvrPeriodData.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwfNpfOptions.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\GwfSfrCommon.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwfStorageUtils.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwfVscInputData.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwtDspOptions.f90"/>
-		<File RelativePath="..\src\Model\ModelUtilities\GwtSpc.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\TspSpc.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\ModelPackageInput.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Mover.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\PackageMover.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\ReleaseSchedule.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\SfrCrossSectionManager.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\SfrCrossSectionUtils.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\SwfCxsUtils.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\TimeSelect.f90"/>
-		<File RelativePath="..\src\Model\ModelUtilities\TrackData.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\TimeStepSelect.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\TrackFile.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\TrackControl.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\TspAdvOptions.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\UzfCellGroup.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\UzfEtUtil.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\VectorInterpolation.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Xt3dAlgorithm.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Xt3dInterface.f90"/></Filter>
+		<Filter Name="ChannelFlow">
+		<File RelativePath="..\src\Model\ChannelFlow\chf.f90"/></Filter>
+		<Filter Name="OverlandFlow">
+		<File RelativePath="..\src\Model\OverlandFlow\olf.f90"/></Filter>
 		<Filter Name="ParticleTracking">
 		<File RelativePath="..\src\Model\ParticleTracking\prt-fmi.f90"/>
 		<File RelativePath="..\src\Model\ParticleTracking\prt-mip.f90"/>
@@ -414,13 +459,51 @@
 		<File RelativePath="..\src\Utilities\ArrayRead\Integer1dReader.f90"/>
 		<File RelativePath="..\src\Utilities\ArrayRead\Integer2dReader.f90"/>
 		<File RelativePath="..\src\Utilities\ArrayRead\LayeredArrayReader.f90"/></Filter>
+		<Filter Name="Export">
+		<File RelativePath="..\src\Utilities\Export\DisNCMesh.f90">
+			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/></File>
+		<File RelativePath="..\src\Utilities\Export\DisNCStructured.f90">
+			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/></File>
+		<File RelativePath="..\src\Utilities\Export\DisvNCMesh.f90">
+			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/></File>
+		<File RelativePath="..\src\Utilities\Export\MeshNCModel.f90">
+			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/></File>
+		<File RelativePath="..\src\Utilities\Export\ModelExport.f90"/>
+		<File RelativePath="..\src\Utilities\Export\NCExportCreate.f90">
+			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/></File>
+		<File RelativePath="..\src\Utilities\Export\NCModel.f90"/></Filter>
 		<Filter Name="Idm">
 		<Filter Name="mf6blockfile">
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\AsciiInputLoadType.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\IdmMf6File.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\LoadMf6File.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\LoadNCInput.F90">
+			<FileConfiguration Name="Debug|Win32">
+			<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+			<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+			<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+			<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\Mf6FileGridInput.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\Mf6FileListInput.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\Mf6FileStoInput.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\StructArray.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\StructVector.f90"/></Filter>
 		<File RelativePath="..\src\Utilities\Idm\BoundInputContext.f90"/>
@@ -433,7 +516,15 @@
 		<File RelativePath="..\src\Utilities\Idm\ModelPackageInputs.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\ModflowInput.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\SourceCommon.f90"/>
-		<File RelativePath="..\src\Utilities\Idm\SourceLoad.F90"/></Filter>
+		<File RelativePath="..\src\Utilities\Idm\SourceLoad.F90">
+			<FileConfiguration Name="Debug|Win32">
+			<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+			<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+			<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+			<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File></Filter>
 		<Filter Name="Libraries">
 		<File RelativePath="..\src\Utilities\Libraries\blas\blas1_d.f90"/>
 		<File RelativePath="..\src\Utilities\Libraries\daglib\dag_module.f90"/>
@@ -450,11 +541,29 @@
 		<File RelativePath="..\src\Utilities\Matrix\SparseMatrix.f90"/></Filter>
 		<Filter Name="Memory">
 		<File RelativePath="..\src\Utilities\Memory\Memory.f90"/>
+		<File RelativePath="..\src\Utilities\Memory\MemoryContainerIterator.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemoryHelper.f90"/>
-		<File RelativePath="..\src\Utilities\Memory\MemoryList.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemoryManager.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemoryManagerExt.f90"/>
-		<File RelativePath="..\src\Utilities\Memory\MemorySetHandler.f90"/></Filter>
+		<File RelativePath="..\src\Utilities\Memory\MemorySetHandler.f90"/>
+		<File RelativePath="..\src\Utilities\Memory\MemoryStore.f90"/></Filter>
+		<Filter Name="netcdf">
+		<File RelativePath="..\src\Utilities\Idm\netcdf\NCArrayReader.f90">
+			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/></File>
+		<File RelativePath="..\src\Utilities\Idm\netcdf\NCContextBuild.f90">
+			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/></File>
+		<File RelativePath="..\src\Utilities\Idm\netcdf\NCFileVars.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\netcdf\NetCDFCommon.f90">
+			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/></File></Filter>
 		<Filter Name="Observation">
 		<File RelativePath="..\src\Utilities\Observation\Obs.f90"/>
 		<File RelativePath="..\src\Utilities\Observation\ObsContainer.f90"/>
@@ -519,15 +628,23 @@
 		<File RelativePath="..\src\Utilities\HeadFileReader.f90"/>
 		<File RelativePath="..\src\Utilities\HGeoUtil.f90"/>
 		<File RelativePath="..\src\Utilities\InputOutput.f90"/>
+		<File RelativePath="..\src\Utilities\Iterator.f90"/>
 		<File RelativePath="..\src\Utilities\Iunit.f90"/>
+		<File RelativePath="..\src\Utilities\KeyValueList.f90"/>
+		<File RelativePath="..\src\Utilities\KeyValueListIterator.f90"/>
+		<File RelativePath="..\src\Utilities\KeyValueNode.f90"/>
 		<File RelativePath="..\src\Utilities\kind.f90"/>
 		<File RelativePath="..\src\Utilities\List.f90"/>
+		<File RelativePath="..\src\Utilities\ListIterator.f90"/>
+		<File RelativePath="..\src\Utilities\ListNode.f90"/>
 		<File RelativePath="..\src\Utilities\ListReader.f90"/>
 		<File RelativePath="..\src\Utilities\LongLineReader.f90"/>
 		<File RelativePath="..\src\Utilities\MathUtil.f90"/>
 		<File RelativePath="..\src\Utilities\Message.f90"/>
 		<File RelativePath="..\src\Utilities\OpenSpec.f90"/>
 		<File RelativePath="..\src\Utilities\PackageBudget.f90"/>
+		<File RelativePath="..\src\Utilities\PtrHashTable.f90"/>
+		<File RelativePath="..\src\Utilities\PtrHashTableIterator.f90"/>
 		<File RelativePath="..\src\Utilities\Sim.f90"/>
 		<File RelativePath="..\src\Utilities\SimStages.f90"/>
 		<File RelativePath="..\src\Utilities\SimVariables.f90"/>

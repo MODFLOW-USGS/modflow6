@@ -21,6 +21,7 @@ gwf-npf.dfn
 gwf-rch.dfn
 gwf-rcha.dfn
 gwf-riv.dfn
+gwf-sto.dfn
 gwf-wel.dfn
 
 # gwt model
@@ -41,18 +42,29 @@ gwe-disv.dfn
 gwe-disu.dfn
 gwe-dis.dfn
 
-# swf model
-swf-nam.dfn
-swf-disv1d.dfn
-swf-dis2d.dfn
-swf-disv2d.dfn
-swf-cxs.dfn
-swf-dfw.dfn
-swf-ic.dfn
-swf-cdb.dfn
-swf-chd.dfn
-swf-flw.dfn
-swf-zdg.dfn
+# chf model
+chf-nam.dfn
+chf-disv1d.dfn
+chf-cxs.dfn
+chf-dfw.dfn
+chf-ic.dfn
+chf-cdb.dfn
+chf-chd.dfn
+chf-flw.dfn
+chf-sto.dfn
+chf-zdg.dfn
+
+# olf model
+olf-nam.dfn
+olf-dis2d.dfn
+olf-disv2d.dfn
+olf-dfw.dfn
+olf-ic.dfn
+olf-cdb.dfn
+olf-chd.dfn
+olf-flw.dfn
+olf-sto.dfn
+olf-zdg.dfn
 
 # prt model
 prt-nam.dfn
@@ -61,13 +73,15 @@ prt-disv.dfn
 prt-mip.dfn
 
 # exchanges
+exg-chfgwf.dfn
 exg-gwfgwf.dfn
 exg-gwfgwt.dfn
 exg-gwtgwt.dfn
 exg-gwfgwe.dfn
 exg-gwegwe.dfn
-exg-swfgwf.dfn
 exg-gwfprt.dfn
+exg-olfgwf.dfn
 
 # utils
 utl-hpc.dfn
+utl-ncf.dfn

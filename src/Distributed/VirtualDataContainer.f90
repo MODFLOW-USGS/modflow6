@@ -6,7 +6,7 @@ module VirtualDataContainerModule
   use STLVecIntModule
   use ConstantsModule, only: LENCOMPONENTNAME, LENMEMPATH, LENCONTEXTNAME
   use MemoryHelperModule, only: create_mem_path
-  use MemoryManagerModule, only: get_from_memorylist
+  use MemoryManagerModule, only: get_from_memorystore
   implicit none
   private
 
@@ -268,7 +268,7 @@ contains
       ! create new virtual memory item
       vm_pth = this%get_vrt_mem_path(vd%var_name, vd%subcmp_name)
       call vd%vm_allocate(vd%var_name, vm_pth, shape)
-      call get_from_memorylist(vd%var_name, vm_pth, vd%virtual_mt, found)
+      call get_from_memorystore(vd%var_name, vm_pth, vd%virtual_mt, found)
       if (vd%map_type > 0) then
         vd%remote_to_virtual => this%element_luts(vd%map_type)%remote_to_virtual
         vd%remote_elem_shift => this%element_maps(vd%map_type)%remote_elem_shift

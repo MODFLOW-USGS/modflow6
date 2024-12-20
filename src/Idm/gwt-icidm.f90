@@ -9,13 +9,21 @@ module GwtIcInputModule
   public gwt_ic_block_definitions
   public GwtIcParamFoundType
   public gwt_ic_multi_package
+  public gwt_ic_subpackages
 
   type GwtIcParamFoundType
     logical :: export_ascii = .false.
+    logical :: export_nc = .false.
     logical :: strt = .false.
   end type GwtIcParamFoundType
 
   logical :: gwt_ic_multi_package = .false.
+
+  character(len=16), parameter :: &
+    gwt_ic_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     gwtic_export_ascii = InputParamDefinitionType &
@@ -27,6 +35,25 @@ module GwtIcInputModule
     'EXPORT_ASCII', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'export array variables to layered ascii files.', & ! longname
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwtic_export_nc = InputParamDefinitionType &
+    ( &
+    'GWT', & ! component
+    'IC', & ! subcomponent
+    'OPTIONS', & ! block
+    'EXPORT_ARRAY_NETCDF', & ! tag name
+    'EXPORT_NC', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'export array variables to netcdf output files.', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -44,6 +71,7 @@ module GwtIcInputModule
     'STRT', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
+    'starting concentration', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -55,6 +83,7 @@ module GwtIcInputModule
     gwt_ic_param_definitions(*) = &
     [ &
     gwtic_export_ascii, &
+    gwtic_export_nc, &
     gwtic_strt &
     ]
 
@@ -70,6 +99,7 @@ module GwtIcInputModule
     '', & ! fortran variable
     '', & ! type
     '', & ! shape
+    '', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

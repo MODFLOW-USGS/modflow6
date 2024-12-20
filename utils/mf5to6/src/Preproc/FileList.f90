@@ -5,8 +5,9 @@ module FileListModule
                                  FCDATAOUT, FCOUTPUT, FCDATABOUT
   use FileTypeModule,      only: FileType, ConstructFileType, CastAsFileType
   use InputOutputModule,   only: same_word
-  use ListModule,          only: ListType, ListNodeType
-  use SimModule,           only: store_warning, store_error, ustop
+  use ListModule,          only: ListType
+  use ListNodeModule,      only: ListNodeType
+  use SimPHMFModule,       only: store_warning, store_error, ustop
   use UtilitiesModule,     only: close_file
 
   private

@@ -1,12 +1,9 @@
 import os
 import shutil
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator, List, Optional, Tuple, Union
+from typing import Optional, Union
 from warnings import warn
-
-import numpy as np
-from flopy.utils import CellBudgetFile
-from flopy.utils.compare import compare_heads
 
 COMPARE_PROGRAMS = (
     "mf2005",
@@ -15,7 +12,7 @@ COMPARE_PROGRAMS = (
     "mflgr",
     "libmf6",
     "mf6",
-    "mf6_regression"
+    "mf6_regression",
     # todo: "mp7"
 )
 EXTTEXT = {
@@ -225,8 +222,7 @@ def get_matching_files(
         extensions = [extensions]
 
     for ext in extensions:
-        for file in workspace.glob(f"*.{ext}"):
-            yield file
+        yield from workspace.glob(f"*.{ext}")
 
 
 def get_mf6_comparison(src):
@@ -479,7 +475,7 @@ def get_mf6_ftypes(namefile, ftypekeys):
 
 def get_regression_files(
     workspace: os.PathLike, extensions
-) -> Tuple[List[str], List[str]]:
+) -> tuple[list[str], list[str]]:
     if isinstance(extensions, str):
         extensions = [extensions]
     files = os.listdir(workspace)
@@ -491,9 +487,7 @@ def get_regression_files(
             for extension in extensions:
                 if file_name.lower().endswith(extension):
                     files0.append(fpth0)
-                    fpth1 = os.path.join(
-                        workspace, "mf6_regression", file_name
-                    )
+                    fpth1 = os.path.join(workspace, "mf6_regression", file_name)
                     files1.append(fpth1)
                     break
     return files0, files1
@@ -583,9 +577,7 @@ def setup_model(namefile, dst, remove_existing=True, extrafiles=None):
             print(f"{srcf} does not exist")
 
 
-def setup_mf6(
-    src, dst, mfnamefile="mfsim.nam", extrafiles=None, remove_existing=True
-):
+def setup_mf6(src, dst, mfnamefile="mfsim.nam", extrafiles=None, remove_existing=True):
     """
     Setup an MF6 simulation test, copying input files from the source
     to the destination workspace.
@@ -668,9 +660,7 @@ def setup_mf6(
     return mf6inp, mf6outp
 
 
-def setup_mf6_comparison(
-    src, dst, cmp_exe="mf6", overwrite=True, verbose=False
-):
+def setup_mf6_comparison(src, dst, cmp_exe="mf6", overwrite=True, verbose=False):
     """Setup an output comparison for MODFLOW 6 simulation.
 
     Parameters
@@ -694,7 +684,7 @@ def setup_mf6_comparison(
     """
 
     if cmp_exe is None:
-        warn(f"No action provided, aborting")
+        warn("No action provided, aborting")
         return
 
     # create and/or clean dest dir if needed

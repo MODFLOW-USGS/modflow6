@@ -280,6 +280,7 @@ contains
     ! DIS
     deallocate (this%dis_ndim)
     deallocate (this%dis_nodes)
+    deallocate (this%dis_nodesuser)
     deallocate (this%dis_nodeuser)
     deallocate (this%dis_nja)
     deallocate (this%dis_njas)
@@ -310,8 +311,6 @@ contains
 
     obj_ptr => model_list%GetItem(idx)
     v_model => cast_as_virtual_model(obj_ptr)
-    return
-
   end function get_virtual_model_from_list
 
   function cast_as_virtual_model(obj_ptr) result(v_model)

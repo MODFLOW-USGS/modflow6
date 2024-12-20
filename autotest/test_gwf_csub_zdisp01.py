@@ -3,10 +3,9 @@ import os
 import flopy
 import numpy as np
 import pytest
-from flopy.utils.compare import compare_heads
-
-from framework import TestFramework
 from conftest import try_get_target
+from flopy.utils.compare import compare_heads
+from framework import TestFramework
 
 cases = ["csub_zdisp01"]
 cmppth = "mfnwt"
@@ -202,9 +201,7 @@ def build_models(idx, test):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    tdis = flopy.mf6.ModflowTdis(
-        sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
 
     # create gwf model
     zthick = [top - botm[0], botm[0] - botm[1], botm[1] - botm[2]]
@@ -299,9 +296,7 @@ def build_models(idx, test):
     )
 
     # drain
-    drn = flopy.mf6.ModflowGwfdrn(
-        gwf, maxbound=maxdrd, stress_period_data=drd6
-    )
+    drn = flopy.mf6.ModflowGwfdrn(gwf, maxbound=maxdrd, stress_period_data=drd6)
 
     # wel file
     wel = flopy.mf6.ModflowGwfwel(
@@ -414,9 +409,7 @@ def check_output(idx, test):
     fn = f"{os.path.basename(test.name)}.total_comp.hds"
     fpth = os.path.join(test.workspace, "mfnwt", fn)
     try:
-        sobj = flopy.utils.HeadFile(
-            fpth, text="LAYER COMPACTION", verbose=False
-        )
+        sobj = flopy.utils.HeadFile(fpth, text="LAYER COMPACTION", verbose=False)
         tc0 = sobj.get_ts((2, wrp[0], wcp[0]))
     except:
         assert False, f'could not load data from "{fpth}"'
@@ -491,9 +484,7 @@ def check_output(idx, test):
     msg = f"maximum absolute total-budget difference ({diffmax}) "
 
     # write summary
-    fpth = os.path.join(
-        test.workspace, f"{os.path.basename(test.name)}.bud.cmp.out"
-    )
+    fpth = os.path.join(test.workspace, f"{os.path.basename(test.name)}.bud.cmp.out")
     with open(fpth, "w") as f:
         for i in range(diff.shape[0]):
             if i == 0:

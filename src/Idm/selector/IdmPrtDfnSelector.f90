@@ -16,6 +16,7 @@ module IdmPrtDfnSelectorModule
   public :: prt_aggregate_definitions
   public :: prt_block_definitions
   public :: prt_idm_multi_package
+  public :: prt_idm_subpackages
   public :: prt_idm_integrated
 
 contains
@@ -31,6 +32,12 @@ contains
     type(InputBlockDefinitionType), dimension(:), target :: input_dfn_target
     input_dfn => input_dfn_target
   end subroutine set_block_pointer
+
+  subroutine set_subpkg_pointer(subpkg_list, subpkg_list_target)
+    character(len=16), dimension(:), pointer :: subpkg_list
+    character(len=16), dimension(:), target :: subpkg_list_target
+    subpkg_list => subpkg_list_target
+  end subroutine set_subpkg_pointer
 
   function prt_param_definitions(subcomponent) result(input_definition)
     character(len=*), intent(in) :: subcomponent
@@ -105,6 +112,23 @@ contains
     end select
     return
   end function prt_idm_multi_package
+
+  function prt_idm_subpackages(subcomponent) result(subpackages)
+    character(len=*), intent(in) :: subcomponent
+    character(len=16), dimension(:), pointer :: subpackages
+    select case (subcomponent)
+    case ('NAM')
+      call set_subpkg_pointer(subpackages, prt_nam_subpackages)
+    case ('DIS')
+      call set_subpkg_pointer(subpackages, prt_dis_subpackages)
+    case ('DISV')
+      call set_subpkg_pointer(subpackages, prt_disv_subpackages)
+    case ('MIP')
+      call set_subpkg_pointer(subpackages, prt_mip_subpackages)
+    case default
+    end select
+    return
+  end function prt_idm_subpackages
 
   function prt_idm_integrated(subcomponent) result(integrated)
     character(len=*), intent(in) :: subcomponent

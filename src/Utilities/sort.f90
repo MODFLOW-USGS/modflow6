@@ -17,13 +17,10 @@ module SortModule
   end interface
 
 contains
+
+  !< @brief quick sort that also includes an index number
+  !<
   subroutine qsort_int1d(indx, v, reverse)
-! **************************************************************************
-! qsort -- quick sort that also includes an index number
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
     ! -- dummy arguments
     integer(I4B), dimension(:), intent(inout) :: indx
     integer(I4B), dimension(:), intent(inout) :: v
@@ -147,18 +144,11 @@ contains
         j = j - 1
       end do
     end if
-    !
-    ! -- return
-    return
   end subroutine qsort_int1d
 
+  !< @brief quick sort that also includes an index number
+  !<
   subroutine qsort_dbl1d(indx, v, reverse)
-! **************************************************************************
-! qsort -- quick sort that also includes an index number
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
     ! -- dummy arguments
     integer(I4B), dimension(:), intent(inout) :: indx
     real(DP), dimension(:), intent(inout) :: v
@@ -282,9 +272,6 @@ contains
         j = j - 1
       end do
     end if
-    !
-    ! -- return
-    return
   end subroutine qsort_dbl1d
 
   subroutine unique_values_int1d(a, b)
@@ -337,9 +324,6 @@ contains
     ! -- allocate tarr and create idxarr
     deallocate (tarr)
     deallocate (indxarr)
-    !
-    ! -- return
-    return
   end subroutine unique_values_int1d
 
   subroutine unique_values_dbl1d(a, b)
@@ -392,18 +376,11 @@ contains
     ! -- allocate tarr and create idxarr
     deallocate (tarr)
     deallocate (indxarr)
-    !
-    ! -- return
-    return
   end subroutine unique_values_dbl1d
 
+  !< @brief heap selection
+  !<
   subroutine selectn(indx, v, reverse)
-! **************************************************************************
-! selectn -- heap selection
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
     ! -- dummy arguments
     integer(I4B), dimension(:), intent(inout) :: indx
     real(DP), dimension(:), intent(inout) :: v
@@ -481,9 +458,6 @@ contains
         j = j - 1
       end do
     end if
-    !
-    ! -- return
-    return
   end subroutine selectn
 
   subroutine rswap(a, b)
@@ -497,9 +471,6 @@ contains
     d = a
     a = b
     b = d
-    !
-    ! -- return
-    return
   end subroutine rswap
 
   subroutine iswap(ia, ib)
@@ -513,9 +484,6 @@ contains
     id = ia
     ia = ib
     ib = id
-    !
-    ! -- return
-    return
   end subroutine iswap
 
 end module SortModule

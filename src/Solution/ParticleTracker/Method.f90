@@ -2,6 +2,7 @@
 module MethodModule
 
   use KindModule, only: DP, I4B, LGP
+  use ConstantsModule, only: DZERO
   use ErrorUtilModule, only: pstop
   use SubcellModule, only: SubcellType
   use ParticleModule
@@ -9,8 +10,9 @@ module MethodModule
   use PrtFmiModule, only: PrtFmiType
   use CellModule, only: CellType
   use CellDefnModule, only: CellDefnType
-  use TrackModule, only: TrackFileControlType
+  use TrackControlModule, only: TrackControlType
   use TimeSelectModule, only: TimeSelectType
+  use MathUtilModule, only: is_close
   implicit none
 
   private
@@ -27,12 +29,12 @@ module MethodModule
   !! depending on cell geometry (implementing the strategy pattern).
   !<
   type, abstract :: MethodType
-    character(len=40), pointer, public :: type !< method name
+    character(len=40), pointer, public :: name !< method name
     logical(LGP), public :: delegates !< whether the method delegates
     type(PrtFmiType), pointer, public :: fmi => null() !< ptr to fmi
     class(CellType), pointer, public :: cell => null() !< ptr to the current cell
     class(SubcellType), pointer, public :: subcell => null() !< ptr to the current subcell
-    type(TrackFileControlType), pointer, public :: trackfilectl => null() !< ptr to track file control
+    type(TrackControlType), pointer, public :: trackctl => null() !< ptr to track file control
     type(TimeSelectType), pointer, public :: tracktimes => null() !< ptr to user-defined tracking times
     integer(I4B), dimension(:), pointer, contiguous, public :: izone => null() !< pointer to zone numbers
     real(DP), dimension(:), pointer, contiguous, public :: flowja => null() !< pointer to intercell flows
@@ -50,7 +52,7 @@ module MethodModule
     procedure :: save
     procedure :: track
     procedure :: try_pass
-    procedure :: update
+    procedure :: check
   end type MethodType
 
   abstract interface
@@ -70,13 +72,13 @@ module MethodModule
 
 contains
 
-  subroutine init(this, fmi, cell, subcell, trackfilectl, tracktimes, &
+  subroutine init(this, fmi, cell, subcell, trackctl, tracktimes, &
                   izone, flowja, porosity, retfactor)
     class(MethodType), intent(inout) :: this
     type(PrtFmiType), intent(in), pointer, optional :: fmi
     class(CellType), intent(in), pointer, optional :: cell
     class(SubcellType), intent(in), pointer, optional :: subcell
-    type(TrackFileControlType), intent(in), pointer, optional :: trackfilectl
+    type(TrackControlType), intent(in), pointer, optional :: trackctl
     type(TimeSelectType), intent(in), pointer, optional :: tracktimes
     integer(I4B), intent(in), pointer, optional :: izone(:)
     real(DP), intent(in), pointer, optional :: flowja(:)
@@ -86,7 +88,7 @@ contains
     if (present(fmi)) this%fmi => fmi
     if (present(cell)) this%cell => cell
     if (present(subcell)) this%subcell => subcell
-    if (present(trackfilectl)) this%trackfilectl => trackfilectl
+    if (present(trackctl)) this%trackctl => trackctl
     if (present(tracktimes)) this%tracktimes => tracktimes
     if (present(izone)) this%izone => izone
     if (present(flowja)) this%flowja => flowja
@@ -94,7 +96,8 @@ contains
     if (present(retfactor)) this%retfactor => retfactor
   end subroutine init
 
-  !> @brief Track particle through subdomains
+  !> @brief Track the particle over domains of the given
+  ! level until the particle terminates or tmax elapses.
   recursive subroutine track(this, particle, level, tmax)
     ! dummy
     class(MethodType), intent(inout) :: this
@@ -106,6 +109,7 @@ contains
     integer(I4B) :: nextlevel
     class(methodType), pointer :: submethod
 
+    ! Advance the particle over subdomains
     advancing = .true.
     nextlevel = level + 1
     do while (advancing)
@@ -115,28 +119,28 @@ contains
     end do
   end subroutine track
 
-  !> @brief Try passing the particle to the next subdomain
+  !> @brief Try passing the particle to the next subdomain.
   subroutine try_pass(this, particle, nextlevel, advancing)
     class(MethodType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
     integer(I4B) :: nextlevel
     logical(LGP) :: advancing
 
-    ! tracking submethod marked tracking complete?
-    ! reset domain boundary flag and don't advance
+    ! if the particle is done advancing, reset the domain boundary flag.
     if (.not. particle%advancing) then
       particle%iboundary = 0
       advancing = .false.
     else
-      ! otherwise pass particle to next subdomain
-      ! and if it's on a boundary, stop advancing
+      ! otherwise pass the particle to the next subdomain.
+      ! if that leaves it on a boundary, stop advancing.
       call this%pass(particle)
-      if (particle%iboundary(nextlevel - 1) .ne. 0) &
+      if (particle%iboundary(nextlevel - 1) .ne. 0) then
         advancing = .false.
+      end if
     end if
   end subroutine try_pass
 
-  !> @brief Load subdomain tracking method (submethod)
+  !> @brief Load the subdomain tracking method (submethod).
   subroutine load(this, particle, next_level, submethod)
     class(MethodType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
@@ -145,14 +149,14 @@ contains
     call pstop(1, "load must be overridden")
   end subroutine load
 
-  !> @brief Pass a particle to the next subdomain, internal use only
+  !> @brief Pass the particle to the next subdomain.
   subroutine pass(this, particle)
     class(MethodType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
     call pstop(1, "pass must be overridden")
   end subroutine pass
 
-  !> @brief Save a particle's current state.
+  !> @brief Save the particle's state to output files.
   subroutine save(this, particle, reason)
     use TdisModule, only: kper, kstp, totimc
     ! dummy
@@ -179,50 +183,106 @@ contains
       end if
     end if
 
-    ! Save the particle's state to any registered tracking output files
-    call this%trackfilectl%save(particle, kper=per, &
-                                kstp=stp, reason=reason)
+    call this%trackctl%save(particle, kper=per, kstp=stp, reason=reason)
   end subroutine save
 
-  !> @brief Update particle state and check termination conditions
+  !> @brief Check reporting/terminating conditions before tracking.
   !!
-  !! Update the particle's properties (e.g. advancing flag, zone number,
-  !! status). If any termination conditions apply, the particle's status
-  !! will be set to the appropriate termination value. If any reporting
-  !! conditions apply, save particle state with the proper reason code.
+  !! Check a number of conditions determining whether to continue
+  !! tracking the particle or terminate it, as well as whether to
+  !! record any output data as per selected reporting conditions.
   !<
-  subroutine update(this, particle, cell_defn)
-    ! -- dummy
+  subroutine check(this, particle, cell_defn)
+    ! modules
+    use TdisModule, only: endofsimulation, totim
+    ! dummy
     class(MethodType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
     type(CellDefnType), pointer, intent(inout) :: cell_defn
+    ! local
+    logical(LGP) :: dry_cell, dry_particle, no_exit_face, stop_zone, weak_sink
+
+    dry_cell = this%fmi%ibdgwfsat0(cell_defn%icell) == 0
+    dry_particle = particle%z > cell_defn%top
+    no_exit_face = cell_defn%inoexitface > 0
+    stop_zone = cell_defn%izone > 0 .and. particle%istopzone == cell_defn%izone
+    weak_sink = cell_defn%iweaksink > 0
 
     particle%izone = cell_defn%izone
-    if (cell_defn%izone .ne. 0) then
-      if (particle%istopzone .eq. cell_defn%izone) then
-        particle%advancing = .false.
-        particle%istatus = 6
-        call this%save(particle, reason=3) ! particle terminated
-        return
-      end if
-    end if
-    if (cell_defn%inoexitface .ne. 0) then
+    if (stop_zone) then
       particle%advancing = .false.
-      particle%istatus = 5
-      call this%save(particle, reason=3) ! particle terminated
+      particle%istatus = 6
+      call this%save(particle, reason=3)
       return
     end if
-    if (cell_defn%iweaksink .ne. 0) then
-      if (particle%istopweaksink .ne. 0) then
+
+    if (no_exit_face .and. .not. dry_cell) then
+      particle%advancing = .false.
+      particle%istatus = 5
+      call this%save(particle, reason=3)
+      return
+    end if
+
+    if (weak_sink) then
+      if (particle%istopweaksink > 0) then
         particle%advancing = .false.
         particle%istatus = 3
-        call this%save(particle, reason=3) ! particle terminated
+        call this%save(particle, reason=3)
         return
       else
-        call this%save(particle, reason=4) ! particle exited weak sink
+        call this%save(particle, reason=4)
+      end if
+    end if
+
+    if (dry_cell) then
+      if (particle%idrymeth == 0) then
+        no_exit_face = .false.
+      else if (particle%idrymeth == 1) then
+        ! stop
+        particle%advancing = .false.
+        particle%istatus = 7
+        call this%save(particle, reason=3)
+        return
+      else if (particle%idrymeth == 2) then
+        ! stay
+        no_exit_face = .false.
+        particle%advancing = .false.
+        particle%ttrack = totim
+        ! terminate if last period/step
+        if (endofsimulation) then
+          particle%istatus = 5
+          call this%save(particle, reason=3)
+          return
+        end if
+        call this%save(particle, reason=2)
+      end if
+    else if (dry_particle .and. this%name /= "passtobottom") then
+      ! dry particle
+      if (particle%idrymeth == 0) then
+        ! drop to water table
+        particle%z = cell_defn%top
+        call this%save(particle, reason=1)
+      else if (particle%idrymeth == 1) then
+        ! terminate
+        particle%advancing = .false.
+        particle%istatus = 7
+        call this%save(particle, reason=3)
+        return
+      else if (particle%idrymeth == 2) then
+        ! stay
+        no_exit_face = .false.
+        particle%advancing = .false.
         return
       end if
     end if
-  end subroutine update
+
+    if (no_exit_face) then
+      particle%advancing = .false.
+      particle%istatus = 5
+      call this%save(particle, reason=3)
+      return
+    end if
+
+  end subroutine check
 
 end module MethodModule

@@ -3,7 +3,7 @@ Test the exchange mover functionality to work both ways,
 also in parallel. Use the following setup of two connected
 DIS models with a stream flow crossing the boundary twice:
 
-         
+
               left:                      right:
            .  .  .  .  .             .  .  .  .  .   1
  sfr_in => x  x  x  x  x             x  x  x  x  x   2
@@ -15,11 +15,9 @@ sfr_out <= x  x  x  x  x             x  x  x  x  x   4
 The "single" model is also constructed as a reference.
 """
 
-
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 cases = ["gwf_exgmvr02"]
@@ -64,20 +62,7 @@ def make_sfr_data(sfr_cells, ireach_offset=0):
         ncon = 2
         if ridx in [0, nc - 1]:
             ncon = 1
-        t = (
-            irno,
-            cellid,
-            rlen,
-            rwid,
-            rgrd,
-            rtp,
-            rbth,
-            rhk,
-            rman,
-            ncon,
-            ustrf,
-            ndv,
-        )
+        t = (irno, cellid, rlen, rwid, rgrd, rtp, rbth, rhk, rman, ncon, ustrf, ndv)
         pak_data.append(t)
 
         if ridx == 0:  # first one only connected to the next
@@ -241,16 +226,7 @@ def build_exchanges(sim):
     mvrpack_sim = [["left", "sfr_left"], ["right", "sfr_right"]]
     mvrspd = [
         # connect left to right
-        [
-            "left",
-            "sfr_left",
-            ncol_split - 1,
-            "right",
-            "sfr_right",
-            0,
-            "FACTOR",
-            1.00,
-        ],
+        ["left", "sfr_left", ncol_split - 1, "right", "sfr_right", 0, "FACTOR", 1.00],
         # connect right to left
         [
             "right",
@@ -277,16 +253,9 @@ def build_exchanges(sim):
 
 def build_simulation(idx, sim_ws, sim_type="single"):
     name = cases[idx]
-    sim = flopy.mf6.MFSimulation(
-        sim_name=name,
-        sim_ws=sim_ws,
-    )
+    sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=sim_ws)
 
-    tdis = flopy.mf6.ModflowTdis(
-        sim,
-        time_units="DAYS",
-        nper=nper,
-    )
+    tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper)
 
     # Flow solver
     ims = flopy.mf6.ModflowIms(

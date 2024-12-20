@@ -6,12 +6,12 @@
 #  - thermally hot stream water warming host gw cells
 #
 
+import math
 import os
 
 import flopy
 import numpy as np
 import pytest
-import math
 from framework import TestFramework
 
 cases = ["sfe-conductn", "sfe-conducti", "sfe-conducto", "sfe-conductm"]
@@ -42,7 +42,7 @@ def get_x_frac(x_coord1, rwid):
 
 def get_xy_pts(x, y, rwid):
     x_xsec1 = get_x_frac(x, rwid)
-    x_sec_tab = [[xx, hh] for xx, hh, in zip(x_xsec1, y)]
+    x_sec_tab = [[xx, hh] for xx, hh in zip(x_xsec1, y)]
     return x_sec_tab
 
 
@@ -158,7 +158,7 @@ def get_bud(fname, srchStr):
             if srchStr in line:
                 # Read the package budget
                 line = next(f)
-                while not "TOTAL IN =" in line:
+                while "TOTAL IN =" not in line:
                     if "=" in line:
                         in_bud_lst.update(process_line(line))
 
@@ -169,7 +169,7 @@ def get_bud(fname, srchStr):
                 T_in = dct["IN"]
 
                 line = next(f)
-                while not "TOTAL OUT =" in line:
+                while "TOTAL OUT =" not in line:
                     if "=" in line:
                         out_bud_lst.update(process_line(line))
 
@@ -198,11 +198,8 @@ rhos = 2650  # Density of the aquifer material ($kg/m^3$)
 Cpw = 4180  # Heat capacity of water ($J/kg/C$)
 Cps = 880  # Heat capacity of the solids ($J/kg/C$)
 lhv = 2454000.0  # Latent heat of vaporization ($J/kg$)
-K_therm_strmbed = [
-    1.5,
-    1.75,
-    2.0,
-]  # Thermal conductivity of the streambed material ($W/m/C$)
+# Thermal conductivity of the streambed material ($W/m/C$)
+K_therm_strmbed = [1.5, 1.75, 2.0]
 rbthcnd = [0.0001, 0.0001, 0.0001, 0.0001]
 
 # time params
@@ -225,7 +222,7 @@ def build_models(idx, test):
     ws = test.workspace
     name = cases[idx]
 
-    print("Building model...{}".format(name))
+    print(f"Building model...{name}")
 
     # generate names for each model
     gwfname = "gwf-" + name
@@ -265,7 +262,7 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
     sim.register_ims_package(ims, [gwfname])
 
@@ -358,17 +355,16 @@ def build_models(idx, test):
     strmbd_hk = rhk[idx]
     strm_up = 100.25
     strm_dn = 99
-    slope = (
-        (strm_up - strm_dn) / ((ncol - 1) * delr) / 10
-    )  # divide by 10 to further reduce slop
+    # divide by 10 to further reduce slop
+    slope = (strm_up - strm_dn) / ((ncol - 1) * delr) / 10
     ustrf = 1.0
     ndv = 0
     strm_incision = 1.0
 
     # use trapezoidal cross-section for channel geometry
-    sfr_xsec_tab_nm1 = "{}.xsec.tab1".format(gwfname)
-    sfr_xsec_tab_nm2 = "{}.xsec.tab2".format(gwfname)
-    sfr_xsec_tab_nm3 = "{}.xsec.tab3".format(gwfname)
+    sfr_xsec_tab_nm1 = f"{gwfname}.xsec.tab1"
+    sfr_xsec_tab_nm2 = f"{gwfname}.xsec.tab2"
+    sfr_xsec_tab_nm3 = f"{gwfname}.xsec.tab3"
     sfr_xsec_tab_nm = [sfr_xsec_tab_nm1, sfr_xsec_tab_nm2, sfr_xsec_tab_nm3]
     crosssections = []
     for n in range(nreaches):
@@ -383,7 +379,7 @@ def build_models(idx, test):
             ncol=2,
             table=x_sec_tab[n],
             filename=sfr_xsec_tab_nm[n],
-            pname=f"sfrxsectable" + str(n + 1),
+            pname="sfrxsectable" + str(n + 1),
         )
 
     packagedata = []
@@ -428,7 +424,7 @@ def build_models(idx, test):
 
     # Instantiate SFR observation points
     sfr_obs = {
-        "{}.sfr.obs.csv".format(gwfname): [
+        f"{gwfname}.sfr.obs.csv": [
             ("rch1_depth", "depth", 1),
             ("rch2_depth", "depth", 2),
             ("rch3_depth", "depth", 3),
@@ -456,7 +452,7 @@ def build_models(idx, test):
         perioddata=sfr_perioddata,
         observations=sfr_obs,
         pname="SFR-1",
-        filename="{}.sfr".format(gwfname),
+        filename=f"{gwfname}.sfr",
     )
 
     # --------------------------------------------------
@@ -478,7 +474,7 @@ def build_models(idx, test):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwename),
+        filename=f"{gwename}.ims",
     )
     sim.register_ims_package(imsgwe, [gwename])
 
@@ -494,7 +490,7 @@ def build_models(idx, test):
         top=top,
         botm=botm,
         pname="DIS",
-        filename="{}.dis".format(gwename),
+        filename=f"{gwename}.dis",
     )
 
     # Instantiate Mobile Storage and Transfer package
@@ -502,11 +498,13 @@ def build_models(idx, test):
         gwe,
         save_flows=True,
         porosity=porosity,
-        cps=Cps,
-        rhos=rhos,
-        packagedata=[Cpw, rhow, lhv],
+        heat_capacity_water=Cpw,
+        density_water=rhow,
+        latent_heat_vaporization=lhv,
+        heat_capacity_solid=Cps,
+        density_solid=rhos,
         pname="EST",
-        filename="{}.est".format(gwename),
+        filename=f"{gwename}.est",
     )
 
     # Instantiate Energy Transport Initial Conditions package
@@ -522,15 +520,13 @@ def build_models(idx, test):
         ktw=0.5918,
         kts=0.2700,
         pname="CND",
-        filename="{}.cnd".format(gwename),
+        filename=f"{gwename}.cnd",
     )
 
     # Instantiating MODFLOW 6 transport source-sink mixing package
     # [b/c at least one boundary back is active (SFR), ssm must be on]
     sourcerecarray = [("CHD-1", "AUX", "TEMPERATURE")]
-    flopy.mf6.ModflowGwessm(
-        gwe, sources=sourcerecarray, filename="{}.ssm".format(gwename)
-    )
+    flopy.mf6.ModflowGwessm(gwe, sources=sourcerecarray, filename=f"{gwename}.ssm")
 
     # Instantiate Streamflow Energy Transport package
     sfepackagedata = []
@@ -557,19 +553,17 @@ def build_models(idx, test):
         reachperioddata=sfeperioddata,
         flow_package_name="SFR-1",
         pname="SFE-1",
-        filename="{}.sfe".format(gwename),
+        filename=f"{gwename}.sfe",
     )
 
     # Instantiate Output Control package for transport
     flopy.mf6.ModflowGweoc(
         gwe,
-        temperature_filerecord="{}.ucn".format(gwename),
+        temperature_filerecord=f"{gwename}.ucn",
         saverecord=[("TEMPERATURE", "ALL")],
-        temperatureprintrecord=[
-            ("COLUMNS", 3, "WIDTH", 20, "DIGITS", 8, "GENERAL")
-        ],
+        temperatureprintrecord=[("COLUMNS", 3, "WIDTH", 20, "DIGITS", 8, "GENERAL")],
         printrecord=[("TEMPERATURE", "ALL"), ("BUDGET", "ALL")],
-        filename="{}.oc".format(gwename),
+        filename=f"{gwename}.oc",
     )
 
     # Instantiate Gwf-Gwe Exchange package
@@ -578,7 +572,7 @@ def build_models(idx, test):
         exgtype="GWF6-GWE6",
         exgmnamea=gwfname,
         exgmnameb=gwename,
-        filename="{}.gwfgwe".format(gwename),
+        filename=f"{gwename}.gwfgwe",
     )
 
     return sim, None
@@ -624,33 +618,29 @@ def check_output(idx, test):
         )
 
         assert np.isclose(wa, shared_area[0, j], atol=1e-4), msg
-    
+
     # Sub-scenario checks
     # initialize search term
-    srchStr = "SFE-1 BUDGET FOR ENTIRE MODEL AT END OF TIME STEP    1, STRESS PERIOD   1"
+    srchStr = (
+        "SFE-1 BUDGET FOR ENTIRE MODEL AT END OF TIME STEP    1, STRESS PERIOD   1"
+    )
     fname = "gwe-" + name + ".lst"
     fname = os.path.join(test.workspace, fname)
 
     # gw exchng (item 'GWF') should be zero in heat transport budget
     T_in, T_out, in_bud_lst, out_bud_lst = get_bud(fname, srchStr)
-    assert np.isclose(
-        T_in, T_out, atol=0.1
-    ), "There is a heat budget discrepancy"
+    assert np.isclose(T_in, T_out, atol=0.1), "There is a heat budget discrepancy"
 
     # Get temperature of streamwater
     fname1 = "gwe-" + name + ".sfe.bin"
     fname1 = os.path.join(test.workspace, fname1)
-    sfeobj = flopy.utils.HeadFile(
-        fname1, precision="double", text="TEMPERATURE"
-    )
+    sfeobj = flopy.utils.HeadFile(fname1, precision="double", text="TEMPERATURE")
     sfe_temps = sfeobj.get_alldata()
 
     # Get temperature of gw
     fname2 = "gwe-" + name + ".ucn"
     fname2 = os.path.join(test.workspace, fname2)
-    gwobj = flopy.utils.HeadFile(
-        fname2, precision="double", text="TEMPERATURE"
-    )
+    gwobj = flopy.utils.HeadFile(fname2, precision="double", text="TEMPERATURE")
     gw_temps = gwobj.get_alldata()
 
     msg1 = "Budget item 'GWF' should be 0.0 for this scenario"
@@ -665,10 +655,8 @@ def check_output(idx, test):
         "conductive losses from the stream to the aquifer "
         "(i.e., greater shared wetted areas)"
     )
-    if (
-        name[-1] == "n"
-    ):  # no gw/sw convective exchange, simulates conductive exchange only
-
+    if name[-1] == "n":
+        # no gw/sw convective exchange, simulates conductive exchange only
         assert in_bud_lst["GWF"] == 0.0, msg1
         assert out_bud_lst["GWF"] == 0.0, msg1
 
@@ -683,9 +671,7 @@ def check_output(idx, test):
             )
             assert slp < 0.0, msg3
 
-            slp = trenddetector(
-                np.arange(0, gw_temps.shape[-2]), gw_temps[0, 0, 1, :]
-            )
+            slp = trenddetector(np.arange(0, gw_temps.shape[-2]), gw_temps[0, 0, 1, :])
             assert slp > 0.0, msg4
 
         else:
@@ -694,7 +680,6 @@ def check_output(idx, test):
 
     # streamflow gain from aquifer ("into stream")
     if name[-1] == "i":
-
         msg = "Budget item 'GWF' should reflect heat entering stream"
         assert in_bud_lst["GWF"] > 0.0, msg
         assert out_bud_lst["GWF"] == 0.0, msg
@@ -710,9 +695,7 @@ def check_output(idx, test):
             )
             assert slp < 0.0, msg3
 
-            slp = trenddetector(
-                np.arange(0, gw_temps.shape[-2]), gw_temps[0, 0, 1, :]
-            )
+            slp = trenddetector(np.arange(0, gw_temps.shape[-2]), gw_temps[0, 0, 1, :])
             assert slp > 0.0, msg4
 
         else:
@@ -721,7 +704,6 @@ def check_output(idx, test):
 
     # streamflow loss to aquifer ("out of stream")
     if name[-1] == "o":
-
         msg = "Budget item 'GWF' should reflect heat exiting stream"
         assert in_bud_lst["GWF"] == 0.0, msg
         assert out_bud_lst["GWF"] > 0.0, msg
@@ -737,9 +719,7 @@ def check_output(idx, test):
             )
             assert slp < 0.0, msg3
 
-            slp = trenddetector(
-                np.arange(0, gw_temps.shape[-2]), gw_temps[0, 0, 1, :]
-            )
+            slp = trenddetector(np.arange(0, gw_temps.shape[-2]), gw_temps[0, 0, 1, :])
             assert slp < 0.0, msg4
 
         else:
@@ -750,7 +730,6 @@ def check_output(idx, test):
     # Loss of streamwater to aquifer
     # Thus, convection from strm to gw, conduction from gw to strm
     if name[-1] == "m":  # 'm' for mixed
-
         msg = "Budget item 'GWF' should reflect heat exiting stream"
         assert in_bud_lst["GWF"] == 0.0, msg
         assert out_bud_lst["GWF"] > 0.0, msg
@@ -770,9 +749,7 @@ def check_output(idx, test):
             )
             assert slp > 0.0, msg3
 
-            slp = trenddetector(
-                np.arange(0, gw_temps.shape[-2]), gw_temps[0, 0, 1, :]
-            )
+            slp = trenddetector(np.arange(0, gw_temps.shape[-2]), gw_temps[0, 0, 1, :])
             assert slp > 0.0, msg4
 
 

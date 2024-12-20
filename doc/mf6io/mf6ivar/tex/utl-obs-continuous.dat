@@ -1,5 +1,0 @@
-BEGIN CONTINUOUS FILEOUT <obs_output_file_name> [BINARY]
-  <obsname> <obstype> <id> [<id2>]
-  <obsname> <obstype> <id> [<id2>]
-  ...
-END CONTINUOUS

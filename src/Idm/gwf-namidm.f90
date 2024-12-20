@@ -9,6 +9,7 @@ module GwfNamInputModule
   public gwf_nam_block_definitions
   public GwfNamParamFoundType
   public gwf_nam_multi_package
+  public gwf_nam_subpackages
 
   type GwfNamParamFoundType
     logical :: list = .false.
@@ -18,12 +19,29 @@ module GwfNamInputModule
     logical :: newtonoptions = .false.
     logical :: newton = .false.
     logical :: under_relaxation = .false.
+    logical :: ncmesh2drec = .false.
+    logical :: netcdf_mesh2d = .false.
+    logical :: ncstructrec = .false.
+    logical :: netcdf_struct = .false.
+    logical :: fileout = .false.
+    logical :: ncmesh2dfile = .false.
+    logical :: ncstructfile = .false.
+    logical :: nc_filerecord = .false.
+    logical :: netcdf = .false.
+    logical :: filein = .false.
+    logical :: netcdf_fname = .false.
     logical :: ftype = .false.
     logical :: fname = .false.
     logical :: pname = .false.
   end type GwfNamParamFoundType
 
   logical :: gwf_nam_multi_package = .false.
+
+  character(len=16), parameter :: &
+    gwf_nam_subpackages(*) = &
+    [ &
+    '                ' &
+    ]
 
   type(InputParamDefinitionType), parameter :: &
     gwfnam_list = InputParamDefinitionType &
@@ -35,6 +53,7 @@ module GwfNamInputModule
     'LIST', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'name of listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .true., & ! preserve case
@@ -52,6 +71,7 @@ module GwfNamInputModule
     'PRINT_INPUT', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print input to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -69,6 +89,7 @@ module GwfNamInputModule
     'PRINT_FLOWS', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'print calculated flows to listing file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -86,6 +107,7 @@ module GwfNamInputModule
     'SAVE_FLOWS', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'save flows for all packages to budget file', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -103,6 +125,7 @@ module GwfNamInputModule
     'NEWTONOPTIONS', & ! fortran variable
     'RECORD NEWTON UNDER_RELAXATION', & ! type
     '', & ! shape
+    'newton keyword and options', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -120,6 +143,7 @@ module GwfNamInputModule
     'NEWTON', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to activate Newton-Raphson formulation', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -137,9 +161,208 @@ module GwfNamInputModule
     'UNDER_RELAXATION', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
+    'keyword to activate Newton-Raphson UNDER_RELAXATION option', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfnam_ncmesh2drec = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'NC_MESH2D_FILERECORD', & ! tag name
+    'NCMESH2DREC', & ! fortran variable
+    'RECORD NETCDF_MESH2D FILEOUT NCMESH2DFILE', & ! type
+    '', & ! shape
+    '', & ! longname
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfnam_netcdf_mesh2d = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'NETCDF_MESH2D', & ! tag name
+    'NETCDF_MESH2D', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'budget keyword', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfnam_ncstructrec = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'NC_STRUCTURED_FILERECORD', & ! tag name
+    'NCSTRUCTREC', & ! fortran variable
+    'RECORD NETCDF_STRUCTURED FILEOUT NCSTRUCTFILE', & ! type
+    '', & ! shape
+    '', & ! longname
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfnam_netcdf_struct = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'NETCDF_STRUCTURED', & ! tag name
+    'NETCDF_STRUCT', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'budget keyword', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfnam_fileout = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'FILEOUT', & ! tag name
+    'FILEOUT', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'file keyword', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfnam_ncmesh2dfile = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'NCMESH2DFILE', & ! tag name
+    'NCMESH2DFILE', & ! fortran variable
+    'STRING', & ! type
+    '', & ! shape
+    'file keyword', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .true., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfnam_ncstructfile = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'NCSTRUCTFILE', & ! tag name
+    'NCSTRUCTFILE', & ! fortran variable
+    'STRING', & ! type
+    '', & ! shape
+    'file keyword', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .true., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfnam_nc_filerecord = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'NC_FILERECORD', & ! tag name
+    'NC_FILERECORD', & ! fortran variable
+    'RECORD NETCDF FILEIN NETCDF_FILENAME', & ! type
+    '', & ! shape
+    '', & ! longname
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfnam_netcdf = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'NETCDF', & ! tag name
+    'NETCDF', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'netcdf keyword', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfnam_filein = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'FILEIN', & ! tag name
+    'FILEIN', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'file keyword', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfnam_netcdf_fname = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'NETCDF_FILENAME', & ! tag name
+    'NETCDF_FNAME', & ! fortran variable
+    'STRING', & ! type
+    '', & ! shape
+    'netcdf input filename', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .true., & ! preserve case
     .false., & ! layered
     .false. & ! timeseries
     )
@@ -154,6 +377,7 @@ module GwfNamInputModule
     'FTYPE', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'package type', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -171,6 +395,7 @@ module GwfNamInputModule
     'FNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'file name', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
@@ -188,6 +413,7 @@ module GwfNamInputModule
     'PNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
+    'user name for package', & ! longname
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -205,6 +431,17 @@ module GwfNamInputModule
     gwfnam_newtonoptions, &
     gwfnam_newton, &
     gwfnam_under_relaxation, &
+    gwfnam_ncmesh2drec, &
+    gwfnam_netcdf_mesh2d, &
+    gwfnam_ncstructrec, &
+    gwfnam_netcdf_struct, &
+    gwfnam_fileout, &
+    gwfnam_ncmesh2dfile, &
+    gwfnam_ncstructfile, &
+    gwfnam_nc_filerecord, &
+    gwfnam_netcdf, &
+    gwfnam_filein, &
+    gwfnam_netcdf_fname, &
     gwfnam_ftype, &
     gwfnam_fname, &
     gwfnam_pname &
@@ -220,6 +457,7 @@ module GwfNamInputModule
     'PACKAGES', & ! fortran variable
     'RECARRAY FTYPE FNAME PNAME', & ! type
     '', & ! shape
+    'package list', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
