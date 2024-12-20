@@ -318,9 +318,9 @@ def get_model(idx, ws):
     )
     orecarray = {}
     orecarray["csub_obs.csv"] = [
-        ("tcomp1", "interbed-compaction", "01_05_05"),
-        ("tcomp2", "interbed-compaction", "02_05_05"),
-        ("tcomp3", "interbed-compaction", "03_05_05"),
+        ("tcomp1", "interbed-compaction", (44,)),
+        ("tcomp2", "interbed-compaction", (140,)),
+        ("tcomp3", "interbed-compaction", (240,)),
     ]
     csub_obs_package = csub.obs.initialize(
         filename=opth, digits=10, print_input=True, continuous=orecarray
