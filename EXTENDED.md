@@ -124,7 +124,7 @@ The `TestSimulation` object that is being run from the framework should be confi
 $ pytest -s --parallel test_par_gwf01.py
 ```
 
-Similary to run a test, for example `autotest/test_netcdf_gwe_cnd.py`, in NetCDF test mode:
+To run a test in NetCDF test mode, for example `autotest/test_netcdf_gwe_cnd.py`:
 
 ```
 $ pytest --netcdf test_netcdf_gwe_cnd.py
