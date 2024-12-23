@@ -2,7 +2,7 @@
 
 This document describes how to set up a development environment to modify, build and test MODFLOW 6. Details on how to contribute your code to the repository are found in the separate document [CONTRIBUTING.md](CONTRIBUTING.md). 
 
-To build and test a parallel version of the program, first read the instructions below and then continue in [PARALLEL.md](PARALLEL.md).
+To build and test an extended version of the program, first read the instructions below and then continue in [EXTENDED.md](EXTENDED.md).
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
@@ -337,7 +337,7 @@ or using pixi to setup the build directory:
 pixi run setup builddir
 ```
 
-Debug versions can be built using pixi by adding `-Ddebug=true` at the end of the pixi command. Other meson commands (for example, `-Dparallel=true`, `--wipe`, _etc._) added to the pixi command are passed through to Meson. 
+Debug versions can be built using pixi by adding `-Ddebug=true` at the end of the pixi command. Other meson commands (for example, `-Dextended=true`, `--wipe`, _etc._) added to the pixi command are passed through to Meson.
 
 Substitute `%CD%` as necessary on Windows.
 
