@@ -23,7 +23,7 @@ The extended version of MODFLOW 6 requires the Message Passing Interface (MPI), 
 
 ### MPI
 
-The extended version of MODFLOW 6 uses MPI to synchronize data between processes. There are a couple of implementations of the MPI standard available. Their applicability usually depends on the platform that is used:
+The extended version of MODFLOW 6 uses MPI to synchronize data between processes when configured to run in parallel mode. There are a couple of implementations of the MPI standard available. Their applicability usually depends on the platform that is used:
 
 - Open MPI: https://www.open-mpi.org/
 - MPICH: https://www.mpich.org/
@@ -52,6 +52,10 @@ $ make all
 ```
 
 in a terminal open in the root directory of your PETSc download
+
+## Compiling NetCDF from source
+
+See, for example, https://docs.unidata.ucar.edu/netcdf-c/4.9.2/building\_netcdf\_fortran.html and https://docs.unidata.ucar.edu/nug/current/getting\_and\_building\_netcdf.html#building for information related to building NetCDF-Fortran and prerequisites in a Unix/Linux environment.
 
 ## Using a package manager to install MPI and PETSc
 
@@ -188,7 +192,7 @@ Make sure that you work with gdb versions >= 10. We have found that earlier vers
 
 ## Compatibility
 
-Extended MODFLOW has been built successfully with the following configurations:
+Parallel MODFLOW (a pre-extended build without NetCDF) has been built successfully with the following configurations:
 
 | Operating System                    | Toolchain                 | MPI               | PETSc               | Package Manager |
 |-------------------------------------|---------------------------|-------------------|---------------------|-----------------|
