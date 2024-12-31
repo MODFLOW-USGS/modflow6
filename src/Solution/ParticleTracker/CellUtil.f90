@@ -88,9 +88,9 @@ contains
     rect%dz = dz
     rect%sinrot = sinrot
     rect%cosrot = cosrot
-    rect%xOrigin = xOrigin
-    rect%yOrigin = yOrigin
-    rect%zOrigin = zOrigin
+    rect%xO = xOrigin
+    rect%yO = yOrigin
+    rect%zO = zOrigin
     rect%ipvOrigin = ipv1
 
     ! -- Compute (unscaled) cell edge velocities from face flows

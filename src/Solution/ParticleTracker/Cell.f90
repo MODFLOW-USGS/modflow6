@@ -13,6 +13,9 @@ module CellModule
   type, abstract :: CellType
     character(len=40), pointer :: type ! tracking domain type
     type(CellDefnType), pointer :: defn => null() ! cell defn
+    double precision, public :: xO ! model x origin for local (x, y)
+    double precision, public :: yO ! model y origin for local (x, y)
+    double precision, public :: zO ! model z origin for local z
   contains
     procedure(destroy), deferred :: destroy !< destroy the cell
   end type CellType

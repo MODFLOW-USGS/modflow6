@@ -25,10 +25,6 @@ module CellRectModule
     double precision, public :: vz2 ! top-boundary z velocity
 
     integer, public :: ipvOrigin ! origin vertex
-    double precision, public :: xOrigin ! model x origin for local (x, y)
-    double precision, public :: yOrigin ! model y origin for local (x, y)
-    double precision, public :: zOrigin ! model z origin for local z
-
   contains
     procedure :: destroy => destroy_rect ! destructor for the cell
   end type CellRectType

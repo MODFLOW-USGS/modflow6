@@ -297,11 +297,11 @@ contains
       subcell%dz = dz
       subcell%sinrot = DZERO
       subcell%cosrot = DONE
-      subcell%zOrigin = DZERO
+      subcell%zO = DZERO
       select case (isc)
       case (1)
-        subcell%xOrigin = dx
-        subcell%yOrigin = dy
+        subcell%xO = dx
+        subcell%yO = dy
         term = factor / areax
         subcell%vx1 = qintl1 * term
         subcell%vx2 = -qextl2 * term
@@ -309,8 +309,8 @@ contains
         subcell%vy1 = -qintl2 * term
         subcell%vy2 = -qextl1 * term
       case (2)
-        subcell%xOrigin = dx
-        subcell%yOrigin = DZERO
+        subcell%xO = dx
+        subcell%yO = DZERO
         term = factor / areax
         subcell%vx1 = -qintl2 * term
         subcell%vx2 = -qextl1 * term
@@ -318,8 +318,8 @@ contains
         subcell%vy1 = qextl2 * term
         subcell%vy2 = -qintl1 * term
       case (3)
-        subcell%xOrigin = DZERO
-        subcell%yOrigin = DZERO
+        subcell%xO = DZERO
+        subcell%yO = DZERO
         term = factor / areax
         subcell%vx1 = qextl2 * term
         subcell%vx2 = -qintl1 * term
@@ -327,8 +327,8 @@ contains
         subcell%vy1 = qextl1 * term
         subcell%vy2 = qintl2 * term
       case (4)
-        subcell%xOrigin = DZERO
-        subcell%yOrigin = dy
+        subcell%xO = DZERO
+        subcell%yO = dy
         term = factor / areax
         subcell%vx1 = qextl1 * term
         subcell%vx2 = qintl2 * term

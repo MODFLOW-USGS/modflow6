@@ -11,6 +11,9 @@ module SubcellModule
     character(len=40), pointer, public :: type !< character string that names the tracking domain type
     integer, public :: isubcell !< index of subcell in the cell
     integer, public :: icell !< index of cell in the source grid
+    double precision, public :: xO !< x origin for local coords
+    double precision, public :: yO !< y origin for local coords
+    double precision, public :: zO !< z origin for local coords
   contains
     procedure(destroy), deferred :: destroy !< destructor
     procedure(init), deferred :: init !< initializer
