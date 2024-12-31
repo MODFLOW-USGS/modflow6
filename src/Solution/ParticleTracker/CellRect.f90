@@ -17,10 +17,6 @@ module CellRectModule
     double precision, public :: sinrot ! sine of rotation angle for local (x, y)
     double precision, public :: cosrot ! cosine of rotation angle for local (x, y)
 
-    double precision, public :: xOrigin ! model x origin for local (x, y)
-    double precision, public :: yOrigin ! model y origin for local (x, y)
-    double precision, public :: zOrigin ! model z origin for local z
-
     double precision, public :: vx1 ! west-boundary local-x velocity
     double precision, public :: vx2 ! east-boundary local-x velocity
     double precision, public :: vy1 ! south-boundary local-y velocity
@@ -29,6 +25,10 @@ module CellRectModule
     double precision, public :: vz2 ! top-boundary z velocity
 
     integer, public :: ipvOrigin ! origin vertex
+    double precision, public :: xOrigin ! model x origin for local (x, y)
+    double precision, public :: yOrigin ! model y origin for local (x, y)
+    double precision, public :: zOrigin ! model z origin for local z
+
   contains
     procedure :: destroy => destroy_rect ! destructor for the cell
   end type CellRectType
