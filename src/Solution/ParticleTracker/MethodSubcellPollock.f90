@@ -65,9 +65,9 @@ contains
       !    track particle across subcell, convert back to model coords
       !    (sinrot and cosrot should be 0 and 1, respectively, i.e. no
       !    rotation, also no z translation; only x and y translations)
-      xOrigin = subcell%xO
-      yOrigin = subcell%yO
-      zOrigin = subcell%zO
+      xOrigin = subcell%xOrigin
+      yOrigin = subcell%yOrigin
+      zOrigin = subcell%zOrigin
       sinrot = subcell%sinrot
       cosrot = subcell%cosrot
       call particle%transform(xOrigin, yOrigin)

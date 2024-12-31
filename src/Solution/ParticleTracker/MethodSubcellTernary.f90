@@ -147,8 +147,8 @@ contains
     xi = particle%x
     yi = particle%y
     zi = particle%z
-    x0 = subcell%xO
-    y0 = subcell%yO
+    x0 = subcell%x0
+    y0 = subcell%y0
     x1 = subcell%x1
     y1 = subcell%y1
     x2 = subcell%x2

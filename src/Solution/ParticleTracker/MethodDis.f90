@@ -95,9 +95,9 @@ contains
       cell%dz = dz
       cell%sinrot = DZERO
       cell%cosrot = DONE
-      cell%xO = cell%defn%polyvert(1, 1)
-      cell%yO = cell%defn%polyvert(2, 1)
-      cell%zO = cell%defn%bot
+      cell%xOrigin = cell%defn%polyvert(1, 1)
+      cell%yOrigin = cell%defn%polyvert(2, 1)
+      cell%zOrigin = cell%defn%bot
       cell%ipvOrigin = 1
 
       factor = DONE / cell%defn%retfactor

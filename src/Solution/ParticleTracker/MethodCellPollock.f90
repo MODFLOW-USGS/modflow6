@@ -135,9 +135,9 @@ contains
 
       ! Transform model coordinates to local cell coordinates
       ! (translated/rotated but not scaled relative to model)
-      xOrigin = cell%xO
-      yOrigin = cell%yO
-      zOrigin = cell%zO
+      xOrigin = cell%xOrigin
+      yOrigin = cell%yOrigin
+      zOrigin = cell%zOrigin
       sinrot = cell%sinrot
       cosrot = cell%cosrot
       call particle%transform(xOrigin, yOrigin, zOrigin, &
@@ -171,9 +171,9 @@ contains
       subcell%dz = cell%dz
       subcell%sinrot = DZERO
       subcell%cosrot = DONE
-      subcell%xO = DZERO
-      subcell%yO = DZERO
-      subcell%zO = DZERO
+      subcell%xOrigin = DZERO
+      subcell%yOrigin = DZERO
+      subcell%zOrigin = DZERO
 
       ! Set subcell edge velocities
       subcell%vx1 = cell%vx1 ! cell velocities already account for retfactor and porosity

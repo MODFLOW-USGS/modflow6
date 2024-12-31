@@ -158,7 +158,8 @@ contains
     real(DP), intent(in) :: tmax
     ! local
     integer(I4B) :: i
-    real(DP) :: x, y, z
+    real(DP) :: x, y, z, xO, yO
+    real(DP), allocatable :: xs(:), ys(:)
 
     ! (Re)allocate type-bound arrays
     select type (cell => this%cell)
@@ -195,11 +196,23 @@ contains
       allocate (this%xvertnext(this%nverts))
       allocate (this%yvertnext(this%nverts))
 
+      allocate (xs(this%nverts))
+      allocate (ys(this%nverts))
+
+      xs = cell%defn%polyvert(1, :)
+      ys = cell%defn%polyvert(2, :)
+
+      xO = xs(minloc(abs(xs), dim=1))
+      yO = ys(minloc(abs(ys), dim=1))
+
+      deallocate (xs)
+      deallocatE (ys)
+
       ! Cell vertices
       do i = 1, this%nverts
         x = cell%defn%polyvert(1, i)
         y = cell%defn%polyvert(2, i)
-        call transform(x, y, DZERO, x, y, z, cell%xO, cell%yO)
+        call transform(x, y, DZERO, x, y, z, xO, yO)
         this%xvert(i) = x
         this%yvert(i) = y
       end do
@@ -221,13 +234,13 @@ contains
       call this%vertvelo()
 
       ! Transform particle coordinates
-      call particle%transform(cell%xO, cell%yO)
+      call particle%transform(xO, yO)
 
       ! Track the particle across the cell.
       call this%track(particle, 2, tmax)
 
       ! Transform particle coordinates back
-      call particle%transform(cell%xO, cell%yO, invert=.true.)
+      call particle%transform(xO, yO, invert=.true.)
       call particle%reset_transform()
 
     end select
@@ -310,8 +323,8 @@ contains
 
       ! Set coordinates and velocities at vertices of triangular subcell
       iv0 = isc
-      subcell%xO = this%xvert(iv0)
-      subcell%yO = this%yvert(iv0)
+      subcell%x0 = this%xvert(iv0)
+      subcell%y0 = this%yvert(iv0)
       subcell%x1 = this%xvertnext(iv0)
       subcell%y1 = this%yvertnext(iv0)
       subcell%x2 = this%xctr

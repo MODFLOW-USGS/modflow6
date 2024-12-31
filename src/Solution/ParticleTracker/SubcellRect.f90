@@ -11,6 +11,9 @@ module SubcellRectModule
     private
     double precision, public :: sinrot !< sine of rotation angle for local (x, y)
     double precision, public :: cosrot !< cosine of rotation angle for local (x, y)
+    double precision, public :: xOrigin !< cell x origin for local (x, y)
+    double precision, public :: yOrigin !< cell y origin for local (x, y)
+    double precision, public :: zOrigin !< cell z origin for local z
     double precision, public :: dx, dy, dz !< subcell dimensions
     double precision, public :: vx1, vx2, vy1, vy2, vz1, vz2 !< subcell face velocities
   contains

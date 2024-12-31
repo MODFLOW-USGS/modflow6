@@ -27,7 +27,6 @@ module MethodDisvModule
     procedure, public :: deallocate !< deallocate arrays and scalars
     procedure, public :: load => load_disv !< load the cell method
     procedure, public :: load_cell_defn !< load cell definition from the grid
-    procedure, public :: load_cell !< load the cell from the grid
     procedure, public :: pass => pass_disv !< pass the particle to the next cell
     procedure :: map_neighbor !< map a location on the cell face to the shared face of a neighbor
     procedure :: update_flowja !< update intercell mass flows
@@ -88,7 +87,6 @@ contains
     type is (CellPolyType)
       ic = particle%idomain(next_level)
       call this%load_cell_defn(ic, cell%defn)
-      call this%load_cell(ic, cell)
       if (this%fmi%ibdgwfsat0(ic) == 0) then
         call method_cell_ptb%init( &
           fmi=this%fmi, &
@@ -332,18 +330,6 @@ contains
     call this%load_indicators(defn)
     call this%load_flows(defn)
   end subroutine load_cell_defn
-
-  subroutine load_cell(this, ic, cell)
-    ! dummy
-    class(MethodDisvType), intent(inout) :: this
-    integer(I4B), intent(in) :: ic
-    type(CellPolyType), pointer, intent(inout) :: cell
-
-    cell%xO = cell%defn%polyvert(1, 1)
-    cell%yO = cell%defn%polyvert(2, 1)
-    cell%zO = cell%defn%bot
-
-  end subroutine load_cell
 
   !> @brief Loads cell properties to cell definition from the grid.
   subroutine load_properties(this, ic, defn)
