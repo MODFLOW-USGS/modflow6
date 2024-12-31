@@ -196,17 +196,16 @@ contains
       allocate (this%xvertnext(this%nverts))
       allocate (this%yvertnext(this%nverts))
 
+      ! New origin is the corner of the cell's
+      ! bounding box closest to the old origin
       allocate (xs(this%nverts))
       allocate (ys(this%nverts))
-
       xs = cell%defn%polyvert(1, :)
       ys = cell%defn%polyvert(2, :)
-
       xO = xs(minloc(abs(xs), dim=1))
       yO = ys(minloc(abs(ys), dim=1))
-
       deallocate (xs)
-      deallocatE (ys)
+      deallocate (ys)
 
       ! Cell vertices
       do i = 1, this%nverts
