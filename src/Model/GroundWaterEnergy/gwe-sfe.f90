@@ -34,8 +34,9 @@
 module GweSfeModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, DONE, LINELENGTH
-  use SimModule, only: store_error
+  use ConstantsModule, only: DZERO, DONE, LINELENGTH, LENBOUNDNAME, DEP20
+  use SimVariablesModule, only: errmsg
+  use SimModule, only: store_error, count_errors
   use BndModule, only: BndType, GetBndFromList
   use TspFmiModule, only: TspFmiType
   use SfrModule, only: SfrType
@@ -69,6 +70,8 @@ module GweSfeModule
     real(DP), dimension(:), pointer, contiguous :: tempevap => null() !< evaporation temperature
     real(DP), dimension(:), pointer, contiguous :: temproff => null() !< runoff temperature
     real(DP), dimension(:), pointer, contiguous :: tempiflw => null() !< inflow temperature
+    real(DP), dimension(:), pointer, contiguous :: ktf => null() !< thermal conductivity between the sfe and groundwater cell
+    real(DP), dimension(:), pointer, contiguous :: rfeatthk => null() !< thickness of streambed material through which thermal conduction occurs
 
   contains
 
@@ -90,6 +93,7 @@ module GweSfeModule
     procedure :: pak_rp_obs => sfe_rp_obs
     procedure :: pak_bd_obs => sfe_bd_obs
     procedure :: pak_set_stressperiod => sfe_set_stressperiod
+    procedure :: apt_read_cvs => sfe_read_cvs
 
   end type GweSfeType
 
@@ -737,6 +741,10 @@ contains
     call mem_deallocate(this%temproff)
     call mem_deallocate(this%tempiflw)
     !
+    ! -- Deallocate arrays
+    call mem_deallocate(this%ktf)
+    call mem_deallocate(this%rfeatthk)
+    !
     ! -- Deallocate scalars in TspAptType
     call this%TspAptType%bnd_da()
   end subroutine sfe_da
@@ -1088,5 +1096,177 @@ contains
     !
 999 continue
   end subroutine sfe_set_stressperiod
+
+  !> @brief Read feature information for this advanced package
+  !<
+  subroutine sfe_read_cvs(this)
+    ! -- modules
+    use MemoryManagerModule, only: mem_allocate
+    use TimeSeriesManagerModule, only: read_value_or_time_series_adv
+    ! -- dummy
+    class(GweSfeType), intent(inout) :: this
+    ! -- local
+    character(len=LINELENGTH) :: text
+    character(len=LENBOUNDNAME) :: bndName, bndNameTemp
+    character(len=9) :: cno
+    character(len=50), dimension(:), allocatable :: caux
+    integer(I4B) :: ierr
+    logical :: isfound, endOfBlock
+    integer(I4B) :: n
+    integer(I4B) :: ii, jj
+    integer(I4B) :: iaux
+    integer(I4B) :: itmp
+    integer(I4B) :: nlak
+    integer(I4B) :: nconn
+    integer(I4B), dimension(:), pointer, contiguous :: nboundchk
+    real(DP), pointer :: bndElem => null()
+    !
+    ! -- initialize itmp
+    itmp = 0
+    !
+    ! -- allocate apt data
+    call mem_allocate(this%strt, this%ncv, 'STRT', this%memoryPath)
+    call mem_allocate(this%ktf, this%ncv, 'KTF', this%memoryPath)
+    call mem_allocate(this%rfeatthk, this%ncv, 'RFEATTHK', this%memoryPath)
+    call mem_allocate(this%lauxvar, this%naux, this%ncv, 'LAUXVAR', &
+                      this%memoryPath)
+    !
+    ! -- lake boundary and concentrations
+    if (this%imatrows == 0) then
+      call mem_allocate(this%iboundpak, this%ncv, 'IBOUND', this%memoryPath)
+      call mem_allocate(this%xnewpak, this%ncv, 'XNEWPAK', this%memoryPath)
+    end if
+    call mem_allocate(this%xoldpak, this%ncv, 'XOLDPAK', this%memoryPath)
+    !
+    ! -- allocate character storage not managed by the memory manager
+    allocate (this%featname(this%ncv)) ! ditch after boundnames allocated??
+    !allocate(this%status(this%ncv))
+    !
+    do n = 1, this%ncv
+      this%strt(n) = DEP20
+      this%ktf(n) = DZERO
+      this%rfeatthk(n) = DZERO
+      this%lauxvar(:, n) = DZERO
+      this%xoldpak(n) = DEP20
+      if (this%imatrows == 0) then
+        this%iboundpak(n) = 1
+        this%xnewpak(n) = DEP20
+      end if
+    end do
+    !
+    ! -- allocate local storage for aux variables
+    if (this%naux > 0) then
+      allocate (caux(this%naux))
+    end if
+    !
+    ! -- allocate and initialize temporary variables
+    allocate (nboundchk(this%ncv))
+    do n = 1, this%ncv
+      nboundchk(n) = 0
+    end do
+    !
+    ! -- get packagedata block
+    call this%parser%GetBlock('PACKAGEDATA', isfound, ierr, &
+                              supportOpenClose=.true.)
+    !
+    ! -- parse locations block if detected
+    if (isfound) then
+      write (this%iout, '(/1x,a)') 'PROCESSING '//trim(adjustl(this%text))// &
+        ' PACKAGEDATA'
+      nlak = 0
+      nconn = 0
+      do
+        call this%parser%GetNextLine(endOfBlock)
+        if (endOfBlock) exit
+        n = this%parser%GetInteger()
+
+        if (n < 1 .or. n > this%ncv) then
+          write (errmsg, '(a,1x,i6)') &
+            'Itemno must be > 0 and <= ', this%ncv
+          call store_error(errmsg)
+          cycle
+        end if
+        !
+        ! -- increment nboundchk
+        nboundchk(n) = nboundchk(n) + 1
+        !
+        ! -- strt
+        this%strt(n) = this%parser%GetDouble()
+        !
+        ! -- read additional thermal conductivity terms
+        this%ktf(n) = this%parser%GetDouble()
+        this%rfeatthk(n) = this%parser%GetDouble()
+        if (this%rfeatthk(n) <= DZERO) then
+          write (errmsg, '(4x,a)') &
+          '****ERROR. Specified thickness used for thermal &
+          &conduction MUST BE > 0 else divide by zero error occurs'
+          call store_error(errmsg)
+          cycle
+        end if
+        !
+        ! -- get aux data
+        do iaux = 1, this%naux
+          call this%parser%GetString(caux(iaux))
+        end do
+
+        ! -- set default bndName
+        write (cno, '(i9.9)') n
+        bndName = 'Feature'//cno
+
+        ! -- featname
+        if (this%inamedbound /= 0) then
+          call this%parser%GetStringCaps(bndNameTemp)
+          if (bndNameTemp /= '') then
+            bndName = bndNameTemp
+          end if
+        end if
+        this%featname(n) = bndName
+
+        ! -- fill time series aware data
+        ! -- fill aux data
+        do jj = 1, this%naux
+          text = caux(jj)
+          ii = n
+          bndElem => this%lauxvar(jj, ii)
+          call read_value_or_time_series_adv(text, ii, jj, bndElem, &
+                                             this%packName, 'AUX', &
+                                             this%tsManager, this%iprpak, &
+                                             this%auxname(jj))
+        end do
+        !
+        nlak = nlak + 1
+      end do
+      !
+      ! -- check for duplicate or missing lakes
+      do n = 1, this%ncv
+        if (nboundchk(n) == 0) then
+          write (errmsg, '(a,1x,i0)') 'No data specified for feature', n
+          call store_error(errmsg)
+        else if (nboundchk(n) > 1) then
+          write (errmsg, '(a,1x,i0,1x,a,1x,i0,1x,a)') &
+            'Data for feature', n, 'specified', nboundchk(n), 'times'
+          call store_error(errmsg)
+        end if
+      end do
+      !
+      write (this%iout, '(1x,a)') &
+        'END OF '//trim(adjustl(this%text))//' PACKAGEDATA'
+    else
+      call store_error('Required packagedata block not found.')
+    end if
+    !
+    ! -- terminate if any errors were detected
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+    end if
+    !
+    ! -- deallocate local storage for aux variables
+    if (this%naux > 0) then
+      deallocate (caux)
+    end if
+    !
+    ! -- deallocate local storage for nboundchk
+    deallocate (nboundchk)
+  end subroutine sfe_read_cvs
 
 end module GweSfeModule
