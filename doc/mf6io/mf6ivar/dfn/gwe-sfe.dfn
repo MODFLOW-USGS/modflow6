@@ -294,7 +294,7 @@ tagged false
 in_record true
 reader urword
 longname boundary thermal conductivity
-description is the thermal conductivity of the interface between the aquifer cell and the stream reach.  
+description is the thermal conductivity of the material between the aquifer cell and the stream reach. The thickness of the material is defined by the variable RBTHCND.
 
 block packagedata
 name rbthcnd

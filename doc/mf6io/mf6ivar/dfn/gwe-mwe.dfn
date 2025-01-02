@@ -294,7 +294,7 @@ tagged false
 in_record true
 reader urword
 longname thermal conductivity of the feature
-description is the thermal conductivity of the interface between the aquifer cell and the feature.
+description is the thermal conductivity of the material between the aquifer cell and the feature. The thickness of the material is defined by the variable FTHK.
 
 block packagedata
 name fthk
