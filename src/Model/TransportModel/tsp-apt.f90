@@ -79,8 +79,6 @@ module TspAptModule
     integer(I4B), pointer :: idxprepak => null() !< budget-object index that precedes package-specific budget objects
     integer(I4B), pointer :: idxlastpak => null() !< budget-object index of last package-specific budget object
     real(DP), dimension(:), pointer, contiguous :: strt => null() !< starting feature concentration (or temperature)
-    real(DP), dimension(:), pointer, contiguous :: ktf => null() !< thermal conductivity between the apt and groundwater cell
-    real(DP), dimension(:), pointer, contiguous :: rfeatthk => null() !< thickness of streambed/lakebed/filter-pack material through which thermal conduction occurs
     integer(I4B), dimension(:), pointer, contiguous :: idxlocnode => null() !< map position in global rhs and x array of pack entry
     integer(I4B), dimension(:), pointer, contiguous :: idxpakdiag => null() !< map diag position of feature in global amat
     integer(I4B), dimension(:), pointer, contiguous :: idxdglo => null() !< map position in global array of package diagonal row entries
@@ -1236,8 +1234,6 @@ contains
     call mem_deallocate(this%qsto)
     call mem_deallocate(this%ccterm)
     call mem_deallocate(this%strt)
-    call mem_deallocate(this%ktf)
-    call mem_deallocate(this%rfeatthk)
     call mem_deallocate(this%lauxvar)
     call mem_deallocate(this%xoldpak)
     if (this%imatrows == 0) then
@@ -1498,8 +1494,6 @@ contains
     !
     ! -- allocate apt data
     call mem_allocate(this%strt, this%ncv, 'STRT', this%memoryPath)
-    call mem_allocate(this%ktf, this%ncv, 'KTF', this%memoryPath)
-    call mem_allocate(this%rfeatthk, this%ncv, 'RFEATTHK', this%memoryPath)
     call mem_allocate(this%lauxvar, this%naux, this%ncv, 'LAUXVAR', &
                       this%memoryPath)
     !
@@ -1516,8 +1510,6 @@ contains
     !
     do n = 1, this%ncv
       this%strt(n) = DEP20
-      this%ktf(n) = DZERO
-      this%rfeatthk(n) = DZERO
       this%lauxvar(:, n) = DZERO
       this%xoldpak(n) = DEP20
       if (this%imatrows == 0) then
@@ -1564,22 +1556,6 @@ contains
         !
         ! -- strt
         this%strt(n) = this%parser%GetDouble()
-        !
-        ! -- If GWE model, read additional thermal conductivity terms
-        if (this%depvartype == 'TEMPERATURE') then
-          ! -- Skip for UZE
-          if (trim(adjustl(this%text)) /= 'UZE') then
-            this%ktf(n) = this%parser%GetDouble()
-            this%rfeatthk(n) = this%parser%GetDouble()
-            if (this%rfeatthk(n) <= DZERO) then
-              write (errmsg, '(4x,a)') &
-              '****ERROR. Specified thickness used for thermal &
-              &conduction MUST BE > 0 else divide by zero error occurs'
-              call store_error(errmsg)
-              cycle
-            end if
-          end if
-        end if
         !
         ! -- get aux data
         do iaux = 1, this%naux
