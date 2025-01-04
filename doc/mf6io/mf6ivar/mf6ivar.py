@@ -413,7 +413,10 @@ def write_desc(vardict, block, blk_var_list, varexcludeprefix=None):
                     # s += '\\begin{verbatim}\n'
                     s += "\\begin{lstlisting}[style=blockdefinition]\n"
                     for vn in t.strip().split()[1:]:
-                        if "removed" in vardict[(vn, block)] or "deprecated" in vardict[(vn, block)]:
+                        if (
+                            "removed" in vardict[(vn, block)]
+                            or "deprecated" in vardict[(vn, block)]
+                        ):
                             continue
                         blockentry = block_entry(vn, block, vardict, "")
                         s += f"{blockentry}\n"
