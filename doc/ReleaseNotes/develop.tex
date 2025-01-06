@@ -17,13 +17,11 @@
 %	\item xxx
 %\end{itemize}
 
-%\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
-%\underline{BASIC FUNCTIONALITY}
-%\begin{itemize}
-%	\item xxx
-%	\item xxx
-%	\item xxx
-%\end{itemize}
+\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
+\underline{BASIC FUNCTIONALITY}
+\begin{itemize}
+	\item The PRT model previously allowed particles to be released at any time. Release times falling outside the bounds of the simulation's time discretization could produce undefined behavior. Any release times falling outside the bounds of TDIS will now be skipped with a warning message. 
+\end{itemize}
 
 %\underline{INTERNAL FLOW PACKAGES}
 %\begin{itemize}
