@@ -351,14 +351,14 @@ contains
         ! starts, or if no `extend_tracking`, after it ends.
         if (t < DZERO) then
           write (warnmsg, '(a,g0,a)') &
-            'Warning: Skipping negative release time (t=', t, ').'
+            'Skipping negative release time (t=', t, ').'
           call store_warning(warnmsg)
           cycle
         else if (t > totalsimtime .and. this%iextend == 0) then
           write (warnmsg, '(a,g0,a)') &
-            'Warning: Skipping release time falling after the end &
-            &of the simulation (t=', t, '). Enable EXTEND_TRACKING &
-            &to release particles after the simulation end time.'
+            'Skipping release time falling after the end of the &
+            &simulation (t=', t, '). Enable EXTEND_TRACKING to &
+            &release particles after the simulation end time.'
           call store_warning(warnmsg)
           cycle
         end if
