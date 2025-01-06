@@ -308,8 +308,10 @@ contains
 
   !> @brief Advance a time step and release particles if scheduled.
   subroutine prp_ad(this)
+    use TdisModule, only: totalsimtime
     class(PrtPrpType) :: this
     integer(I4B) :: ip, it
+    real(DP) :: t
 
     ! Notes
     ! -----
@@ -344,7 +346,23 @@ contains
     ! each release time in the current step.
     do ip = 1, this%nreleasepoints
       do it = 1, this%schedule%count()
-        call this%release(ip, this%schedule%times(it))
+        t = this%schedule%times(it)
+        ! Skip the release time if it's before the simulation
+        ! starts, or if no `extend_tracking`, after it ends.
+        if (t < DZERO) then
+          write (warnmsg, '(a,g0,a)') &
+            'Warning: Skipping negative release time (t=', t, ').'
+          call store_warning(warnmsg)
+          cycle
+        else if (t > totalsimtime .and. this%iextend == 0) then
+          write (warnmsg, '(a,g0,a)') &
+            'Warning: Skipping release time falling after the end &
+            &of the simulation (t=', t, '). Enable EXTEND_TRACKING &
+            &to release particles after the simulation end time.'
+          call store_warning(warnmsg)
+          cycle
+        end if
+        call this%release(ip, t)
       end do
     end do
   end subroutine prp_ad

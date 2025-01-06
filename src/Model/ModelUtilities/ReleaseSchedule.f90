@@ -7,8 +7,6 @@ module ReleaseScheduleModule
   use MathUtilModule, only: is_close
   use TimeSelectModule, only: TimeSelectType
   use TimeStepSelectModule, only: TimeStepSelectType
-  use SimModule, only: store_error, store_warning
-  use SimVariablesModule, only: errmsg, warnmsg
 
   implicit none
   private
@@ -110,7 +108,7 @@ contains
   !! This routine is idempotent.
   !<
   subroutine advance(this, lines)
-    use TdisModule, only: totimc, kstp, endofperiod, totalsimtime
+    use TdisModule, only: totimc, kstp, endofperiod
     class(ReleaseScheduleType), intent(inout) :: this
     character(len=LINELENGTH), intent(in), optional :: lines(:)
     integer(I4B) :: it, i
@@ -145,24 +143,10 @@ contains
     end if
 
     ! Schedule explicitly specified release times, up
-    ! to the configured tolerance of coincidence. Any
-    ! release times falling outside tdis' bounds will
-    ! be omitted; particle releases may only occur in
-    ! the simulation's time window.
+    ! to the configured tolerance of coincidence
     if (this%time_select%any()) then
       do it = this%time_select%selection(1), this%time_select%selection(2)
         trelease = this%time_select%times(it)
-
-        ! Skip the release time if..
-        ! ..it falls before the simulation start time
-        if (trelease < DZERO .or. trelease > totalsimtime) then
-          write (warnmsg, '(a,g0,a)') &
-            'Warning: release time (t=', trelease, ') is outside tdis'
-          call store_warning(warnmsg)
-          cycle
-        end if
-
-        ! ..or it's too close to the previous time
         if (tprevious >= DZERO .and. is_close( &
             tprevious, &
             trelease, &
