@@ -400,6 +400,6 @@ tagged true
 in_record true
 reader urword
 optional true
-removed 6.5.1
+removed 6.6.0
 longname
 description release particles after the specified fraction of the time step has elapsed. If FRACTION is not set, particles are released at the start of the specified time step(s). FRACTION must be a single value when used with ALL, FIRST, or FREQUENCY. When used with STEPS, FRACTION may be a single value or an array of the same length as STEPS. If a single FRACTION value is provided with STEPS, the fraction applies to all steps. NOTE: The FRACTION option has been removed. For fine control over release timing, specify times explicitly using the RELEASETIMES block.
