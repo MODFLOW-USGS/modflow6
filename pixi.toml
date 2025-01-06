@@ -110,6 +110,7 @@ build-dist = { cmd = "python build_dist.py", cwd = "distribution" }
 test-dist-scripts = { cmd = "pytest -v --durations 0", cwd = "distribution" }
 update-version = { cmd = "python update_version.py", cwd = "distribution" }
 deprecations = { cmd = "python deprecations.py", cwd = "doc/mf6io/mf6ivar" }
+check-citations = "cffconvert --validate -i CITATION.cff"
 
 [feature.rtd.tasks]
 sphinx = { cmd = "make html", cwd = ".build_rtd_docs" }
