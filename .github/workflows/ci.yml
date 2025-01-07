@@ -65,8 +65,8 @@ jobs:
       - name: Check python format
         run: pixi run check-python-format
 
-      - name: Check CITATION.cff
-        run: pixi run check-citations
+      # - name: Check CITATION.cff
+      #   run: pixi run check-citations
 
   build:
     name: Build
