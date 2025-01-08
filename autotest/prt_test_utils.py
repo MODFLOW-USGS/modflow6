@@ -391,10 +391,17 @@ def plot_nodes_and_vertices(
 
     # plot nodes
     xc, yc = mg.get_xcellcenters_for_layer(0), mg.get_ycellcenters_for_layer(0)
-    for i in range(ncpl):
-        x, y = xc[i], yc[i]
-        ax.plot(x, y, "o", color="grey", alpha=0.5)
-        ax.annotate(str(i + 1), (x, y), color="grey", alpha=0.5)
+    if mg.grid_type == "structured":
+        ids = mg.get_lrc(range(mg.ncpl))
+        for _, i, j in ids:
+            x, y = xc[i], yc[i]
+            ax.plot(x, y, "o", color="grey", alpha=0.5)
+            ax.annotate(f"{i + 1}, {j + 1}", (x, y), color="grey", alpha=0.5)
+    else:
+        for i in range(mg.ncpl):
+            x, y = xc[i], yc[i]
+            ax.plot(x, y, "o", color="grey", alpha=0.5)
+            ax.annotate(str(i + 1), (x, y), color="grey", alpha=0.5)
 
     # create legend
     ax.legend(
