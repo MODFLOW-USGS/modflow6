@@ -942,9 +942,9 @@ contains
         n = ival
 
         if (n < 1 .or. n > this%nreleasepoints) then
-          write (errmsg, '(a,1x,i0,a)') &
-            'Release point number must be greater than 0 and less than', &
-            'or equal to', this%nreleasepoints, '.'
+          write (errmsg, '(a,i0,a,i0,a)') &
+            'Expected ', this%nreleasepoints, ' release points. &
+            &Points must be numbered from 1 to ', this%nreleasepoints, '.'
           call store_error(errmsg)
           cycle
         end if
