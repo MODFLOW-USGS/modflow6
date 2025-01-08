@@ -73,7 +73,6 @@ contains
       call particle%transform(xOrigin, yOrigin)
       call this%track_subcell(subcell, particle, tmax)
       call particle%transform(xOrigin, yOrigin, invert=.true.)
-      call particle%reset_transform()
     end select
   end subroutine apply_msp
 

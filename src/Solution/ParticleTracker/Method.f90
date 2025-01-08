@@ -134,9 +134,8 @@ contains
       ! otherwise pass the particle to the next subdomain.
       ! if that leaves it on a boundary, stop advancing.
       call this%pass(particle)
-      if (particle%iboundary(nextlevel - 1) .ne. 0) then
+      if (particle%iboundary(nextlevel - 1) .ne. 0) &
         advancing = .false.
-      end if
     end if
   end subroutine try_pass
 
