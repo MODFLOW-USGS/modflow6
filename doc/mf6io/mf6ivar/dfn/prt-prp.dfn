@@ -337,7 +337,7 @@ description
 
 block period
 name releasesetting
-type keystring all first frequency steps fraction
+type keystring all first last frequency steps fraction
 shape
 tagged false
 in_record true
