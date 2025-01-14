@@ -344,14 +344,14 @@ def get_model(idx, ws):
         )
 
     cobs = [
-        ("w1l1", "interbed-compaction", "01_09_10"),
-        ("w1l2", "interbed-compaction", "02_09_10"),
-        ("w1l3", "interbed-compaction", "03_09_10"),
-        ("w1l4", "interbed-compaction", "04_09_10"),
-        ("w2l1", "interbed-compaction", "01_12_07"),
-        ("w2l2", "interbed-compaction", "02_12_07"),
-        ("w2l3", "interbed-compaction", "03_12_07"),
-        ("w2l4", "interbed-compaction", "04_12_07"),
+        ("w1l1", "interbed-compaction", (89,)),
+        ("w1l2", "interbed-compaction", (299,)),
+        ("w1l3", "interbed-compaction", (509,)),
+        ("w1l4", "interbed-compaction", (719,)),
+        ("w2l1", "interbed-compaction", (130,)),
+        ("w2l2", "interbed-compaction", (340,)),
+        ("w2l3", "interbed-compaction", (550,)),
+        ("w2l4", "interbed-compaction", (760,)),
         ("s1l1", "coarse-compaction", (0, 8, 9)),
         ("s1l2", "coarse-compaction", (1, 8, 9)),
         ("s1l3", "coarse-compaction", (2, 8, 9)),
@@ -383,7 +383,7 @@ def get_model(idx, ws):
         ("pc4", "preconstress-cell", (3, 8, 9)),
         ("sk1l2", "ske-cell", (1, 8, 9)),
         ("sk2l4", "ske-cell", (3, 11, 6)),
-        ("t1l2", "theta", "02_09_10"),
+        ("t1l2", "theta", (1, 8, 9)),
     ]
 
     orecarray = {"csub_obs.csv": cobs}
