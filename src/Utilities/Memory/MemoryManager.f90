@@ -2807,7 +2807,7 @@ contains
     itr = memorystore%iterator()
     do while (itr%has_next())
       call itr%next()
-      mt => itr%value() 
+      mt => itr%value()
       if (IDEVELOPMODE == 1) then
         !
         ! -- check if memory has been deallocated
