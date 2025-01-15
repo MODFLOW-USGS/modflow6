@@ -250,9 +250,9 @@ def check_output(idx, test):
         ]
     ]
     cres = np.array(cres)
-    assert np.allclose(
-        cres, conc
-    ), "simulated concentrations do not match with known solution."
+    assert np.allclose(cres, conc), (
+        "simulated concentrations do not match with known solution."
+    )
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

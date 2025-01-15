@@ -238,9 +238,9 @@ def check_output(idx, test):
     print("Storage change for mobile water in unsat zone should be ", qsto)
     print("Simulated storage is ", qstosim)
     assert np.allclose(qsto, qstosim), "Simulated storage not equal known storage"
-    assert np.allclose(
-        vw, volume_mobile_sim
-    ), "Simulated mobile water volume in aux does not match known result"
+    assert np.allclose(vw, volume_mobile_sim), (
+        "Simulated mobile water volume in aux does not match known result"
+    )
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

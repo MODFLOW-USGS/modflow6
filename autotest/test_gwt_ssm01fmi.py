@@ -222,9 +222,9 @@ def run_transport_model(dir, exe):
     # Create the ssm sources block information
     sourcerecarray = []
     # sourcerecarray += [("WEL-1", "AUX", "CONCENTRATION")]
-    sourcerecarray += [(f"GHB-{i+1}", "AUX", "CONCENTRATION") for i in [0, 1, 2, 3]]
-    sourcerecarray += [(f"RIV-{i+1}", "AUX", "CONCENTRATION") for i in [0, 1, 2]]
-    sourcerecarray += [(f"DRN-{i+1}", "AUX", "CONCENTRATION") for i in [0, 1, 2]]
+    sourcerecarray += [(f"GHB-{i + 1}", "AUX", "CONCENTRATION") for i in [0, 1, 2, 3]]
+    sourcerecarray += [(f"RIV-{i + 1}", "AUX", "CONCENTRATION") for i in [0, 1, 2]]
+    sourcerecarray += [(f"DRN-{i + 1}", "AUX", "CONCENTRATION") for i in [0, 1, 2]]
 
     fileinput = [
         ("WEL-1", f"{gwtname}.wel1.spc"),

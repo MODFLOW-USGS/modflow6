@@ -321,9 +321,9 @@ def check_output(idx, test):
     diff = conc_sim - conc_answer
     dmax = np.abs(diff).max()
 
-    assert np.allclose(
-        conc_sim, conc_answer
-    ), f"Concentrations do not match with known solution. Max diff = {dmax}"
+    assert np.allclose(conc_sim, conc_answer), (
+        f"Concentrations do not match with known solution. Max diff = {dmax}"
+    )
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

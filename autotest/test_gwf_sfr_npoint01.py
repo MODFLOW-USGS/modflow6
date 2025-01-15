@@ -289,9 +289,9 @@ def check_output(idx, test):
     obs_pth = os.path.join(test.workspace, f"{test.name}.sfr.obs.csv")
     obs = flopy.utils.Mf6Obs(obs_pth).get_data()
 
-    assert np.allclose(
-        obs["INFLOW"], np.abs(obs["OUTFLOW"])
-    ), "inflow not equal to outflow"
+    assert np.allclose(obs["INFLOW"], np.abs(obs["OUTFLOW"])), (
+        "inflow not equal to outflow"
+    )
 
     xs_type = xsect_types[idx]
     xs_d = np_data[xs_type]

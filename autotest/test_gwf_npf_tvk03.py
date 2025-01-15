@@ -185,9 +185,9 @@ def check_output(idx, test):
     for kper, expected_result in enumerate(expected_results):
         h = head[kper, ex_lay - 1, ex_row - 1, ex_col - 1]
         print(kper, h, expected_result)
-        assert np.isclose(
-            h, expected_result
-        ), f"Expected head {expected_result} in period {kper} but found {h}"
+        assert np.isclose(h, expected_result), (
+            f"Expected head {expected_result} in period {kper} but found {h}"
+        )
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

@@ -176,7 +176,7 @@ def check_output(idx, test, export, gridded_input):
     nlay = getattr(dis, "nlay").data
     pd = getattr(tdis, "perioddata").array
     print(pd)
-    timestep = 0
+    kstp = 0
     for i in range(nper):
         for j in range(int(pd[i][1])):
             rec = hobj.get_data(kstpkper=(j, i))
@@ -184,16 +184,16 @@ def check_output(idx, test, export, gridded_input):
                 for l in range(nlay):
                     assert np.allclose(
                         np.array(rec[l]).flatten(),
-                        xds[f"head_l{l+1}"][timestep, :].fillna(1.00000000e30).data,
-                    ), f"NetCDF-temperature comparison failure in timestep {timestep+1}"
-                timestep += 1
+                        xds[f"head_l{l + 1}"][kstp, :].fillna(1.00000000e30).data,
+                    ), f"NetCDF-temperature comparison failure in timestep {kstp + 1}"
+                kstp += 1
             elif export == "structured":
                 assert np.allclose(
                     # np.array(rec).flatten(),
                     np.array(rec),
-                    xds["head"][timestep, :].fillna(1.00000000e30).data,
-                ), f"NetCDF-head comparison failure in timestep {timestep+1}"
-                timestep += 1
+                    xds["head"][kstp, :].fillna(1.00000000e30).data,
+                ), f"NetCDF-head comparison failure in timestep {kstp + 1}"
+                kstp += 1
 
     # compare recharge arrays
     rch = getattr(gwf, "rcha_0")
@@ -238,12 +238,12 @@ def check_output(idx, test, export, gridded_input):
             if var.endswith("_l"):
                 for l in range(nlay):
                     assert np.allclose(
-                        np.array(b[l]).flatten(), xds[f"{var}{l+1}"].data
-                    ), f"NetCDF input array comparison failure, variable={var}{l+1}"
+                        np.array(b[l]).flatten(), xds[f"{var}{l + 1}"].data
+                    ), f"NetCDF input array comparison failure, variable={var}{l + 1}"
             else:
-                assert np.allclose(
-                    np.array(b).flatten(), xds[var].data
-                ), f"NetCDF input array comparison failure, variable={var}"
+                assert np.allclose(np.array(b).flatten(), xds[var].data), (
+                    f"NetCDF input array comparison failure, variable={var}"
+                )
         elif export == "structured":
             var = var.replace("_l", "")
             assert np.allclose(

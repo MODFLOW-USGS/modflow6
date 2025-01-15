@@ -478,9 +478,9 @@ def check_output(idx, test):
     print("cell/sfr  head  conc  sfrconc")
     for i in range(ncol * 2):
         print(f"{i + 1}  {head[i]}  {conc[i]}  {sfrconc[i]}")
-    assert np.allclose(
-        conc, sfrconc
-    ), "aquifer concentration does not equal sfr concentration"
+    assert np.allclose(conc, sfrconc), (
+        "aquifer concentration does not equal sfr concentration"
+    )
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

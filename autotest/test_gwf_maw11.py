@@ -235,9 +235,9 @@ def check_output(idx, test):
     for itm in bud_names:
         nm_lst.append(str(itm.strip(), "utf-8"))
 
-    assert (
-        "CONSTANT-TO-MVR" in nm_lst
-    ), "Expected budget term not in MAW binary output file."
+    assert "CONSTANT-TO-MVR" in nm_lst, (
+        "Expected budget term not in MAW binary output file."
+    )
 
     rtm = mawobj.get_data(text="RATE-TO-MVR")
     ctm = mawobj.get_data(text="CONSTANT-TO-MVR")
