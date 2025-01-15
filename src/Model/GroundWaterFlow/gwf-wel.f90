@@ -120,9 +120,9 @@ contains
     call this%BndExtType%bnd_da()
     !
     ! -- scalars
-    call mem_deallocate(this%iflowred)
-    call mem_deallocate(this%flowred)
-    call mem_deallocate(this%ioutafrcsv)
+    call mem_deallocate(this%iflowred, 'IFLOWRED', this%memoryPath)
+    call mem_deallocate(this%flowred, 'FLOWRED', this%memoryPath)
+    call mem_deallocate(this%ioutafrcsv, 'IOUTAFRCSV', this%memoryPath)
     call mem_deallocate(this%q, 'Q', this%memoryPath)
   end subroutine wel_da
 

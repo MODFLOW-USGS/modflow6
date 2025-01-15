@@ -672,7 +672,7 @@ contains
     end if
     !
     ! -- scalars
-    call mem_deallocate(this%nseg)
+    call mem_deallocate(this%nseg, 'NSEG', this%memoryPath)
     deallocate (this%segsdefined)
     deallocate (this%fixed_cell)
     deallocate (this%read_as_arrays)

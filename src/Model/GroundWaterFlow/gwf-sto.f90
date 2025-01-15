@@ -658,18 +658,18 @@ contains
     !
     ! -- Deallocate arrays if package is active
     if (this%inunit > 0) then
-      call mem_deallocate(this%iconvert)
-      call mem_deallocate(this%ss)
-      call mem_deallocate(this%sy)
-      call mem_deallocate(this%strgss)
-      call mem_deallocate(this%strgsy)
+      call mem_deallocate(this%iconvert, 'ICONVERT', this%memoryPath)
+      call mem_deallocate(this%ss, 'SS', this%memoryPath)
+      call mem_deallocate(this%sy, 'SY', this%memoryPath)
+      call mem_deallocate(this%strgss, 'STRGSS', this%memoryPath)
+      call mem_deallocate(this%strgsy, 'STRGSY', this%memoryPath)
       !
       ! -- deallocate TVS arrays
       if (associated(this%oldss)) then
-        call mem_deallocate(this%oldss)
+        call mem_deallocate(this%oldss, 'OLDSS', this%memoryPath)
       end if
       if (associated(this%oldsy)) then
-        call mem_deallocate(this%oldsy)
+        call mem_deallocate(this%oldsy, 'OLDSY', this%memoryPath)
       end if
       !
       ! -- nullify input context pointers
@@ -678,13 +678,13 @@ contains
     end if
     !
     ! -- Deallocate scalars
-    call mem_deallocate(this%istor_coef)
-    call mem_deallocate(this%iconf_ss)
-    call mem_deallocate(this%iorig_ss)
-    call mem_deallocate(this%iusesy)
-    call mem_deallocate(this%satomega)
-    call mem_deallocate(this%integratechanges)
-    call mem_deallocate(this%intvs)
+    call mem_deallocate(this%istor_coef, 'ISTOR_COEF', this%memoryPath)
+    call mem_deallocate(this%iconf_ss, 'ICONF_SS', this%memoryPath)
+    call mem_deallocate(this%iorig_ss, 'IORIG_SS', this%memoryPath)
+    call mem_deallocate(this%iusesy, 'IUSESY', this%memoryPath)
+    call mem_deallocate(this%satomega, 'SATOMEGA', this%memoryPath)
+    call mem_deallocate(this%integratechanges, 'INTEGRATECHANGES', this%memoryPath)
+    call mem_deallocate(this%intvs, 'INTVS', this%memoryPath)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()

@@ -2048,24 +2048,31 @@ contains
 
   !> @brief Deallocate a logical scalar
   !<
-  subroutine deallocate_logical(sclr)
+  subroutine deallocate_logical(sclr, name, mem_path)
     logical(LGP), pointer, intent(inout) :: sclr !< logical scalar to deallocate
+    character(len=*), optional :: name !< variable name
+    character(len=*), optional :: mem_path !< path where variable is stored
     ! -- local
     class(MemoryType), pointer :: mt
     logical(LGP) :: found
     type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     found = .false.
-    itr = memorystore%iterator()
-    do while (itr%has_next())
-      call itr%next()
-      mt => itr%value()
-      if (associated(mt%logicalsclr, sclr)) then
-        nullify (mt%logicalsclr)
-        found = .true.
-        exit
-      end if
-    end do
+    if (present(name) .and. present(mem_path)) then
+      call get_from_memorystore(name, mem_path, mt, found)
+      nullify (mt%logicalsclr)
+    else
+      itr = memorystore%iterator()
+      do while (itr%has_next())
+        call itr%next()
+        mt => itr%value()
+        if (associated(mt%logicalsclr, sclr)) then
+          nullify (mt%logicalsclr)
+          found = .true.
+          exit
+        end if
+      end do
+    end if
     if (.not. found) then
       call store_error('programming error in deallocate_logical', &
                        terminate=.TRUE.)
@@ -2080,24 +2087,31 @@ contains
 
   !> @brief Deallocate a integer scalar
   !<
-  subroutine deallocate_int(sclr)
+  subroutine deallocate_int(sclr, name, mem_path)
     integer(I4B), pointer, intent(inout) :: sclr !< integer variable to deallocate
+    character(len=*), optional :: name !< variable name
+    character(len=*), optional :: mem_path !< path where variable is stored
     ! -- local
     class(MemoryType), pointer :: mt
     logical(LGP) :: found
     type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     found = .false.
-    itr = memorystore%iterator()
-    do while (itr%has_next())
-      call itr%next()
-      mt => itr%value()
-      if (associated(mt%intsclr, sclr)) then
-        nullify (mt%intsclr)
-        found = .true.
-        exit
-      end if
-    end do
+    if (present(name) .and. present(mem_path)) then
+      call get_from_memorystore(name, mem_path, mt, found)
+      nullify (mt%intsclr)
+    else
+      itr = memorystore%iterator()
+      do while (itr%has_next())
+        call itr%next()
+        mt => itr%value()
+        if (associated(mt%intsclr, sclr)) then
+          nullify (mt%intsclr)
+          found = .true.
+          exit
+        end if
+      end do
+    end if
     if (.not. found) then
       call store_error('Programming error in deallocate_int.', terminate=.TRUE.)
     else
@@ -2111,24 +2125,31 @@ contains
 
   !> @brief Deallocate a real scalar
   !<
-  subroutine deallocate_dbl(sclr)
+  subroutine deallocate_dbl(sclr, name, mem_path)
     real(DP), pointer, intent(inout) :: sclr !< real variable to deallocate
+    character(len=*), optional :: name !< variable name
+    character(len=*), optional :: mem_path !< path where variable is stored
     ! -- local
     class(MemoryType), pointer :: mt
     logical(LGP) :: found
     type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     found = .false.
-    itr = memorystore%iterator()
-    do while (itr%has_next())
-      call itr%next()
-      mt => itr%value()
-      if (associated(mt%dblsclr, sclr)) then
-        nullify (mt%dblsclr)
-        found = .true.
-        exit
-      end if
-    end do
+    if (present(name) .and. present(mem_path)) then
+      call get_from_memorystore(name, mem_path, mt, found)
+      nullify (mt%dblsclr)
+    else
+      itr = memorystore%iterator()
+      do while (itr%has_next())
+        call itr%next()
+        mt => itr%value()
+        if (associated(mt%dblsclr, sclr)) then
+          nullify (mt%dblsclr)
+          found = .true.
+          exit
+        end if
+      end do
+    end if
     if (.not. found) then
       call store_error('Programming error in deallocate_dbl.', terminate=.TRUE.)
     else
@@ -2786,7 +2807,7 @@ contains
     itr = memorystore%iterator()
     do while (itr%has_next())
       call itr%next()
-      mt => itr%value()
+      mt => itr%value() 
       if (IDEVELOPMODE == 1) then
         !
         ! -- check if memory has been deallocated

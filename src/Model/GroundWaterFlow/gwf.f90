@@ -1094,19 +1094,19 @@ contains
     end do
     !
     ! -- Scalars
-    call mem_deallocate(this%inic)
-    call mem_deallocate(this%inoc)
-    call mem_deallocate(this%inobs)
-    call mem_deallocate(this%innpf)
-    call mem_deallocate(this%inbuy)
-    call mem_deallocate(this%invsc)
-    call mem_deallocate(this%insto)
-    call mem_deallocate(this%incsub)
-    call mem_deallocate(this%inmvr)
-    call mem_deallocate(this%inhfb)
-    call mem_deallocate(this%ingnc)
-    call mem_deallocate(this%iss)
-    call mem_deallocate(this%inewtonur)
+    call mem_deallocate(this%inic, 'INIC', this%memoryPath)
+    call mem_deallocate(this%inoc, 'INOC', this%memoryPath)
+    call mem_deallocate(this%inobs, 'INOBS', this%memoryPath)
+    call mem_deallocate(this%innpf, 'INNPF', this%memoryPath)
+    call mem_deallocate(this%inbuy, 'INBUY', this%memoryPath)
+    call mem_deallocate(this%invsc, 'INVSC', this%memoryPath)
+    call mem_deallocate(this%insto, 'INSTO', this%memoryPath)
+    call mem_deallocate(this%incsub, 'INCSUB', this%memoryPath)
+    call mem_deallocate(this%inmvr, 'INMVR', this%memoryPath)
+    call mem_deallocate(this%inhfb, 'INHFB', this%memoryPath)
+    call mem_deallocate(this%ingnc, 'INGNC', this%memoryPath)
+    call mem_deallocate(this%iss, 'ISS', this%memoryPath)
+    call mem_deallocate(this%inewtonur, 'INEWTONUR', this%memoryPath)
     !
     ! -- NumericalModelType
     call this%NumericalModelType%model_da()

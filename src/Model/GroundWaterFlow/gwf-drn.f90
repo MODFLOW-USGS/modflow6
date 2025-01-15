@@ -103,8 +103,8 @@ contains
     call this%BndExtType%bnd_da()
     !
     ! -- scalars
-    call mem_deallocate(this%iauxddrncol)
-    call mem_deallocate(this%icubic_scaling)
+    call mem_deallocate(this%iauxddrncol, 'IAUXDDRNCOL', this%memoryPath)
+    call mem_deallocate(this%icubic_scaling, 'ICUBIC_SCALING', this%memoryPath)
     !
     ! -- arrays
     call mem_deallocate(this%elev, 'ELEV', this%memoryPath)

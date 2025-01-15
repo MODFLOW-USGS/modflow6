@@ -907,27 +907,27 @@ contains
     !
     ! -- Deallocate arrays if package was active
     if (this%inunit > 0) then
-      call mem_deallocate(this%visc)
-      call mem_deallocate(this%ivisc)
-      call mem_deallocate(this%dviscdc)
-      call mem_deallocate(this%cviscref)
-      call mem_deallocate(this%ctemp)
+      call mem_deallocate(this%visc, 'VISC', this%memoryPath)
+      call mem_deallocate(this%ivisc, 'IVISC', this%memoryPath)
+      call mem_deallocate(this%dviscdc, 'DRHODC', this%memoryPath)
+      call mem_deallocate(this%cviscref, 'CRHOREF', this%memoryPath)
+      call mem_deallocate(this%ctemp, 'CTEMP', this%memoryPath)
       deallocate (this%cmodelname)
       deallocate (this%cauxspeciesname)
       deallocate (this%modelconc)
     end if
     !
     ! -- Scalars
-    call mem_deallocate(this%thermivisc)
-    call mem_deallocate(this%idxtmpr)
-    call mem_deallocate(this%ioutvisc)
-    call mem_deallocate(this%ireadelev)
-    call mem_deallocate(this%iconcset)
-    call mem_deallocate(this%viscref)
-    call mem_deallocate(this%nviscspecies)
-    call mem_deallocate(this%a2)
-    call mem_deallocate(this%a3)
-    call mem_deallocate(this%a4)
+    call mem_deallocate(this%thermivisc, 'THERMIVISC', this%memoryPath)
+    call mem_deallocate(this%idxtmpr, 'IDXTMPR', this%memoryPath)
+    call mem_deallocate(this%ioutvisc, 'IOUTVISC', this%memoryPath)
+    call mem_deallocate(this%ireadelev, 'IREADELEV', this%memoryPath)
+    call mem_deallocate(this%iconcset, 'ICONCSET', this%memoryPath)
+    call mem_deallocate(this%viscref, 'VISCREF', this%memoryPath)
+    call mem_deallocate(this%nviscspecies, 'NVISCSPECIES', this%memoryPath)
+    call mem_deallocate(this%a2, 'A2', this%memoryPath)
+    call mem_deallocate(this%a3, 'A3', this%memoryPath)
+    call mem_deallocate(this%a4, 'A4', this%memoryPath)
     !
     ! -- Nullify pointers to other package variables
     nullify (this%k11)

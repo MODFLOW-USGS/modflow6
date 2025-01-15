@@ -113,7 +113,7 @@ contains
     call memorystore_remove(this%name_model, 'IC', idm_context)
     !
     ! -- deallocate arrays
-    call mem_deallocate(this%strt)
+    call mem_deallocate(this%strt, 'STRT', this%memoryPath)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()

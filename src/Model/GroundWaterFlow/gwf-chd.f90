@@ -357,8 +357,8 @@ contains
     call this%BndExtType%bnd_da()
     !
     ! -- arrays
-    call mem_deallocate(this%ratechdin)
-    call mem_deallocate(this%ratechdout)
+    call mem_deallocate(this%ratechdin, 'RATECHDIN', this%memoryPath)
+    call mem_deallocate(this%ratechdout, 'RATECHDOUT', this%memoryPath)
     call mem_deallocate(this%head, 'HEAD', this%memoryPath)
   end subroutine chd_da
 

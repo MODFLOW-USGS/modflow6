@@ -638,7 +638,7 @@ contains
     !
     ! -- Arrays
     if (this%inunit > 0) then
-      call mem_deallocate(this%ientries)
+      call mem_deallocate(this%ientries, 'IENTRIES', this%memoryPath)
       deallocate (this%mvr)
       deallocate (this%pckMemPaths)
       deallocate (this%paknames)
@@ -667,15 +667,15 @@ contains
     end if
     !
     ! -- Scalars
-    call mem_deallocate(this%reset_mapped_id)
-    call mem_deallocate(this%ibudgetout)
-    call mem_deallocate(this%ibudcsv)
-    call mem_deallocate(this%maxmvr)
-    call mem_deallocate(this%maxpackages)
-    call mem_deallocate(this%maxcomb)
-    call mem_deallocate(this%nmvr)
-    call mem_deallocate(this%iexgmvr)
-    call mem_deallocate(this%imodelnames)
+    call mem_deallocate(this%reset_mapped_id, 'RESET_MAPPED_ID', this%memoryPath)
+    call mem_deallocate(this%ibudgetout, 'IBUDGETOUT', this%memoryPath)
+    call mem_deallocate(this%ibudcsv, 'IBUDCSV', this%memoryPath)
+    call mem_deallocate(this%maxmvr, 'MAXMVR', this%memoryPath)
+    call mem_deallocate(this%maxpackages, 'MAXPACKAGES', this%memoryPath)
+    call mem_deallocate(this%maxcomb, 'MAXCOMB', this%memoryPath)
+    call mem_deallocate(this%nmvr, 'NMVR', this%memoryPath)
+    call mem_deallocate(this%iexgmvr, 'IEXGMVR', this%memoryPath)
+    call mem_deallocate(this%imodelnames, 'IMODELNAMES', this%memoryPath)
     !
     ! -- deallocate scalars in NumericalPackageType
     call this%NumericalPackageType%da()

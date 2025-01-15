@@ -923,26 +923,26 @@ contains
     !
     ! -- Deallocate arrays if package was active
     if (this%inunit > 0) then
-      call mem_deallocate(this%elev)
-      call mem_deallocate(this%dense)
-      call mem_deallocate(this%concbuy)
-      call mem_deallocate(this%drhodc)
-      call mem_deallocate(this%crhoref)
-      call mem_deallocate(this%ctemp)
+      call mem_deallocate(this%elev, 'ELEV', this%memoryPath)
+      call mem_deallocate(this%dense, 'DENSE', this%memoryPath)
+      call mem_deallocate(this%concbuy, 'CONCBUY', this%memoryPath)
+      call mem_deallocate(this%drhodc, 'DRHODC', this%memoryPath)
+      call mem_deallocate(this%crhoref, 'CRHOREF', this%memoryPath)
+      call mem_deallocate(this%ctemp, 'CTEMP', this%memoryPath)
       deallocate (this%cmodelname)
       deallocate (this%cauxspeciesname)
       deallocate (this%modelconc)
     end if
     !
     ! -- Scalars
-    call mem_deallocate(this%ioutdense)
-    call mem_deallocate(this%iform)
-    call mem_deallocate(this%ireadelev)
-    call mem_deallocate(this%ireadconcbuy)
-    call mem_deallocate(this%iconcset)
-    call mem_deallocate(this%denseref)
+    call mem_deallocate(this%ioutdense, 'IOUTDENSE', this%memoryPath)
+    call mem_deallocate(this%iform, 'IFORM', this%memoryPath)
+    call mem_deallocate(this%ireadelev, 'IREADELEV', this%memoryPath)
+    call mem_deallocate(this%ireadconcbuy, 'IREADCONCBUY', this%memoryPath)
+    call mem_deallocate(this%iconcset, 'ICONCSET', this%memoryPath)
+    call mem_deallocate(this%denseref, 'DENSEREF', this%memoryPath)
     !
-    call mem_deallocate(this%nrhospecies)
+    call mem_deallocate(this%nrhospecies, 'NRHOSPECIES', this%memoryPath)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
