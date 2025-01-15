@@ -212,7 +212,7 @@ def get_model(idx, ws):
     )
     orecarray = {}
     orecarray["csub_obs.csv"] = [
-        ("w1l1", "interbed-compaction", "01_01_02"),
+        ("w1l1", "compaction-cell", (0, 0, 1)),
         ("w1l1t", "csub-cell", (0, 0, 1)),
     ]
     csub_obs_package = csub.obs.initialize(

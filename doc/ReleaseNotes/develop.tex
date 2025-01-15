@@ -23,12 +23,13 @@
 	\item The PRT model previously allowed particles to be released at any time. Release times falling outside the bounds of the simulation's time discretization could produce undefined behavior. Any release times occurring before the simulation begins (i.e. negative times) will now be skipped with a warning message. If EXTEND\_TRACKING is not enabled, release times occurring after the end of the simulation will now be skipped with a warning message as well. If EXTEND\_TRACKING is enabled, release times after the end of the simulation are allowed.
 \end{itemize}
 
-%\underline{INTERNAL FLOW PACKAGES}
-%\begin{itemize}
+\underline{INTERNAL FLOW PACKAGES}
+\begin{itemize}
+	\item CSUB package observations that could be specified using BOUNDNAMES was inconsistent with the input and output guide and allowed BOUNDNAMES to be specified for observations that should not be able to be accumulated. CSUB package observations have been modified so that flow observations are the only observations that can be specified using BOUNDNAMES.
 %	\item xxx
 %	\item xxx
 %	\item xxx
-%\end{itemize}
+\end{itemize}
 
 %\underline{STRESS PACKAGES}
 %\begin{itemize}
