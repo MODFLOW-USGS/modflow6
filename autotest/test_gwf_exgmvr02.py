@@ -296,19 +296,19 @@ def check_output(idx, test):
     fpth = ws / "left.sfr.stg"
     stage_obj = flopy.utils.HeadFile(fpth, text="STAGE")
     v = stage_obj.get_data().squeeze()
-    assert np.allclose(
-        single_stage[0:ncol_split], v[0:ncol_split]
-    ), "sfr left (segment I) stages are not equal"
-    assert np.allclose(
-        single_stage[3 * ncol_split + 1 :], v[ncol_split:]
-    ), "sfr left (segment II) stages are not equal"
+    assert np.allclose(single_stage[0:ncol_split], v[0:ncol_split]), (
+        "sfr left (segment I) stages are not equal"
+    )
+    assert np.allclose(single_stage[3 * ncol_split + 1 :], v[ncol_split:]), (
+        "sfr left (segment II) stages are not equal"
+    )
 
     fpth = ws / "right.sfr.stg"
     stage_obj = flopy.utils.HeadFile(fpth, text="STAGE")
     v = stage_obj.get_data().squeeze()
-    assert np.allclose(
-        single_stage[ncol_split : 3 * ncol_split + 1], v
-    ), "sfr right stages are not equal"
+    assert np.allclose(single_stage[ncol_split : 3 * ncol_split + 1], v), (
+        "sfr right stages are not equal"
+    )
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

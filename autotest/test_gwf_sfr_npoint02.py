@@ -205,9 +205,9 @@ def check_output(idx, test):
     obs_pth = os.path.join(test.workspace, f"{name}.sfr.obs.csv")
     obs = flopy.utils.Mf6Obs(obs_pth).get_data()
 
-    assert np.allclose(
-        obs["INFLOW"], np.abs(obs["OUTFLOW"])
-    ), "inflow not equal to outflow"
+    assert np.allclose(obs["INFLOW"], np.abs(obs["OUTFLOW"])), (
+        "inflow not equal to outflow"
+    )
 
     d = []
     for n in range(nper):

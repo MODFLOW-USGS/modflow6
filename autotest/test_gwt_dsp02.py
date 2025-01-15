@@ -695,9 +695,9 @@ def check_output(idx, test):
 
     creslist = [cres1, cres2]
 
-    assert np.allclose(
-        creslist[idx], conc
-    ), "simulated concentrations do not match with known solution."
+    assert np.allclose(creslist[idx], conc), (
+        "simulated concentrations do not match with known solution."
+    )
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

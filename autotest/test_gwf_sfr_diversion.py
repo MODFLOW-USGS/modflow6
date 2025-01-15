@@ -123,24 +123,24 @@ def check_output(idx, test):
         outflows = cbb.get_data(text="EXT-OUTFLOW")
 
     # check outflow for reach 2 and 3
-    assert np.allclose(
-        [r.q[1] for r in outflows], -inflows * diversion
-    ), "Incorrect outflow for diversion reach"
-    assert np.allclose(
-        [r.q[2] for r in outflows], -inflows * (1 - diversion)
-    ), "Incorrect outflow for outlet reach"
+    assert np.allclose([r.q[1] for r in outflows], -inflows * diversion), (
+        "Incorrect outflow for diversion reach"
+    )
+    assert np.allclose([r.q[2] for r in outflows], -inflows * (1 - diversion)), (
+        "Incorrect outflow for outlet reach"
+    )
 
     # load SFR budget CSV and check overall budget
     with open(fname.replace(".cbb", ".csv")) as f:
         header = f.readline().strip().split(",")
         flux = np.loadtxt(f, delimiter=",")
 
-    assert np.allclose(
-        flux[:, header.index("EXT-OUTFLOW_IN")], 0
-    ), "External flow IN larger than zero"
-    assert np.allclose(
-        flux[:, header.index("PERCENT_DIFFERENCE")], 0
-    ), "Large mass balance error in SFR"
+    assert np.allclose(flux[:, header.index("EXT-OUTFLOW_IN")], 0), (
+        "External flow IN larger than zero"
+    )
+    assert np.allclose(flux[:, header.index("PERCENT_DIFFERENCE")], 0), (
+        "Large mass balance error in SFR"
+    )
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

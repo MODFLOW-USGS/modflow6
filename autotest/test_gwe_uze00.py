@@ -500,9 +500,9 @@ def check_output(idx, test):
         "falling outside established bounds on day 10"
     )
     assert np.max(analytical_sln[10, :37] - temps[10, 0, 0, :37]) <= 0.15993441016, msg2
-    assert (
-        np.min(analytical_sln[10, :37] - temps[10, 0, 0, :37]) >= -0.22298707253
-    ), msg2
+    assert np.min(analytical_sln[10, :37] - temps[10, 0, 0, :37]) >= -0.22298707253, (
+        msg2
+    )
 
     # Ensure that the differences on day 50 fall within established bounds
     msg3 = (
@@ -510,9 +510,9 @@ def check_output(idx, test):
         "falling outside established bounds on day 50"
     )
     assert np.max(analytical_sln[50, :82] - temps[50, 0, 0, :82]) <= 0.09327747258, msg3
-    assert (
-        np.min(analytical_sln[50, :82] - temps[50, 0, 0, :82]) >= -0.21182907402
-    ), msg3
+    assert np.min(analytical_sln[50, :82] - temps[50, 0, 0, :82]) >= -0.21182907402, (
+        msg3
+    )
 
     # Ensure that the differences on day 50 fall within established bounds
     msg3 = (
@@ -520,9 +520,9 @@ def check_output(idx, test):
         "falling outside established bounds on day 50"
     )
     assert np.max(analytical_sln[50, :82] - temps[50, 0, 0, :82]) <= 0.09327747258, msg3
-    assert (
-        np.min(analytical_sln[50, :82] - temps[50, 0, 0, :82]) >= -0.21182907402
-    ), msg3
+    assert np.min(analytical_sln[50, :82] - temps[50, 0, 0, :82]) >= -0.21182907402, (
+        msg3
+    )
 
     # Ensure that the differences on day 100 fall within established bounds
     msg4 = (

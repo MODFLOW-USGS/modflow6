@@ -167,9 +167,9 @@ def check_output(idx, test):
         print(f"Calculated q is {flow_rate_calc}")
         for node, node2, q in bud:
             print(node, node2, q, flow_rate_calc)
-            assert np.isclose(
-                flow_rate_calc, abs(q)
-            ), f"Expected flow rate {flow_rate_calc} but found {q}"
+            assert np.isclose(flow_rate_calc, abs(q)), (
+                f"Expected flow rate {flow_rate_calc} but found {q}"
+            )
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

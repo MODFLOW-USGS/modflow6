@@ -337,8 +337,7 @@ def check_output(idx, test):
     # Energy source loading was crafted such that each cell in
     # the simulation would rise by 1 degree at the end of the simulation.
     msg0 = (
-        "Grid cell temperatures do not reflect the expected difference"
-        "in stress period "
+        "Grid cell temperatures do not reflect the expected differencein stress period "
     )
     answer = ncol[idx]
     assert np.isclose(np.sum(temps[-1]), answer), msg0 + str(idx)

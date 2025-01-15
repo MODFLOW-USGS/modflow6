@@ -225,14 +225,14 @@ def check_output(idx, test):
     # up-down and left-right directions
     conc = conc.reshape((21, 21))
     concud = np.flipud(conc)
-    assert np.allclose(
-        concud, conc
-    ), "simulated concentrations are not symmetric in up-down direction."
+    assert np.allclose(concud, conc), (
+        "simulated concentrations are not symmetric in up-down direction."
+    )
 
     conclr = np.fliplr(conc)
-    assert np.allclose(
-        conclr, conc
-    ), "simulated concentrations are not symmetric in left-right direction."
+    assert np.allclose(conclr, conc), (
+        "simulated concentrations are not symmetric in left-right direction."
+    )
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

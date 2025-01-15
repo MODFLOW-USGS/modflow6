@@ -242,9 +242,9 @@ def check_output(idx, test):
     # This is the answer to this problem.  These concentrations are for
     # steady state and calculated from F = D * (c1 - c2) / L
     cres = np.linspace(9.9, 0, 100).reshape(conc.shape)
-    assert np.allclose(
-        cres, conc
-    ), "simulated concentrations do not match with known solution."
+    assert np.allclose(cres, conc), (
+        "simulated concentrations do not match with known solution."
+    )
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))
