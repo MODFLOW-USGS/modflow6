@@ -2775,7 +2775,8 @@ contains
     call mem_deallocate(this%pumpelev, 'PUMPELEV', this%memoryPath)
     call mem_deallocate(this%bot, 'BOT', this%memoryPath)
     call mem_deallocate(this%ratesim, 'RATESIM', this%memoryPath)
-   call mem_deallocate(this%reduction_length, 'REDUCTION_LENGTH', this%memoryPath)
+    call mem_deallocate(this%reduction_length, 'REDUCTION_LENGTH', &
+                        this%memoryPath)
     call mem_deallocate(this%fwelev, 'FWELEV', this%memoryPath)
     call mem_deallocate(this%fwcond, 'FWCONDS', this%memoryPath)
     call mem_deallocate(this%fwrlen, 'FWRLEN', this%memoryPath)

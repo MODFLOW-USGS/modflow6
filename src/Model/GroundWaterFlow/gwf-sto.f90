@@ -683,7 +683,8 @@ contains
     call mem_deallocate(this%iorig_ss, 'IORIG_SS', this%memoryPath)
     call mem_deallocate(this%iusesy, 'IUSESY', this%memoryPath)
     call mem_deallocate(this%satomega, 'SATOMEGA', this%memoryPath)
-   call mem_deallocate(this%integratechanges, 'INTEGRATECHANGES', this%memoryPath)
+    call mem_deallocate(this%integratechanges, 'INTEGRATECHANGES', &
+                        this%memoryPath)
     call mem_deallocate(this%intvs, 'INTVS', this%memoryPath)
     !
     ! -- deallocate parent

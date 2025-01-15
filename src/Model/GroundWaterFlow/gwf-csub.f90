@@ -2350,7 +2350,8 @@ contains
           call mem_deallocate(this%dbtheta, 'DBTHETA', trim(this%memoryPath))
           call mem_deallocate(this%dbtheta0, 'DBTHETA0', trim(this%memoryPath))
         end if
-        call mem_deallocate(this%idb_nconv_count, 'IDB_NCONV_COUNT', trim(this%memoryPath))
+        call mem_deallocate(this%idb_nconv_count, 'IDB_NCONV_COUNT', &
+                            trim(this%memoryPath))
         call mem_deallocate(this%idbconvert, 'IDBCONVERT', trim(this%memoryPath))
         call mem_deallocate(this%dbdhmax, 'DBDHMAX', trim(this%memoryPath))
         call mem_deallocate(this%dbz, 'DBZ', trim(this%memoryPath))
