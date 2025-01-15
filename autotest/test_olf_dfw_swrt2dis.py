@@ -196,9 +196,9 @@ def check_output(idx, test):
     # at end of simulation, water depth should be 1.0 for all reaches
     olf = mfsim.get_model(olfname)
     depth = stage_all[-1] - olf.dis.bottom.array
-    assert np.allclose(
-        depth, 1.0
-    ), f"Simulated depth at end should be 1, but found {depth}"
+    assert np.allclose(depth, 1.0), (
+        f"Simulated depth at end should be 1, but found {depth}"
+    )
 
 
 @pytest.mark.developmode

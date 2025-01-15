@@ -293,8 +293,8 @@ def run_transport_model(dir, exe):
     # Create the ssm sources block information
     sourcerecarray = []
     sourcerecarray += [("WEL-1", "AUX", "CONCENTRATION")]
-    sourcerecarray += [(f"GHB-{i+1}", "AUX", "CONCENTRATION") for i in [0, 1, 2, 3]]
-    sourcerecarray += [(f"DRN-{i+1}", "AUX", "CONCENTRATION") for i in [0, 1, 2]]
+    sourcerecarray += [(f"GHB-{i + 1}", "AUX", "CONCENTRATION") for i in [0, 1, 2, 3]]
+    sourcerecarray += [(f"DRN-{i + 1}", "AUX", "CONCENTRATION") for i in [0, 1, 2]]
 
     ssm = flopy.mf6.ModflowGwtssm(gwt, print_flows=True, sources=sourcerecarray)
 

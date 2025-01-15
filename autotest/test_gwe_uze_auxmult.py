@@ -361,7 +361,7 @@ def run_single_sim(dir, exe):
     sim = build_single_sim(idx, dir, exe)
     sim.write_simulation()
     success, buff = sim.run_simulation(silent=False)
-    errmsg = f"simulation should terminate with error message, but " f"did not.\n{buff}"
+    errmsg = f"simulation should terminate with error message, but did not.\n{buff}"
     assert not success, errmsg
 
 
@@ -460,9 +460,7 @@ def run_separate_sims(dir, exe):
     sim = build_gwe_sim_only(idx, dir, exe)
     sim.write_simulation()
     success, buff = sim.run_simulation(silent=False)
-    errmsg = (
-        f"GWE simulation should terminate with error message, but " f"did not.\n{buff}"
-    )
+    errmsg = f"GWE simulation should terminate with error message, but did not.\n{buff}"
     assert not success, errmsg
 
 

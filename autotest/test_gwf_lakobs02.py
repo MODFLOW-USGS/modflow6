@@ -180,9 +180,9 @@ def check_output(idx, test):
         "O3": [-1.0],
     }
     for key, value in test_values.items():
-        assert np.array_equal(
-            obs_values.get_data(obsname=key)[key], value
-        ), f"failed comparison for '{key}' observation"
+        assert np.array_equal(obs_values.get_data(obsname=key)[key], value), (
+            f"failed comparison for '{key}' observation"
+        )
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

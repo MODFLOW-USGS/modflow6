@@ -337,9 +337,9 @@ def check_output(idx, test):
     tsreslist = [tsresab, tsresab, tsrescd, tsrescd, None, None, None, None]
     tsres = tsreslist[idx]
     if tsres is not None:
-        assert np.allclose(
-            tsres, tssim
-        ), "simulated concentrations do not match with known solution."
+        assert np.allclose(tsres, tssim), (
+            "simulated concentrations do not match with known solution."
+        )
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

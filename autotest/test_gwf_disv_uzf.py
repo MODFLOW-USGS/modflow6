@@ -271,9 +271,9 @@ def check_output(idx, test):
             hdlayer = arr[ly]
             for rw in np.arange(arr.shape[0]):
                 fullrw = hdlayer[rw]
-                assert np.all(
-                    np.diff(fullrw) < 0
-                ), "GW heads not decreasing to the right"
+                assert np.all(np.diff(fullrw) < 0), (
+                    "GW heads not decreasing to the right"
+                )
 
     # After confirming heads drop off to the right,
     # complete checks that ET totals & character (UZET vs GWET)

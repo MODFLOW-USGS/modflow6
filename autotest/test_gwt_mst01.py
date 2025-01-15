@@ -216,9 +216,9 @@ def check_output(idx, test):
 
     # end of stress period 1
     cres1 = np.ones((nlay, nrow, ncol), float)
-    assert np.allclose(
-        cres1, conc1
-    ), "simulated concentrations do not match with known solution."
+    assert np.allclose(cres1, conc1), (
+        "simulated concentrations do not match with known solution."
+    )
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

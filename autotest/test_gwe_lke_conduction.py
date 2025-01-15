@@ -671,9 +671,9 @@ def check_output(idx, test):
 
     # Retrieve budget
     T_in, T_out, in_bud_lst, out_bud_lst = get_bud(fname, srchStr)
-    assert np.isclose(
-        T_in, T_out, atol=0.1
-    ), "There is a heat budget discrepancy where there shouldn't be"
+    assert np.isclose(T_in, T_out, atol=0.1), (
+        "There is a heat budget discrepancy where there shouldn't be"
+    )
 
     msg1 = "Budget item 'GWF' should be 0.0 for this scenario"
     msg2 = (
@@ -686,8 +686,7 @@ def check_output(idx, test):
     )
     msg4 = "There should be a warming trend in the groundwater adjacent to the lake"
     msg5 = (
-        "Budget item 'GWF' should reflect heat entering the lake "
-        "(via gw/sw exchange)"
+        "Budget item 'GWF' should reflect heat entering the lake (via gw/sw exchange)"
     )
     msg6 = "Budget item 'GWF' should reflect heat exiting the lake (via gw/sw exchange)"
 

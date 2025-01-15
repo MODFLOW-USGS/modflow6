@@ -223,7 +223,7 @@ def build_well_data(modelgrid, nper):
             cellid = modelgrid.intersect(x, y, z=z_node[well_layers[i]])
             if isinstance(cellid, int):
                 cellid = (cellid,)
-            spd.append((*cellid, wellq[i], concentration, f"well-{i+1}"))
+            spd.append((*cellid, wellq[i], concentration, f"well-{i + 1}"))
         spd_dict[iper] = spd
     return spd_dict
 
@@ -528,9 +528,9 @@ def check_output(idx, test):
 
     head = gwf_base.output.head().get_data().flatten().reshape(shape3d)
     if answer is not None:
-        assert np.allclose(
-            head[0], answer
-        ), "head data for first layer does not match know result"
+        assert np.allclose(head[0], answer), (
+            "head data for first layer does not match know result"
+        )
 
     extension = "cbc"
     fpth0 = ws / f"{sim_name}.{extension}"

@@ -1008,9 +1008,9 @@ if __name__ == "__main__":
     elif dfn.suffix.lower() in [".dfn"]:
         dfns = [dfn]
 
-    assert all(
-        p.is_file() for p in dfns
-    ), f"DFNs not found: {[p for p in dfns if not p.is_file()]}"
+    assert all(p.is_file() for p in dfns), (
+        f"DFNs not found: {[p for p in dfns if not p.is_file()]}"
+    )
 
     if verbose:
         print("Converting DFNs:")

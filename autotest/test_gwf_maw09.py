@@ -250,9 +250,9 @@ def check_output(idx, test):
 
     # Check final well head
     well_head = wobs[-1]
-    assert np.allclose(
-        well_head, 17.25
-    ), f"final simulated maw head ({well_head}) does not equal 17.25."
+    assert np.allclose(well_head, 17.25), (
+        f"final simulated maw head ({well_head}) does not equal 17.25."
+    )
 
     fname = gwfname + ".hds"
     fname = os.path.join(test.workspace, fname)

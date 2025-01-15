@@ -134,9 +134,9 @@ def build_models(idx, test):
 def check_output(idx, test):
     hres = get_strt_array(idx).flatten()
     obs = get_obs_out(idx, test)
-    assert np.allclose(
-        hres, obs
-    ), "simulated head observations do not match with known solution."
+    assert np.allclose(hres, obs), (
+        "simulated head observations do not match with known solution."
+    )
 
 
 @pytest.mark.slow

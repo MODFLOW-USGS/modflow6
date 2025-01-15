@@ -507,17 +507,17 @@ def check_output(idx, test):
     if include_NWT:
         # Compare MF6 results with NWT
         # layer 1
-        assert np.allclose(
-            mf6_wc[:, 0, 0, :], mfnwt_wc[:, 0, 0, :], atol=0.01
-        ), "mf6 water contents different than NWT"
+        assert np.allclose(mf6_wc[:, 0, 0, :], mfnwt_wc[:, 0, 0, :], atol=0.01), (
+            "mf6 water contents different than NWT"
+        )
         # layer 2 (has a mixed condition later in the simulation
-        assert np.allclose(
-            mf6_wc[:, 1, 0, :], mfnwt_wc[:, 1, 0, :], atol=0.01
-        ), "mf6 water contents different than NWT"
+        assert np.allclose(mf6_wc[:, 1, 0, :], mfnwt_wc[:, 1, 0, :], atol=0.01), (
+            "mf6 water contents different than NWT"
+        )
     else:
-        assert np.allclose(
-            mf6_wc[:, 0, 0, 1], mfnwt_wc, atol=0.01
-        ), "mf6 water contents different than established solution"
+        assert np.allclose(mf6_wc[:, 0, 0, 1], mfnwt_wc, atol=0.01), (
+            "mf6 water contents different than established solution"
+        )
 
     print("Finished running checks")
 

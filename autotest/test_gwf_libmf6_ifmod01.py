@@ -261,9 +261,9 @@ def check_interface_models(mf6):
     mem_addr = mf6.get_var_address("BOT", ifm_name_left, "DIS")
     bot = mf6.get_value_ptr(mem_addr)
     zc = (bot + top) / 2
-    assert all(
-        [zc[i] >= zc[i + 1] for i in range(len(zc) - 1)]
-    ), f"Interface model for {name_left} contains incorrectly numbered cells"
+    assert all([zc[i] >= zc[i + 1] for i in range(len(zc) - 1)]), (
+        f"Interface model for {name_left} contains incorrectly numbered cells"
+    )
 
     # confirm some properties for the 'left' interface
     # model, looping over the models that contribute:
@@ -285,18 +285,18 @@ def check_interface_models(mf6):
                 k11_model = mf6.get_value_ptr(mem_addr)
                 mem_addr = mf6.get_var_address("K11", ifm_name_left, "NPF")
                 k11_interface = mf6.get_value_ptr(mem_addr)
-                assert (
-                    k11_model[local_id - 1] == k11_interface[iface_idx - 1]
-                ), "K11 in interface model does not match"
+                assert k11_model[local_id - 1] == k11_interface[iface_idx - 1], (
+                    "K11 in interface model does not match"
+                )
 
                 # DIS/AREA
                 mem_addr = mf6.get_var_address("AREA", name, "DIS")
                 area_model = mf6.get_value_ptr(mem_addr)
                 mem_addr = mf6.get_var_address("AREA", ifm_name_left, "DIS")
                 area_interface = mf6.get_value_ptr(mem_addr)
-                assert (
-                    area_model[local_id - 1] == area_interface[iface_idx - 1]
-                ), "AREA in interface model does not match"
+                assert area_model[local_id - 1] == area_interface[iface_idx - 1], (
+                    "AREA in interface model does not match"
+                )
 
 
 @requires_pkg("modflowapi")

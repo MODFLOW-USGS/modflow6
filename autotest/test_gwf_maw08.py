@@ -189,9 +189,9 @@ def eval_results(idx, test):
     bobj = flopy.utils.HeadFile(fname, text="HEAD")
 
     well_head = bobj.get_data().flatten()
-    assert np.allclose(
-        well_head, 10.0
-    ), f"simulated maw head ({well_head[0]}) does not equal 10."
+    assert np.allclose(well_head, 10.0), (
+        f"simulated maw head ({well_head[0]}) does not equal 10."
+    )
 
     fname = gwfname + ".hds"
     fname = os.path.join(test.workspace, fname)

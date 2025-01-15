@@ -374,17 +374,19 @@ def check_output(idx, test):
         # active. This tests the interface model for dealing with drying
         # and wetting, and handling inactive cells, explicitly
         if iper == 1:
-            assert np.all(
-                heads_left[0, 0, :] == -1.0e30
-            ), "left model, top layer should be DRY in period 2"
-            assert np.all(
-                heads_right[0, 0, :] > -1.0e30
-            ), "right model, top layer should be WET in period 2"
+            assert np.all(heads_left[0, 0, :] == -1.0e30), (
+                "left model, top layer should be DRY in period 2"
+            )
+            assert np.all(heads_right[0, 0, :] > -1.0e30), (
+                "right model, top layer should be WET in period 2"
+            )
 
         # compare heads
         maxdiff = np.amax(abs(heads - heads_2models))
-        assert maxdiff < 10 * hclose_check, f"Max. head diff. {maxdiff} should \
+        assert maxdiff < 10 * hclose_check, (
+            f"Max. head diff. {maxdiff} should \
                          be within solver tolerance (x10): {10 * hclose_check}"
+        )
 
     # check budget error from .lst file
     for mname in [mname_ref, mname_left, mname_right]:

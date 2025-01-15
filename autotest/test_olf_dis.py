@@ -234,14 +234,14 @@ def check_grb_dis2d(fpth):
     assert grb.angrot == angrot, "angrot in grb file is not correct"
     assert np.allclose(grb.delr, dx * np.ones(ncol)), "grb delr not correct"
     assert np.allclose(grb.delc, dx * np.ones(nrow)), "grb delc not correct"
-    assert np.allclose(
-        grb.bot.reshape((nrow, ncol)), np.zeros((nrow, ncol))
-    ), "grb botm not correct"
+    assert np.allclose(grb.bot.reshape((nrow, ncol)), np.zeros((nrow, ncol))), (
+        "grb botm not correct"
+    )
     assert grb.ia.shape[0] == grb.ncells + 1, "ia in grb file is not correct size"
     assert grb.ja.shape[0] == grb.nja, "ja in grb file is not correct size"
-    assert np.allclose(
-        grb.idomain.reshape((nrow, ncol)), idomain
-    ), "grb idomain not correct"
+    assert np.allclose(grb.idomain.reshape((nrow, ncol)), idomain), (
+        "grb idomain not correct"
+    )
 
 
 def check_grb_disv2d(fpth):
@@ -257,9 +257,9 @@ def check_grb_disv2d(fpth):
     assert grb.xorigin == xorigin, "xorigin in grb file is not correct"
     assert grb.yorigin == yorigin, "yorigin in grb file is not correct"
     assert grb.angrot == angrot, "angrot in grb file is not correct"
-    assert np.allclose(
-        grb.bot.reshape((nrow, ncol)), np.zeros((nrow, ncol))
-    ), "grb botm not correct"
+    assert np.allclose(grb.bot.reshape((nrow, ncol)), np.zeros((nrow, ncol))), (
+        "grb botm not correct"
+    )
     cellx, celly = np.meshgrid(
         np.linspace(dx / 2, ncol * dx - dx / 2, ncol),
         np.linspace(dx * nrow - dx / 2.0, dx / 2, nrow),
@@ -267,14 +267,14 @@ def check_grb_disv2d(fpth):
     assert np.allclose(grb._datadict["CELLX"], cellx.flatten()), "cellx is not right"
     assert np.allclose(grb._datadict["CELLY"], celly.flatten()), "celly is not right"
     assert grb._datadict["IAVERT"].shape[0] == ncpl + 1, "iavert size not right"
-    assert (
-        grb._datadict["IAVERT"][-1] - 1 == grb._datadict["JAVERT"].shape[0]
-    ), "javert size not right"
+    assert grb._datadict["IAVERT"][-1] - 1 == grb._datadict["JAVERT"].shape[0], (
+        "javert size not right"
+    )
     assert grb.ia.shape[0] == grb.ncells + 1, "ia in grb file is not correct size"
     assert grb.ja.shape[0] == grb.nja, "ja in grb file is not correct size"
-    assert np.allclose(
-        grb.idomain.reshape((ncpl,)), idomain.reshape((ncpl,))
-    ), "grb idomain not correct"
+    assert np.allclose(grb.idomain.reshape((ncpl,)), idomain.reshape((ncpl,))), (
+        "grb idomain not correct"
+    )
 
 
 def check_output(idx, test):
@@ -296,9 +296,9 @@ def check_output(idx, test):
     fpth = test.workspace / f"{modelname}.stage"
     sobj = flopy.utils.HeadFile(fpth, precision="double", text="STAGE")
     stage = sobj.get_data().reshape((nrow, ncol))
-    assert np.allclose(
-        stage[idomain == 0], 3.0e30
-    ), "stage should have nodata values where idomain is zero"
+    assert np.allclose(stage[idomain == 0], 3.0e30), (
+        "stage should have nodata values where idomain is zero"
+    )
     assert stage[idomain == 1].max() == 1.0, "maximum stage should be 1.0"
     assert stage[idomain == 1].min() == 0.5, "minimum stage should be 0.5"
 

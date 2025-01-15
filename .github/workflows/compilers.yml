@@ -99,7 +99,7 @@ jobs:
       - name: Setup pixi
         uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.24.2
+          pixi-version: v0.40.1
           manifest-path: "modflow6/pixi.toml"
 
       - name: Custom pixi install

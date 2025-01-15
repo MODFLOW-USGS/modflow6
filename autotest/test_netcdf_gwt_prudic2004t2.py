@@ -158,12 +158,12 @@ def check_output(idx, test, export, gridded_input):
                 for l in range(nlay):
                     assert np.allclose(
                         np.array(rec[l]).flatten(),
-                        xds[f"concentration_l{l+1}"][timestep, :]
+                        xds[f"concentration_l{l + 1}"][timestep, :]
                         .fillna(1.00000000e30)
                         .data,
                     ), (
                         "NetCDF-concentration comparison failure "
-                        f"in timestep {timestep+1}"
+                        f"in timestep {timestep + 1}"
                     )
                 timestep += 1
             elif export == "structured":
@@ -171,7 +171,7 @@ def check_output(idx, test, export, gridded_input):
                     # np.array(rec).flatten(),
                     np.array(rec),
                     xds["concentration"][timestep, :].fillna(1.00000000e30).data,
-                ), f"NetCDF-concentration comparison failure in timestep {timestep+1}"
+                ), f"NetCDF-concentration comparison failure in timestep {timestep + 1}"
                 timestep += 1
 
     vlist = [
@@ -198,17 +198,17 @@ def check_output(idx, test, export, gridded_input):
             if var.endswith("_l"):
                 for l in range(nlay):
                     assert np.allclose(
-                        np.array(b[l]).flatten(), xds[f"{var}{l+1}"].data
-                    ), f"NetCDF input array comparison failure, variable={var}{l+1}"
+                        np.array(b[l]).flatten(), xds[f"{var}{l + 1}"].data
+                    ), f"NetCDF input array comparison failure, variable={var}{l + 1}"
             else:
-                assert np.allclose(
-                    np.array(b).flatten(), xds[var].data
-                ), f"NetCDF input array comparison failure, variable={var}"
+                assert np.allclose(np.array(b).flatten(), xds[var].data), (
+                    f"NetCDF input array comparison failure, variable={var}"
+                )
         elif export == "structured":
             var = var.replace("_l", "")
-            assert np.allclose(
-                np.array(b), xds[var].data
-            ), f"NetCDF input array comparison failure, variable={var}"
+            assert np.allclose(np.array(b), xds[var].data), (
+                f"NetCDF input array comparison failure, variable={var}"
+            )
 
 
 @pytest.mark.slow

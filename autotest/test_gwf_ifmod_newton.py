@@ -362,8 +362,10 @@ def check_output(idx, test):
 
         # compare heads
         maxdiff = np.amax(abs(heads - heads_2models))
-        assert maxdiff < 10 * hclose_check, f"Max. head diff. {maxdiff} should \
+        assert maxdiff < 10 * hclose_check, (
+            f"Max. head diff. {maxdiff} should \
                          be within solver tolerance (x10): {10 * hclose_check}"
+        )
 
     # check budget error from .lst file
     for mname in [mname_ref, mname_left, mname_right]:

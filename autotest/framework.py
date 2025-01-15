@@ -518,15 +518,15 @@ class TestFramework:
         rclose = get_rclose(self.workspace)
         cmp_path = self.workspace / compare
         if "mf6_regression" in compare:
-            assert self._compare_heads(
-                extensions=HDS_EXT, htol=htol
-            ), "head comparison failed"
-            assert self._compare_budgets(
-                extensions=CBC_EXT, rclose=rclose
-            ), "budget comparison failed"
-            assert self._compare_concentrations(
-                htol=htol
-            ), "concentration comparison failed"
+            assert self._compare_heads(extensions=HDS_EXT, htol=htol), (
+                "head comparison failed"
+            )
+            assert self._compare_budgets(extensions=CBC_EXT, rclose=rclose), (
+                "budget comparison failed"
+            )
+            assert self._compare_concentrations(htol=htol), (
+                "concentration comparison failed"
+            )
         else:
             assert self._compare_heads(
                 cpth=cmp_path,
@@ -562,9 +562,9 @@ class TestFramework:
         # make sure executable exists and framework knows about it
         tgt = Path(shutil.which(target))
         assert tgt.is_file(), f"Target executable not found: {target}"
-        assert (
-            tgt in self.targets.values()
-        ), "Targets must be explicitly registered with the test framework"
+        assert tgt in self.targets.values(), (
+            "Targets must be explicitly registered with the test framework"
+        )
 
         if self.verbose:
             print(f"Running {target} in {workspace}")

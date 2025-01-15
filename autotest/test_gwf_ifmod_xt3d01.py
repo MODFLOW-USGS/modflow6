@@ -344,9 +344,9 @@ def check_output(idx, test):
         for icol in range(mg.ncol):
             if qyb[0, irow, icol] != "--":
                 diff = abs(qyb[0, irow, icol])
-                assert (
-                    diff < 10 * hclose
-                ), "Specific discharge should not have a y-component in this model"
+                assert diff < 10 * hclose, (
+                    "Specific discharge should not have a y-component in this model"
+                )
             if qxb[0, irow, icol] != "--":
                 diff = abs(qxb[0, irow, icol] - qx_exact)
                 assert diff < 10 * hclose, (
@@ -372,9 +372,9 @@ def check_output(idx, test):
         for icol in range(mg_c.ncol):
             if qyb_c[0, irow, icol] != "--":
                 diff = abs(qyb_c[0, irow, icol])
-                assert (
-                    diff < 10 * hclose
-                ), "Specific discharge should not have a y-component in this model"
+                assert diff < 10 * hclose, (
+                    "Specific discharge should not have a y-component in this model"
+                )
             if qxb_c[0, irow, icol] != "--":
                 diff = abs(qxb_c[0, irow, icol] - qx_exact)
                 assert diff < 10 * hclose, (
@@ -401,9 +401,9 @@ def check_output(idx, test):
     fpth = os.path.join(test.workspace, f"{parent_name}.cbc")
     cbb = flopy.utils.CellBudgetFile(fpth)
     flow_ja_face = cbb.get_data(idx=0)
-    assert (
-        len(flow_ja_face) > 0
-    ), "Could not check residuals as flow-ja-face could not be found"
+    assert len(flow_ja_face) > 0, (
+        "Could not check residuals as flow-ja-face could not be found"
+    )
     ia = grb._datadict["IA"] - 1
     for fjf in flow_ja_face:
         fjf = fjf.flatten()
@@ -436,12 +436,12 @@ def check_output(idx, test):
 
     # Ensure observations are the same as parent exchange flows
     # and negative child exchange flows
-    assert np.allclose(
-        obsvalues, parent_exchange_flows
-    ), "exchange observations do not match parent exchange flows"
-    assert np.allclose(
-        obsvalues, -child_exchange_flows
-    ), "exchange observations do not match child exchange flows"
+    assert np.allclose(obsvalues, parent_exchange_flows), (
+        "exchange observations do not match parent exchange flows"
+    )
+    assert np.allclose(obsvalues, -child_exchange_flows), (
+        "exchange observations do not match child exchange flows"
+    )
 
     # Read the lumped boundname observations values
     fpth = os.path.join(test.workspace, "gwf_obs_boundnames.csv")
@@ -449,9 +449,9 @@ def check_output(idx, test):
         lines = f.readlines()
     obsnames = [name for name in lines[0].strip().split(",")[1:]]
     obsvalues = [float(v) for v in lines[1].strip().split(",")[1:]]
-    assert np.allclose(
-        obsvalues, [-50.0, 50.0, 0, 0.0]
-    ), "boundname observations do not match expected results"
+    assert np.allclose(obsvalues, [-50.0, 50.0, 0, 0.0]), (
+        "boundname observations do not match expected results"
+    )
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

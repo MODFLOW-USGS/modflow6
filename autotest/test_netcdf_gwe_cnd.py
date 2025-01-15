@@ -176,15 +176,18 @@ def check_output(idx, test, export, gridded_input):
                 for l in range(nlay):
                     assert np.allclose(
                         np.array(rec[l]).flatten(),
-                        xds[f"temperature_l{l+1}"][timestep, :].data,
-                    ), f"NetCDF-temperature comparison failure in timestep {timestep+1}"
+                        xds[f"temperature_l{l + 1}"][timestep, :].data,
+                    ), (
+                        "NetCDF-temperature comparison failure in timestep "
+                        f"{timestep + 1}"
+                    )
                 timestep += 1
             elif export == "structured":
                 assert np.allclose(
                     # np.array(rec).flatten(),
                     np.array(rec),
                     xds["temperature"][timestep, :].data,
-                ), f"NetCDF-temperature comparison failure in timestep {timestep+1}"
+                ), f"NetCDF-temperature comparison failure in timestep {timestep + 1}"
                 timestep += 1
 
     vlist = [
@@ -212,12 +215,12 @@ def check_output(idx, test, export, gridded_input):
             if var.endswith("_l"):
                 for l in range(nlay):
                     assert np.allclose(
-                        np.array(b[l]).flatten(), xds[f"{var}{l+1}"].data
-                    ), f"NetCDF input array comparison failure, variable={var}{l+1}"
+                        np.array(b[l]).flatten(), xds[f"{var}{l + 1}"].data
+                    ), f"NetCDF input array comparison failure, variable={var}{l + 1}"
             else:
-                assert np.allclose(
-                    np.array(b).flatten(), xds[var].data
-                ), f"NetCDF input array comparison failure, variable={var}"
+                assert np.allclose(np.array(b).flatten(), xds[var].data), (
+                    f"NetCDF input array comparison failure, variable={var}"
+                )
         elif export == "structured":
             var = var.replace("_l", "")
             assert np.allclose(

@@ -575,9 +575,9 @@ def check_output(idx, test):
                 analytical_temps.append(T)
 
             analytical_temps = np.array(analytical_temps)
-            assert np.allclose(
-                analytical_temps, sim_temps[sp, 0, 0, :], atol=0.005
-            ), "simulated solution is whacked"
+            assert np.allclose(analytical_temps, sim_temps[sp, 0, 0, :], atol=0.005), (
+                "simulated solution is whacked"
+            )
             # plt.plot(cell_centroids, analytical_temps, "r-", label="Analytical Solution")  # noqa
             # plt.plot(cell_centroids, sim_temps[sp, 0, 0, :], "b--", label="GWE")
             # plt.axhline(0.0, color='black')
@@ -605,9 +605,9 @@ def check_output(idx, test):
             else:
                 atol = 0.47
 
-            assert np.allclose(
-                analytical_temps, sim_temps[sp, 0, 0, :], atol=atol
-            ), "simulated solution isn't matching the analytical solution"
+            assert np.allclose(analytical_temps, sim_temps[sp, 0, 0, :], atol=atol), (
+                "simulated solution isn't matching the analytical solution"
+            )
 
 
 # - No need to change any code below

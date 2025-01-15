@@ -564,9 +564,9 @@ def check_output(idx, test):
 
     # Check heads satisfy problem set up (i.e., all of row 2 is dry)
     hdsr1 = hds[0, 0, 0, :]
-    assert np.all(
-        hdsr1 < bot_r2
-    ), "heads in row 1 should be below bottom elevation of row 2"
+    assert np.all(hdsr1 < bot_r2), (
+        "heads in row 1 should be below bottom elevation of row 2"
+    )
     assert np.all(hds[0, 0, 1, :] < 0), "row 2 is not dry"
 
     # Starting temperatures after steady flow period should be 4.0 degrees
@@ -575,39 +575,39 @@ def check_output(idx, test):
         "Steady state temperatures not as expected",
     )
     # Same with concentrations in non-dry cells
-    assert np.all(
-        np.isclose(conc1[0, :, 0], strt_conc[:, 0])
-    ), "Steady state concentrations not as expected"
+    assert np.all(np.isclose(conc1[0, :, 0], strt_conc[:, 0])), (
+        "Steady state concentrations not as expected"
+    )
     # Unlike GWE, GWT will not keep dry cells active and output should reflect this
-    assert np.all(
-        conc1[:, :, 1, :] < 0
-    ), "Concentrations should be set to 'inactive' (-1.e+30) in row 2"
+    assert np.all(conc1[:, :, 1, :] < 0), (
+        "Concentrations should be set to 'inactive' (-1.e+30) in row 2"
+    )
 
     # Starting in the transient stress period, the water entering in the
     # 'through' row is warmed to 30.0 C.  First check that this is the case
-    assert np.all(
-        temp1[-1] > temp1[0]
-    ), "Transient period temperature increase does not appear to have kicked in"
+    assert np.all(temp1[-1] > temp1[0]), (
+        "Transient period temperature increase does not appear to have kicked in"
+    )
     # Dry cell temperatures are only warmed through conduction with neighboring
     # 'through' cells and shouldn't be as warm as wet cells at the end of the
     # warming period
-    assert np.all(
-        temp1[-1, :, 0] > temp1[-1, 0, 1]
-    ), "Cells with water should be warmer than dry cells"
+    assert np.all(temp1[-1, :, 0] > temp1[-1, 0, 1]), (
+        "Cells with water should be warmer than dry cells"
+    )
 
     # None of the cells should reach the temperature of the incoming water
     # during the simulation period owing to the thermal bleeding that occurs
     # to the adjacent dry cells.
-    assert np.all(
-        temp1[-1] < ghb_temp_warmup
-    ), "Cells should not reach the temperature of the incoming water"
+    assert np.all(temp1[-1] < ghb_temp_warmup), (
+        "Cells should not reach the temperature of the incoming water"
+    )
 
     # An increasing amount of thermal bleeding should occur moving in the
     # direction of flow since the thickness of the dry cells increases in the
     # downstream direction
-    assert np.all(
-        np.diff(temp1[-1, :, 0, :-1]) < 0
-    ), "Temperature change in the downstream direction should be negative"
+    assert np.all(np.diff(temp1[-1, :, 0, :-1]) < 0), (
+        "Temperature change in the downstream direction should be negative"
+    )
     assert isMonotonic(np.diff(temp1[-1, :, 0, :-1])), (
         "A monotonic increase in the amount of heat lost to neighboring dry "
         "cells is expected"
@@ -640,9 +640,9 @@ def check_output(idx, test):
     # in the dry cell should remain inactive (i.e., no "molecular diffusion")
     # and greater than their GWE counterpart temperatures since there is
     # no "retardation" of concentration (temperature) owing to conduction
-    assert np.all(
-        conc1[:, :, 1, :] < 0
-    ), "The dry cells should never have a non-inactive concentration value"
+    assert np.all(conc1[:, :, 1, :] < 0), (
+        "The dry cells should never have a non-inactive concentration value"
+    )
 
 
 # - No need to change any code below

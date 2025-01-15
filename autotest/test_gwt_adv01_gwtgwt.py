@@ -670,9 +670,9 @@ def check_output(idx, test):
 
     creslist = [cres1, cres2, cres3]
 
-    assert np.allclose(
-        creslist[idx], conc
-    ), "simulated concentrations do not match with known solution."
+    assert np.allclose(creslist[idx], conc), (
+        "simulated concentrations do not match with known solution."
+    )
 
     # check budget
     for mname in ["transport1", "transport2"]:

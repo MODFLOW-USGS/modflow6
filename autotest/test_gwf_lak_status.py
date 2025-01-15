@@ -256,15 +256,15 @@ def check_head_file(idx, test):
     head1 = bobj.get_data(totim=times[1]).flatten()
     head2 = bobj.get_data(totim=times[2]).flatten()
 
-    assert np.allclose(
-        head0, head2
-    ), "Simulated heads for period 1 and 3 should be the same"
-    assert np.all(
-        np.less_equal(head1, 100.0)
-    ), f"Simulated heads for period 2 should be less than or equal to 100. {head1}"
-    assert np.any(
-        np.greater(head0, 100.0)
-    ), f"Some simulated heads for period 1 should be greater than 100. {head0}"
+    assert np.allclose(head0, head2), (
+        "Simulated heads for period 1 and 3 should be the same"
+    )
+    assert np.all(np.less_equal(head1, 100.0)), (
+        f"Simulated heads for period 2 should be less than or equal to 100. {head1}"
+    )
+    assert np.any(np.greater(head0, 100.0)), (
+        f"Some simulated heads for period 1 should be greater than 100. {head0}"
+    )
 
 
 def check_lake_obs(idx, test):

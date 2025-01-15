@@ -234,9 +234,9 @@ def check_output(idx, test):
         ts = cobj.get_ts([(0, 0, 0), (0, 0, 1)])
     except:
         assert False, f'could not load data from "{fpth}"'
-    assert np.allclose(
-        ts, tsanswers[idx]
-    ), "simulated concentrations do not match with known solution."
+    assert np.allclose(ts, tsanswers[idx]), (
+        "simulated concentrations do not match with known solution."
+    )
 
     # Check sorbate concentrations
     fpth = os.path.join(test.workspace, f"{gwtname}.mst.csrb")

@@ -408,7 +408,7 @@ def run_transport_model(dir, exe):
 
     # compare observation concs with binary file concs
     for i in range(7):
-        oname = f"SFT{i+1}CONC"
+        oname = f"SFT{i + 1}CONC"
         assert np.allclose(tc[oname][-1], csft[i]), f"{tc[oname][-1]} {csft[i]}"
 
     simres = tc["SFT1CONC"]

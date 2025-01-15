@@ -192,9 +192,9 @@ def check_output(idx, test):
         8: 9.9949e-04,
     }
     q_answer = q_answer_dict[idx]
-    assert np.allclose(
-        q_answer, q_simulated_inflow
-    ), "simulated flow does not match with known solution."
+    assert np.allclose(q_answer, q_simulated_inflow), (
+        "simulated flow does not match with known solution."
+    )
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

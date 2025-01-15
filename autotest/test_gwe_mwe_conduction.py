@@ -485,9 +485,9 @@ def check_output(idx, test):
         "MWE-1 BUDGET FOR ENTIRE MODEL AT END OF TIME STEP    1, STRESS PERIOD   1"
     )
     T_in, T_out, in_bud_lst, out_bud_lst = get_bud(fname, srchStr)
-    assert np.isclose(
-        T_in, T_out, atol=0.1
-    ), "There is a heat budget discrepancy where there shouldn't be"
+    assert np.isclose(T_in, T_out, atol=0.1), (
+        "There is a heat budget discrepancy where there shouldn't be"
+    )
 
     msg1 = "Conductive heat exchanges calculated explicitly and by MF6 do not match"
     msg2 = (

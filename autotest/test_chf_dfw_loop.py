@@ -488,9 +488,9 @@ def check_output(idx, test):
     diff = obsvals["REACH14"] - answer["STAGE0000000014"]
     print(diff)
     print(diff.max(), diff.min())
-    assert np.allclose(
-        diff, 0.0, atol=0.06
-    ), f"Max diff with swr is {diff.min(), diff.max()}"
+    assert np.allclose(diff, 0.0, atol=0.06), (
+        f"Max diff with swr is {diff.min(), diff.max()}"
+    )
 
     # read the binary grid file
     fpth = test.workspace / f"{name}.disv1d.grb"
@@ -524,9 +524,9 @@ def check_output(idx, test):
                 f"residual for cell {n + 1} is {qresidual[n]} "
                 f"in position {ia[n] + 1} {passfail}"
             )
-        assert np.allclose(
-            qresidual, 0.0, atol=atol
-        ), "residual in flowja diagonal is not zero"
+        assert np.allclose(qresidual, 0.0, atol=atol), (
+            "residual in flowja diagonal is not zero"
+        )
 
     return
 

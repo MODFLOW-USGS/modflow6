@@ -343,9 +343,9 @@ def eval_csv_information(testsim):
     lak_budget = gwf.lak.output.budgetcsv().data
     result = lak_budget["PERCENT_DIFFERENCE"]
     answer = np.zeros(result.shape)
-    assert np.allclose(
-        result, answer
-    ), f"Lake package does not have zero mass balance error: {result}"
+    assert np.allclose(result, answer), (
+        f"Lake package does not have zero mass balance error: {result}"
+    )
 
 
 def check_output(idx, test):

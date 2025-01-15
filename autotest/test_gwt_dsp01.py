@@ -353,9 +353,9 @@ def check_output(idx, test):
         ]
     ]
     cres = np.array(cres)
-    assert np.allclose(
-        cres, conc
-    ), "simulated concentrations do not match with known solution."
+    assert np.allclose(cres, conc), (
+        "simulated concentrations do not match with known solution."
+    )
 
     # load the gwt observation file
     fname = gwtname + ".obs.csv"

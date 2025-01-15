@@ -231,14 +231,14 @@ def check_output(idx, test):
     # Check to make sure that the concentrations are symmetric in both the
     # up-down and left-right directions
     concud = np.flipud(conc)
-    assert np.allclose(
-        concud, conc
-    ), "simulated concentrations are not symmetric in up-down direction."
+    assert np.allclose(concud, conc), (
+        "simulated concentrations are not symmetric in up-down direction."
+    )
 
     conclr = np.fliplr(conc)
-    assert np.allclose(
-        conclr, conc
-    ), "simulated concentrations are not symmetric in left-right direction."
+    assert np.allclose(conclr, conc), (
+        "simulated concentrations are not symmetric in left-right direction."
+    )
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

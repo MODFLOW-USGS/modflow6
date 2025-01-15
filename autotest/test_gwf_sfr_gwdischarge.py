@@ -92,9 +92,9 @@ def check_output(idx, test):
     sim_data = flopy.utils.Mf6Obs(obs_pth).get_data()
     data_names = sim_data.dtype.names
     for idx, name in enumerate(data_names):
-        assert np.allclose(
-            sim_data[name][0], answer[idx]
-        ), f"simulated sfr {name} results do not match answer"
+        assert np.allclose(sim_data[name][0], answer[idx]), (
+            f"simulated sfr {name} results do not match answer"
+        )
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

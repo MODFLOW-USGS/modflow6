@@ -170,22 +170,22 @@ def check_grb_disv1d(fpth):
     assert grb.xorigin == xorigin, "xorigin in grb file is not correct"
     assert grb.yorigin == yorigin, "yorigin in grb file is not correct"
     assert grb.angrot == angrot, "angrot in grb file is not correct"
-    assert np.allclose(
-        grb.bot.reshape((nodes,)), np.zeros((nodes,))
-    ), "grb botm not correct"
+    assert np.allclose(grb.bot.reshape((nodes,)), np.zeros((nodes,))), (
+        "grb botm not correct"
+    )
     cellx = np.array([0.0, 2 * dx])  # node centers pushed all the way to left and right
     celly = np.zeros(nreach)
     assert np.allclose(grb._datadict["CELLX"], cellx.flatten()), "cellx is not right"
     assert np.allclose(grb._datadict["CELLY"], celly.flatten()), "celly is not right"
     assert grb._datadict["IAVERT"].shape[0] == nodes + 1, "iavert size not right"
-    assert (
-        grb._datadict["IAVERT"][-1] - 1 == grb._datadict["JAVERT"].shape[0]
-    ), "javert size not right"
+    assert grb._datadict["IAVERT"][-1] - 1 == grb._datadict["JAVERT"].shape[0], (
+        "javert size not right"
+    )
     assert grb.ia.shape[0] == grb.ncells + 1, "ia in grb file is not correct size"
     assert grb.ja.shape[0] == grb.nja, "ja in grb file is not correct size"
-    assert np.allclose(
-        grb.idomain.reshape((nodes,)), idomain.reshape((nodes,))
-    ), "grb idomain not correct"
+    assert np.allclose(grb.idomain.reshape((nodes,)), idomain.reshape((nodes,))), (
+        "grb idomain not correct"
+    )
 
 
 def check_output(idx, test):

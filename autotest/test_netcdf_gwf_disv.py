@@ -210,8 +210,8 @@ def check_output(idx, test, export, gridded_input):
             for l in range(nlay):
                 assert np.allclose(
                     np.array(rec[l]).flatten(),
-                    xds[f"head_l{l+1}"][timestep, :].fillna(1.00000000e30).data,
-                ), f"NetCDF-Headfile comparison failure in timestep {timestep+1}"
+                    xds[f"head_l{l + 1}"][timestep, :].fillna(1.00000000e30).data,
+                ), f"NetCDF-Headfile comparison failure in timestep {timestep + 1}"
             timestep += 1
 
     # NetCDF variables, layered variables end with "_l"
@@ -227,12 +227,12 @@ def check_output(idx, test, export, gridded_input):
         if var.endswith("_l"):
             for l in range(nlay):
                 assert np.allclose(
-                    np.array(b[l]).flatten(), xds[f"{var}{l+1}"].data
-                ), f"NetCDF input array comparison failure, variable={var}{l+1}"
+                    np.array(b[l]).flatten(), xds[f"{var}{l + 1}"].data
+                ), f"NetCDF input array comparison failure, variable={var}{l + 1}"
         else:
-            assert np.allclose(
-                np.array(b).flatten(), xds[var].data
-            ), f"NetCDF input array comparison failure, variable={var}"
+            assert np.allclose(np.array(b).flatten(), xds[var].data), (
+                f"NetCDF input array comparison failure, variable={var}"
+            )
 
 
 @pytest.mark.netcdf

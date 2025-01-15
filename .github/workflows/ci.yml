@@ -51,7 +51,7 @@ jobs:
       - name: Setup pixi
         uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.24.2
+          pixi-version: v0.40.1
 
       - name: Check Fortran source formatting
         run: pixi run check-format
@@ -87,7 +87,7 @@ jobs:
       - name: Setup pixi
         uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.24.2
+          pixi-version: v0.40.1
 
       - name: Setup MF6
         run: pixi run setup -Dwerror=true builddir
@@ -132,7 +132,7 @@ jobs:
       - name: Setup pixi
         uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.24.2
+          pixi-version: v0.40.1
           manifest-path: "modflow6/pixi.toml"
 
       - name: Custom pixi install
@@ -249,7 +249,7 @@ jobs:
       - name: Setup pixi
         uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.24.2
+          pixi-version: v0.40.1
           manifest-path: "modflow6/pixi.toml"
 
       - name: Custom pixi install
@@ -412,7 +412,7 @@ jobs:
       - name: Setup pixi
         uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.24.2
+          pixi-version: v0.40.1
           manifest-path: "modflow6/pixi.toml"
 
       - name: Custom pixi install
@@ -515,7 +515,7 @@ jobs:
       - name: Setup pixi
         uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.24.2
+          pixi-version: v0.40.1
           manifest-path: "modflow6/pixi.toml"
 
       - name: Custom pixi install

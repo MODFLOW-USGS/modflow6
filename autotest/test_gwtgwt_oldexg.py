@@ -605,38 +605,52 @@ def compare_gwf_to_ref(test):
 
     # compare heads
     maxdiff = np.amax(abs(heads - heads_2models))
-    assert maxdiff < 10 * hclose_check, f"Max. head diff. {maxdiff} should \
+    assert maxdiff < 10 * hclose_check, (
+        f"Max. head diff. {maxdiff} should \
                      be within solver tolerance (x10): {10 * hclose_check}"
+    )
 
     # compare spdis_x left
     maxdiff = np.amax(abs(qxb[:, :, 0:5] - qxb_left))
-    assert maxdiff < 10 * hclose_check, f"Max. diff. in spec. discharge (x) {maxdiff} \
+    assert maxdiff < 10 * hclose_check, (
+        f"Max. diff. in spec. discharge (x) {maxdiff} \
                      should be within solver tolerance (x10): {10 * hclose_check}"
+    )
 
     # compare spdis_y left
     maxdiff = np.amax(abs(qyb[:, :, 0:5] - qyb_left))
-    assert maxdiff < 10 * hclose_check, f"Max. diff. in spec. discharge (y) {maxdiff} \
+    assert maxdiff < 10 * hclose_check, (
+        f"Max. diff. in spec. discharge (y) {maxdiff} \
                      should be within solver tolerance (x10): {10 * hclose_check}"
+    )
 
     # compare spdis_z left
     maxdiff = np.amax(abs(qzb[:, :, 0:5] - qzb_left))
-    assert maxdiff < 10 * hclose_check, f"Max. diff. in spec. discharge (z) {maxdiff} \
+    assert maxdiff < 10 * hclose_check, (
+        f"Max. diff. in spec. discharge (z) {maxdiff} \
                      should be within solver tolerance (x10): {10 * hclose_check}"
+    )
 
     # compare spdis_x right
     maxdiff = np.amax(abs(qxb[:, :, 5:] - qxb_right))
-    assert maxdiff < 10 * hclose_check, f"Max. diff. in spec. discharge (x) {maxdiff} \
+    assert maxdiff < 10 * hclose_check, (
+        f"Max. diff. in spec. discharge (x) {maxdiff} \
                      should be within solver tolerance (x10): {10 * hclose_check}"
+    )
 
     # compare spdis_y right
     maxdiff = np.amax(abs(qyb[:, :, 5:] - qyb_right))
-    assert maxdiff < 10 * hclose_check, f"Max. diff. in spec. discharge (y) {maxdiff} \
+    assert maxdiff < 10 * hclose_check, (
+        f"Max. diff. in spec. discharge (y) {maxdiff} \
                      should be within solver tolerance (x10): {10 * hclose_check}"
+    )
 
     # compare spdis_z right
     maxdiff = np.amax(abs(qzb[:, :, 5:] - qzb_right))
-    assert maxdiff < 10 * hclose_check, f"Max. diff. in spec. discharge (z) {maxdiff} \
+    assert maxdiff < 10 * hclose_check, (
+        f"Max. diff. in spec. discharge (z) {maxdiff} \
                      should be within solver tolerance (x10): {10 * hclose_check}"
+    )
 
     # check budget error from .lst file
     for mname in [mname_ref, mname_left, mname_right]:
@@ -661,9 +675,9 @@ def compare_gwf_to_ref(test):
         assert os.path.isfile(fpth)
         cbb = flopy.utils.CellBudgetFile(fpth, precision="double")
         flow_ja_face = cbb.get_data(idx=0)
-        assert (
-            len(flow_ja_face) > 0
-        ), "Could not check residuals as flow-ja-face could not be found"
+        assert len(flow_ja_face) > 0, (
+            "Could not check residuals as flow-ja-face could not be found"
+        )
 
         for fjf in flow_ja_face:
             fjf = fjf.flatten()
@@ -689,8 +703,10 @@ def compare_gwt_to_ref(test):
 
     # compare concentrations
     maxdiff = np.amax(abs(conc - conc_2models))
-    assert maxdiff < 10 * hclose_check, f"Max. concentration diff. {maxdiff} should \
+    assert maxdiff < 10 * hclose_check, (
+        f"Max. concentration diff. {maxdiff} should \
                      be within solver tolerance (x10): {10 * hclose_check}"
+    )
 
     # check budget error from .lst file
     for mname in [mname_gwtref, mname_gwtleft, mname_gwtright]:
@@ -716,9 +732,9 @@ def compare_gwt_to_ref(test):
         assert os.path.isfile(fpth)
         cbb = flopy.utils.CellBudgetFile(fpth, precision="double")
         flow_ja_face = cbb.get_data(idx=0)
-        assert (
-            len(flow_ja_face) > 0
-        ), "Could not check residuals as flow-ja-face could not be found"
+        assert len(flow_ja_face) > 0, (
+            "Could not check residuals as flow-ja-face could not be found"
+        )
 
         for fjf in flow_ja_face:
             fjf = fjf.flatten()

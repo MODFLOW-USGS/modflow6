@@ -254,9 +254,9 @@ def check_output(idx, test):
     zdis = zobj.get_data(totim=totim)
     zdis[zdis == 1e30] = 0.0
 
-    assert np.allclose(
-        zdis, zdis_calc
-    ), "Calculated z-displacement is not equal to simulated z-displacement"
+    assert np.allclose(zdis, zdis_calc), (
+        "Calculated z-displacement is not equal to simulated z-displacement"
+    )
 
 
 @pytest.mark.slow
