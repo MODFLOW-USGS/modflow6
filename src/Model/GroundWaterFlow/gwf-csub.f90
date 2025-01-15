@@ -2444,7 +2444,7 @@ contains
     call mem_deallocate(this%ioutcompib, 'IOUTCOMPIB', this%memoryPath)
     call mem_deallocate(this%ioutcomps, 'IOUTCOMPS', this%memoryPath)
     call mem_deallocate(this%ioutzdisp, 'IOUTZDISP', this%memoryPath)
-    call mem_deallocate(this%ipakcsv, this%memoryPath)
+    call mem_deallocate(this%ipakcsv, 'IPAKCSV', this%memoryPath)
     call mem_deallocate(this%iupdatematprop, 'IUPDATEMATPROP', this%memoryPath)
     call mem_deallocate(this%epsilon, 'EPSILON', this%memoryPath)
     call mem_deallocate(this%cc_crit, 'CC_CRIT', this%memoryPath)

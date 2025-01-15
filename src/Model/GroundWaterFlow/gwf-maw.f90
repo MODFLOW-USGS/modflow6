@@ -2840,7 +2840,6 @@ contains
     call mem_deallocate(this%check_attr, 'CHECK_ATTR', this%memoryPath)
     call mem_deallocate(this%ishutoffcnt, 'ISHUTOFFCNT', this%memoryPath)
     call mem_deallocate(this%ieffradopt, 'IEFFRADOPT', this%memoryPath)
-    call mem_allocate(this%ioutredflowcsv, 'IOUTREDFLOWCSV', this%memoryPath)
     call mem_deallocate(this%ioutredflowcsv, 'IOUTREDFLOWCSV', this%memoryPath)
     call mem_deallocate(this%satomega, 'SATOMEGA', this%memoryPath)
     call mem_deallocate(this%bditems, 'BDITEMS', this%memoryPath)

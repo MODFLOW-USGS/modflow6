@@ -951,8 +951,8 @@ contains
     call mem_deallocate(this%iname, 'INAME', this%memoryPath)
     call mem_deallocate(this%ixt3d, 'IXT3D', this%memoryPath)
     call mem_deallocate(this%ixt3drhs, 'IXT3DRHS', this%memoryPath)
-    call mem_deallocate(this%satomega, this%memoryPath)
-    call mem_deallocate(this%hnoflo, this%memoryPath)
+    call mem_deallocate(this%satomega, 'SATOMEGA', this%memoryPath)
+    call mem_deallocate(this%hnoflo, 'HNOFLO', this%memoryPath)
     call mem_deallocate(this%hdry, 'HDRY', this%memoryPath)
     call mem_deallocate(this%icellavg, 'ICELLAVG', this%memoryPath)
     call mem_deallocate(this%iavgkeff, 'IAVGKEFF', this%memoryPath)
@@ -985,7 +985,7 @@ contains
     !
     ! -- Deallocate arrays
     deallocate (this%aname)
-    call mem_deallocate(this%ithickstartflag, 'ITHICKSTARTFLAG')
+    call mem_deallocate(this%ithickstartflag, 'ITHICKSTARTFLAG', this%memoryPath)
     call mem_deallocate(this%icelltype, 'ICELLTYPE', this%memoryPath)
     call mem_deallocate(this%k11, 'K11', this%memoryPath)
     call mem_deallocate(this%k22, 'K22', this%memoryPath)
