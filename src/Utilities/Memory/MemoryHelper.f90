@@ -29,7 +29,7 @@ contains
     if (present(subcomponent)) then
       call mem_check_length(subcomponent, LENCOMPONENTNAME, "package")
     end if
-    
+
     if (present(context)) then
       call mem_check_length(context, LENCONTEXTNAME, "context")
     end if
