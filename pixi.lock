@@ -17005,14 +17005,16 @@ packages:
   - libgfortran5 >=12.3.0
   - liblapack >=3.9.0,<4.0a0
   - libstdcxx-ng >=12
-  - numpy <2.3
+  - numpy >=1.22.4,<2.3
   - numpy >=1.19,<3
   - python >=3.9,<3.10.0a0
   - python_abi 3.9.* *_cp39
+  arch: x86_64
+  platform: linux
   license: BSD-3-Clause
   license_family: BSD
   purls:
-  - pkg:pypi/scipy?source=conda-forge-mapping
+  - pkg:pypi/scipy?source=hash-mapping
   size: 16523290
   timestamp: 1716471188947
 - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/scipy-1.13.1-py39hb921187_0.conda
@@ -17026,15 +17028,17 @@ packages:
   - libgfortran5 >=12.3.0
   - liblapack >=3.9.0,<4.0a0
   - libstdcxx-ng >=12
-  - numpy <2.3
+  - numpy >=1.22.4,<2.3
   - numpy >=1.19,<3
   - python >=3.9,<3.10.0a0
   - python >=3.9,<3.10.0a0 *_cpython
   - python_abi 3.9.* *_cp39
+  arch: aarch64
+  platform: linux
   license: BSD-3-Clause
   license_family: BSD
   purls:
-  - pkg:pypi/scipy?source=conda-forge-mapping
+  - pkg:pypi/scipy?source=hash-mapping
   size: 16574369
   timestamp: 1716471566067
 - conda: https://conda.anaconda.org/conda-forge/osx-64/scipy-1.13.1-py39h038d4f4_0.conda
@@ -17049,14 +17053,16 @@ packages:
   - libgfortran5 >=12.3.0
   - libgfortran5 >=13.2.0
   - liblapack >=3.9.0,<4.0a0
-  - numpy <2.3
+  - numpy >=1.22.4,<2.3
   - numpy >=1.19,<3
   - python >=3.9,<3.10.0a0
   - python_abi 3.9.* *_cp39
+  arch: x86_64
+  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls:
-  - pkg:pypi/scipy?source=conda-forge-mapping
+  - pkg:pypi/scipy?source=hash-mapping
   size: 15635286
   timestamp: 1716471538660
 - conda: https://conda.anaconda.org/conda-forge/osx-arm64/scipy-1.13.1-py39h3d5391c_0.conda
@@ -17071,15 +17077,17 @@ packages:
   - libgfortran5 >=12.3.0
   - libgfortran5 >=13.2.0
   - liblapack >=3.9.0,<4.0a0
-  - numpy <2.3
+  - numpy >=1.22.4,<2.3
   - numpy >=1.19,<3
   - python >=3.9,<3.10.0a0
   - python >=3.9,<3.10.0a0 *_cpython
   - python_abi 3.9.* *_cp39
+  arch: arm64
+  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls:
-  - pkg:pypi/scipy?source=conda-forge-mapping
+  - pkg:pypi/scipy?source=hash-mapping
   size: 14699719
   timestamp: 1716472126212
 - conda: https://conda.anaconda.org/conda-forge/win-64/scipy-1.13.1-py39h1a10956_0.conda
@@ -17089,17 +17097,19 @@ packages:
   - libblas >=3.9.0,<4.0a0
   - libcblas >=3.9.0,<4.0a0
   - liblapack >=3.9.0,<4.0a0
-  - numpy <2.3
+  - numpy >=1.22.4,<2.3
   - numpy >=1.19,<3
   - python >=3.9,<3.10.0a0
   - python_abi 3.9.* *_cp39
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
+  arch: x86_64
+  platform: win
   license: BSD-3-Clause
   license_family: BSD
   purls:
-  - pkg:pypi/scipy?source=conda-forge-mapping
+  - pkg:pypi/scipy?source=hash-mapping
   size: 14854560
   timestamp: 1716472552464
 - conda: https://conda.anaconda.org/conda-forge/noarch/setuptools-72.1.0-pyhd8ed1ab_0.conda
