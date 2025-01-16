@@ -129,6 +129,9 @@ contains
 
   end subroutine clear_nodes
 
+  !> @brief Clears a single node
+  !!
+  !<
   subroutine clear_node(node)
     type(KeyValueNodeType), pointer :: node
 
