@@ -4,7 +4,6 @@ import platform
 import shutil
 import sys
 import textwrap
-from datetime import datetime
 from os import PathLike, environ
 from pathlib import Path
 from pprint import pprint
@@ -19,9 +18,7 @@ from flaky import flaky
 from modflow_devtools.build import meson_build
 from modflow_devtools.download import (
     download_and_unzip,
-    download_artifact,
     get_release,
-    list_artifacts,
 )
 from modflow_devtools.markers import no_parallel, requires_exe, requires_github
 from modflow_devtools.misc import run_cmd, run_py_script, set_dir
@@ -71,72 +68,19 @@ PUB_URLS = [
 ]
 
 
-def download_benchmarks(
-    output_path: PathLike,
-    verbose: bool = False,
-    repo_owner: str = "MODFLOW-USGS",
-) -> Optional[Path]:
-    """Try to download MF6 benchmarks from GitHub Actions."""
-
-    output_path = Path(output_path).expanduser().absolute()
-    name = "run-time-comparison"  # todo make configurable
-    repo = f"{repo_owner}/modflow6"  # todo make configurable, add pytest/cli args
-    artifacts = list_artifacts(repo, name=name, verbose=verbose)
-    artifacts = sorted(
-        artifacts,
-        key=lambda a: datetime.strptime(a["created_at"], "%Y-%m-%dT%H:%M:%SZ"),
-        reverse=True,
-    )
-    artifacts = [
-        a
-        for a in artifacts
-        if a["workflow_run"]["head_branch"] == "develop"  # todo make configurable
-    ]
-    most_recent = next(iter(artifacts), None)
-    print(f"Found most recent benchmarks (artifact {most_recent['id']})")
-    if most_recent:
-        print(f"Downloading benchmarks (artifact {most_recent['id']})")
-        download_artifact(repo, id=most_recent["id"], path=output_path, verbose=verbose)
-        print(f"Downloaded benchmarks to {output_path}")
-        path = output_path / f"{name}.md"
-        assert path.is_file()
-        return path
-    else:
-        print("No benchmarks found")
-        return None
-
-
 @pytest.fixture
 def github_user() -> Optional[str]:
     return environ.get("GITHUB_USER", None)
 
 
-@flaky
-@no_parallel
-@requires_github
-def test_download_benchmarks(tmp_path, github_user):
-    path = download_benchmarks(
-        tmp_path,
-        verbose=True,
-        repo_owner=github_user if github_user else "MODFLOW-USGS",
-    )
-    if path:
-        assert path.name == "run-time-comparison.md"
-
-
 def build_benchmark_tex(
     output_path: PathLike,
     force: bool = False,
-    repo_owner: str = "MODFLOW-USGS",
 ):
     """Build LaTeX files for MF6 performance benchmarks to go into the release notes."""
 
     BENCHMARKS_PATH.mkdir(parents=True, exist_ok=True)
     benchmarks_path = BENCHMARKS_PATH / "run-time-comparison.md"
-
-    # download benchmark artifacts if any exist on GitHub
-    if not benchmarks_path.is_file():
-        benchmarks_path = download_benchmarks(BENCHMARKS_PATH, repo_owner=repo_owner)
 
     # run benchmarks again if no benchmarks found on GitHub or overwrite requested
     if force or not benchmarks_path.is_file():
