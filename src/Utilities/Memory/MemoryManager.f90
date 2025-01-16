@@ -2053,7 +2053,7 @@ contains
     character(len=*), optional :: name !< variable name
     character(len=*), optional :: mem_path !< path where variable is stored
     ! -- local
-    class(MemoryType), pointer :: mt
+    type(MemoryType), pointer :: mt
     logical(LGP) :: found
     type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
@@ -2092,7 +2092,7 @@ contains
     character(len=*), optional :: name !< variable name
     character(len=*), optional :: mem_path !< path where variable is stored
     ! -- local
-    class(MemoryType), pointer :: mt
+    type(MemoryType), pointer :: mt
     logical(LGP) :: found
     type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
@@ -2130,7 +2130,7 @@ contains
     character(len=*), optional :: name !< variable name
     character(len=*), optional :: mem_path !< path where variable is stored
     ! -- local
-    class(MemoryType), pointer :: mt
+    type(MemoryType), pointer :: mt
     logical(LGP) :: found
     type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
