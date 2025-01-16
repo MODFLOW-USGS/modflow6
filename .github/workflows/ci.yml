@@ -547,5 +547,5 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: failed-${{ matrix.os }}
+          name: failed-${{ matrix.os }}-ext
           path: modflow6/autotest/.failed

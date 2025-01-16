@@ -180,7 +180,7 @@ jobs:
         if: success() || failure()
         uses: actions/upload-artifact@v4
         with:
-          name: compat
+          name: compat-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.version }}
           path: compat/*.csv
 
   report:
@@ -207,8 +207,9 @@ jobs:
       - name: Download reports
         uses: actions/download-artifact@v4
         with:
-          name: compat
+          pattern: compat-*
           path: .github/compat/new
+          merge-multiple: true
 
       - name: Concatenate reports
         working-directory: .github/compat
