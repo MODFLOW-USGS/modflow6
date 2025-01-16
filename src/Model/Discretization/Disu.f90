@@ -923,7 +923,7 @@ contains
        &/,6X,'UNIT NUMBER: ', I0,/,6X, 'FILE NAME: ', A)"
     !
     ! -- Initialize
-    ntxt = 10
+    ntxt = 11
     if (this%nvert > 0) ntxt = ntxt + 5
     !
     ! -- Open the file
@@ -975,6 +975,9 @@ contains
     write (txt, '(3a, i0)') 'JA ', 'INTEGER ', 'NDIM 1 ', this%con%nja
     txt(lentxt:lentxt) = new_line('a')
     write (iunit) txt
+    write (txt, '(3a, i0)') 'IDOMAIN ', 'INTEGER ', 'NDIM 1 ', this%nodesuser
+    txt(lentxt:lentxt) = new_line('a')
+    write (iunit) txt
     write (txt, '(3a, i0)') 'ICELLTYPE ', 'INTEGER ', 'NDIM 1 ', this%nodesuser
     txt(lentxt:lentxt) = new_line('a')
     write (iunit) txt
@@ -1008,6 +1011,7 @@ contains
     write (iunit) this%bot1d ! bot
     write (iunit) this%con%iausr ! ia
     write (iunit) this%con%jausr ! ja
+    write (iunit) this%idomain ! idomain
     write (iunit) icelltype ! icelltype
     !
     ! -- if vertices have been read then write additional data
