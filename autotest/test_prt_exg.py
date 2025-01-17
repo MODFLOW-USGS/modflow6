@@ -8,8 +8,15 @@ Particles are released from the top left cell.
 
 Results are compared against a MODPATH 7 model.
 
-This test includes two cases, one which gives
-boundnames to particles and one which does not.
+This test includes four cases: one which gives
+boundnames to particles, one which does not, a
+third in which the flow model has a uniformly
+active idomain array while the tracking model
+does not, and a final case in which flow and
+tracking model have different IDOMAIN arrays,
+both non-uniform, where the active region is
+the same size but consists of different cells.
+Both latter cases should be caught as errors.
 """
 
 from pathlib import Path
@@ -30,7 +37,7 @@ from prt_test_utils import (
 )
 
 simname = "prtexg01"
-cases = [simname, f"{simname}bnms"]
+cases = [simname, f"{simname}bnms", f"{simname}idmu", f"{simname}idmn"]
 
 
 def get_model_name(idx, mdl):
@@ -41,18 +48,31 @@ def build_mf6_sim(idx, test):
     # create simulation
     name = cases[idx]
     sim = FlopyReadmeCase.get_gwf_sim(name, test.workspace, test.targets["mf6"])
+    gwf = sim.get_model()
 
     # create prt model
     prt_name = get_model_name(idx, "prt")
     prt = flopy.mf6.ModflowPrt(sim, modelname=prt_name)
 
     # create prt discretization
+    idomain = np.ones(
+        (FlopyReadmeCase.nlay, FlopyReadmeCase.nrow, FlopyReadmeCase.ncol)
+    )
+    if "idm" in name:
+        idomain[-1, -1, -1] = 0
+    if "idmn" in name:
+        # TODO alter flow model's idomain
+        gwf_idomain = idomain.copy()
+        gwf_idomain[-1, -1, -1] = 1
+        gwf_idomain[0, 0, 0] = 0
+        gwf.dis.idomain = gwf_idomain
     flopy.mf6.modflow.mfgwfdis.ModflowGwfdis(
         prt,
         pname="dis",
         nlay=FlopyReadmeCase.nlay,
         nrow=FlopyReadmeCase.nrow,
         ncol=FlopyReadmeCase.ncol,
+        idomain=idomain,
     )
 
     # create mip package
@@ -155,7 +175,7 @@ def build_models(idx, test):
     gwf_name = get_model_name(idx, "gwf")
     gwf = mf6sim.get_model(gwf_name)
     mp7sim = build_mp7_sim(idx, test.workspace / "mp7", test.targets["mp7"], gwf)
-    return mf6sim, mp7sim
+    return mf6sim, None if "idm" in test.name else mp7sim
 
 
 def check_output(idx, test):
@@ -177,6 +197,9 @@ def check_output(idx, test):
 
     # extract model grid
     mg = gwf.modelgrid
+
+    if "idm" in name:
+        return
 
     # check mf6 output files exist
     gwf_budget_file = f"{gwf_name}.bud"
@@ -362,5 +385,6 @@ def test_mf6model(idx, name, function_tmpdir, targets, plot):
         plot=lambda t: plot_output(idx, t) if plot else None,
         targets=targets,
         compare=None,
+        xfail="idm" in name,
     )
     test.run()

@@ -177,6 +177,9 @@ contains
   subroutine exg_ar(this)
     ! -- modules
     use MemoryManagerModule, only: mem_checkin
+    use DisModule, only: DisType
+    use DisvModule, only: DisvType
+    use DisuModule, only: DisuType
     ! -- dummy
     class(GwfPrtExchangeType) :: this
     ! -- local
@@ -189,6 +192,11 @@ contains
       & ',a,'.&
       &  GWF Model has ', i0, ' user nodes and ', i0, ' reduced nodes.&
       &  PRT Model has ', i0, ' user nodes and ', i0, ' reduced nodes.&
+      &  Ensure discretization packages, including IDOMAIN, are identical.')"
+    character(len=*), parameter :: fmtidomerr = &
+      "('GWF and PRT Models do not have the same discretization for exchange&
+      & ',a,'.&
+      &  GWF Model and PRT Model have different IDOMAIN arrays.&
       &  Ensure discretization packages, including IDOMAIN, are identical.')"
     !
     ! -- set gwfmodel
@@ -215,6 +223,34 @@ contains
         prtmodel%dis%nodes
       call store_error(errmsg, terminate=.TRUE.)
     end if
+    !
+    ! -- Make sure idomains are identical
+    select type (gwfdis => gwfmodel%dis)
+    type is (DisType)
+      select type (prtdis => prtmodel%dis)
+      type is (DisType)
+        if (.not. all(gwfdis%idomain == prtdis%idomain)) then
+          write (errmsg, fmtidomerr) trim(this%name)
+          call store_error(errmsg, terminate=.TRUE.)
+        end if
+      end select
+    type is (DisvType)
+      select type (prtdis => prtmodel%dis)
+      type is (DisvType)
+        if (.not. all(gwfdis%idomain == prtdis%idomain)) then
+          write (errmsg, fmtidomerr) trim(this%name)
+          call store_error(errmsg, terminate=.TRUE.)
+        end if
+      end select
+    type is (DisuType)
+      select type (prtdis => prtmodel%dis)
+      type is (DisuType)
+        if (.not. all(gwfdis%idomain == prtdis%idomain)) then
+          write (errmsg, fmtidomerr) trim(this%name)
+          call store_error(errmsg, terminate=.TRUE.)
+        end if
+      end select
+    end select
     !
     ! -- setup pointers to gwf variables allocated in gwf_ar
     prtmodel%fmi%gwfhead => gwfmodel%x
