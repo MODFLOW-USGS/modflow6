@@ -14,13 +14,12 @@ from warnings import warn
 
 import pytest
 from benchmark import run_benchmarks
-from flaky import flaky
 from modflow_devtools.build import meson_build
 from modflow_devtools.download import (
     download_and_unzip,
     get_release,
 )
-from modflow_devtools.markers import no_parallel, requires_exe, requires_github
+from modflow_devtools.markers import no_parallel, requires_exe
 from modflow_devtools.misc import run_cmd, run_py_script, set_dir
 
 from utils import assert_match, convert_line_endings, get_project_root_path, glob, match
