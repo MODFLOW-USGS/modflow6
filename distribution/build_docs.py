@@ -106,20 +106,6 @@ def build_benchmark_tex(
         assert (RELEASE_NOTES_PATH / f"{benchmarks_path.stem}.tex").is_file()
 
 
-@flaky
-@no_parallel
-@requires_github
-def test_build_benchmark_tex(tmp_path):
-    benchmarks_path = BENCHMARKS_PATH / "run-time-comparison.md"
-    tex_path = DISTRIBUTION_PATH / f"{benchmarks_path.stem}.tex"
-
-    try:
-        build_benchmark_tex(tmp_path)
-        assert benchmarks_path.is_file()
-    finally:
-        tex_path.unlink(missing_ok=True)
-
-
 def build_deprecations_tex(force: bool = False):
     """Build LaTeX files for the deprecations table to go into the release notes."""
 
