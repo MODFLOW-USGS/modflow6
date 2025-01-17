@@ -20,6 +20,7 @@
 \textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
 \underline{BASIC FUNCTIONALITY}
 \begin{itemize}
+	\item Previously, GWF Model exchanges with other model types (GWT, GWE, PRT) verified that the flow model and the coupled model had the same number of active nodes, but did not check that the models' IDOMAIN arrays selected precisely the same set. Exchanges will now check that model IDOMAIN arrays are identical.
 	\item A regression was recently introduced into the PRT model's generalized tracking method, in which a coordinate transformation was carried out prematurely. This could result in incorrect particle positions in and near quad-refined cells. This bug has been fixed.
 	\item The PRT model previously allowed particles to be released at any time. Release times falling outside the bounds of the simulation's time discretization could produce undefined behavior. Any release times occurring before the simulation begins (i.e. negative times) will now be skipped with a warning message. If EXTEND\_TRACKING is not enabled, release times occurring after the end of the simulation will now be skipped with a warning message as well. If EXTEND\_TRACKING is enabled, release times after the end of the simulation are allowed.
 \end{itemize}
