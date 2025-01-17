@@ -23,7 +23,7 @@ module FlowModelInterfaceModule
     logical, pointer :: flows_from_file => null() !< if .false., then flows come from GWF through GWF-Model exg
     type(ListType), pointer :: gwfbndlist => null() !< list of gwf stress packages
     integer(I4B), pointer :: iflowsupdated => null() !< flows were updated for this time step
-    integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
+    integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to Model ibound
     real(DP), dimension(:), pointer, contiguous :: gwfflowja => null() !< pointer to the GWF flowja array
     real(DP), dimension(:, :), pointer, contiguous :: gwfspdis => null() !< pointer to npf specific discharge array
     real(DP), dimension(:), pointer, contiguous :: gwfhead => null() !< pointer to the GWF head array
