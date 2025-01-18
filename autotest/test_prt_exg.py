@@ -108,15 +108,17 @@ def build_mf6_sim(idx, test):
         trackcsv_filerecord=[prt_track_csv_file],
     )
 
-    # create a flow model interface
-    # todo Mike Fienen's report (crash when FMI created but not needed)
-    # flopy.mf6.ModflowPrtfmi(
-    #     prt,
-    #     packagedata=[
-    #         ("GWFHEAD", gwf_head_file),
-    #         ("GWFBUDGET", gwf_budget_file),
-    #     ],
-    # )
+    # create a flow model interface. should be ignored.
+    # Mike Fienen reported that an early version of PRT
+    # crashed if FMI is provided when using an exchange.
+    flopy.mf6.ModflowPrtfmi(
+        prt,
+        packagedata=[
+            # garbage paths
+            ("GWFHEAD", "heads.hds"),
+            ("GWFBUDGET", "budget.cbc"),
+        ],
+    )
 
     # create exchange
     gwf_name = get_model_name(idx, "gwf")
