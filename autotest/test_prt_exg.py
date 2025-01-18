@@ -59,9 +59,12 @@ def build_mf6_sim(idx, test):
         (FlopyReadmeCase.nlay, FlopyReadmeCase.nrow, FlopyReadmeCase.ncol)
     )
     if "idm" in name:
+        # add an inactive cell to
+        # tracking model idomain
         idomain[-1, -1, -1] = 0
     if "idmn" in name:
-        # TODO alter flow model's idomain
+        # add a (different) inactive
+        # cell to flow model idomain
         gwf_idomain = idomain.copy()
         gwf_idomain[-1, -1, -1] = 1
         gwf_idomain[0, 0, 0] = 0
