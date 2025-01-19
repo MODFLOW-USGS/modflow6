@@ -351,6 +351,7 @@ contains
     call mem_deallocate(this%iubud)
     call mem_deallocate(this%iuhds)
     call mem_deallocate(this%iumvr)
+    call mem_deallocate(this%iugrb)
     call mem_deallocate(this%nflowpack)
     call mem_deallocate(this%idryinactive)
     !

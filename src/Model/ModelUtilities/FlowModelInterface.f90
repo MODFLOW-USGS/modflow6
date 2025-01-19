@@ -10,6 +10,7 @@ module FlowModelInterfaceModule
   use ListModule, only: ListType
   use BudgetFileReaderModule, only: BudgetFileReaderType
   use HeadFileReaderModule, only: HeadFileReaderType
+  use GridFileReaderModule, only: load_grb
   use PackageBudgetModule, only: PackageBudgetType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr_bfr
 
@@ -24,6 +25,7 @@ module FlowModelInterfaceModule
     type(ListType), pointer :: gwfbndlist => null() !< list of gwf stress packages
     integer(I4B), pointer :: iflowsupdated => null() !< flows were updated for this time step
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to Model ibound
+    class(DisBaseType), pointer :: gwfdis => null() !< flow model discretization object
     real(DP), dimension(:), pointer, contiguous :: gwfflowja => null() !< pointer to the GWF flowja array
     real(DP), dimension(:, :), pointer, contiguous :: gwfspdis => null() !< pointer to npf specific discharge array
     real(DP), dimension(:), pointer, contiguous :: gwfhead => null() !< pointer to the GWF head array
@@ -37,12 +39,13 @@ module FlowModelInterfaceModule
     integer(I4B), pointer :: iubud => null() !< unit number GWF budget file
     integer(I4B), pointer :: iuhds => null() !< unit number GWF head file
     integer(I4B), pointer :: iumvr => null() !< unit number GWF mover budget file
+    integer(I4B), pointer :: iugrb => null() !< unit number binary grid file
     integer(I4B), pointer :: nflowpack => null() !< number of GWF flow packages
     integer(I4B), dimension(:), pointer, contiguous :: igwfmvrterm => null() !< flag to indicate that gwf package is a mover term
     type(BudgetFileReaderType) :: bfr !< budget file reader
     type(HeadFileReaderType) :: hfr !< head file reader
     type(PackageBudgetType), dimension(:), allocatable :: gwfpackages !< used to get flows between a package and gwf
-    type(BudgetObjectType), pointer :: mvrbudobj => null() !< pointer to the mover budget budget object
+    type(BudgetObjectType), pointer :: mvrbudobj => null() !< pointer to the mover budget object
     character(len=16), dimension(:), allocatable :: flowpacknamearray !< array of boundary package names (e.g. LAK-1, SFR-3, etc.)
     character(len=LENVARNAME) :: depvartype = ''
 
@@ -66,7 +69,6 @@ module FlowModelInterfaceModule
     procedure :: initialize_hfr
     procedure :: read_options
     procedure :: read_packagedata
-
   end type FlowModelInterfaceType
 
 contains
@@ -110,6 +112,7 @@ contains
     if (this%inunit /= 0) then
       call this%read_options()
     end if
+
     !
     ! -- Read packagedata options
     if (this%inunit /= 0 .and. this%flows_from_file) then
@@ -151,6 +154,7 @@ contains
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(FlowModelInterfaceType) :: this
+
     ! -- todo: finalize hfr and bfr either here or in a finalize routine
     !
     ! -- deallocate any memory stored with gwfpackages
@@ -181,6 +185,7 @@ contains
     call mem_deallocate(this%iubud)
     call mem_deallocate(this%iuhds)
     call mem_deallocate(this%iumvr)
+    call mem_deallocate(this%iugrb)
     call mem_deallocate(this%nflowpack)
     call mem_deallocate(this%idryinactive)
     !
@@ -208,6 +213,7 @@ contains
     call mem_allocate(this%iubud, 'IUBUD', this%memoryPath)
     call mem_allocate(this%iuhds, 'IUHDS', this%memoryPath)
     call mem_allocate(this%iumvr, 'IUMVR', this%memoryPath)
+    call mem_allocate(this%iugrb, 'IUGRB', this%memoryPath)
     call mem_allocate(this%nflowpack, 'NFLOWPACK', this%memoryPath)
     call mem_allocate(this%idryinactive, "IDRYINACTIVE", this%memoryPath)
     !
@@ -220,6 +226,7 @@ contains
     this%iubud = 0
     this%iuhds = 0
     this%iumvr = 0
+    this%iugrb = 0
     this%nflowpack = 0
     this%idryinactive = 1
   end subroutine allocate_scalars
@@ -346,12 +353,12 @@ contains
     iapt = 0
     blockrequired = .true.
     !
-    ! -- get options block
+    ! -- get packagedata block
     call this%parser%GetBlock('PACKAGEDATA', isfound, ierr, &
                               blockRequired=blockRequired, &
                               supportOpenClose=.true.)
     !
-    ! -- parse options block if detected
+    ! -- parse packagedata block if detected
     if (isfound) then
       write (this%iout, '(1x,a)') 'PROCESSING FMI PACKAGEDATA'
       do
@@ -410,6 +417,19 @@ contains
           call budgetobject_cr_bfr(this%mvrbudobj, 'MVT', this%iumvr, &
                                    this%iout)
           call this%mvrbudobj%fill_from_bfr(this%dis, this%iout)
+        case ('GWFGRID')
+          call this%parser%GetStringCaps(keyword)
+          if (keyword /= 'FILEIN') then
+            call store_error('GWFGRID KEYWORD MUST BE FOLLOWED BY '// &
+                             '"FILEIN" then by filename.')
+            call this%parser%StoreErrorUnit()
+          end if
+          call this%parser%GetString(fname)
+          inunit = getunit()
+          call openfile(inunit, this%iout, fname, 'DATA(BINARY)', FORM, &
+                        ACCESS, 'UNKNOWN')
+          this%iugrb = inunit
+          this%gwfdis => load_grb(this%iugrb, this%iout)
         case default
           write (errmsg, '(a,3(1x,a))') &
             'UNKNOWN', trim(adjustl(this%text)), 'PACKAGEDATA:', trim(keyword)
@@ -421,25 +441,18 @@ contains
   end subroutine read_packagedata
 
   !> @brief Initialize the budget file reader
-  !<
   subroutine initialize_bfr(this)
-    ! -- modules
     class(FlowModelInterfaceType) :: this
-    ! -- dummy
     integer(I4B) :: ncrbud
-    !
-    ! -- Initialize the budget file reader
     call this%bfr%initialize(this%iubud, this%iout, ncrbud)
-    !
-    ! -- todo: need to run through the budget terms
-    !    and do some checking
+    ! todo: need to run through the budget terms
+    ! and do some checking
   end subroutine initialize_bfr
 
   !> @brief Advance the budget file reader
   !!
   !! Advance the budget file reader by reading the next chunk
   !! of information for the current time step and stress period.
-  !!
   !<
   subroutine advance_bfr(this)
     ! -- modules
@@ -586,35 +599,22 @@ contains
   end subroutine advance_bfr
 
   !> @brief Finalize the budget file reader
-  !<
   subroutine finalize_bfr(this)
-    ! -- modules
     class(FlowModelInterfaceType) :: this
-    ! -- dummy
-    !
-    ! -- Finalize the budget file reader
     call this%bfr%finalize()
-    !
   end subroutine finalize_bfr
 
   !> @brief Initialize the head file reader
-  !<
   subroutine initialize_hfr(this)
-    ! -- modules
     class(FlowModelInterfaceType) :: this
-    ! -- dummy
-    !
-    ! -- Initialize the budget file reader
     call this%hfr%initialize(this%iuhds, this%iout)
-    !
-    ! -- todo: need to run through the head terms
-    !    and do some checking
+    ! todo: need to run through the head terms
+    ! and do some checking
   end subroutine initialize_hfr
 
   !> @brief Advance the head file reader
-  !<
   subroutine advance_hfr(this)
-    ! -- modules
+    ! modules
     use TdisModule, only: kstp, kper
     class(FlowModelInterfaceType) :: this
     integer(I4B) :: nu, nr, i, ilay
@@ -705,22 +705,15 @@ contains
   end subroutine advance_hfr
 
   !> @brief Finalize the head file reader
-  !<
   subroutine finalize_hfr(this)
-    ! -- modules
     class(FlowModelInterfaceType) :: this
-    ! -- dummy
-    !
-    ! -- Finalize the head file reader
     close (this%iuhds)
-    !
   end subroutine finalize_hfr
 
   !> @brief Initialize gwf terms from budget file
   !!
   !! initialize terms and figure out how many
   !! different terms and packages are contained within the file
-  !!
   !<
   subroutine initialize_gwfterms_from_bfr(this)
     ! -- modules
@@ -818,7 +811,6 @@ contains
   end subroutine initialize_gwfterms_from_bfr
 
   !> @brief Initialize gwf terms from a GWF exchange
-  !<
   subroutine initialize_gwfterms_from_gwfbndlist(this)
     ! -- modules
     use BndModule, only: BndType, GetBndFromList
@@ -918,22 +910,16 @@ contains
   end subroutine allocate_gwfpackages
 
   !> @brief Deallocate memory in the gwfpackages array
-  !<
   subroutine deallocate_gwfpackages(this)
-    ! -- modules
-    ! -- dummy
     class(FlowModelInterfaceType) :: this
-    ! -- local
     integer(I4B) :: n
-    !
-    ! -- initialize
+
     do n = 1, this%nflowpack
       call this%gwfpackages(n)%da()
     end do
   end subroutine deallocate_gwfpackages
 
   !> @brief Find the package index for the package with the given name
-  !<
   subroutine get_package_index(this, name, idx)
     use BndModule, only: BndType, GetBndFromList
     class(FlowModelInterfaceType) :: this

@@ -226,6 +226,7 @@ $(OBJDIR)/SourceCommon.o \
 $(OBJDIR)/MemoryManagerExt.o \
 $(OBJDIR)/ats.o \
 $(OBJDIR)/GeomUtil.o \
+$(OBJDIR)/GridFileReader.o \
 $(OBJDIR)/TimeSeriesLink.o \
 $(OBJDIR)/TimeSeriesFileList.o \
 $(OBJDIR)/tdis.o \
