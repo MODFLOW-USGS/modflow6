@@ -358,12 +358,12 @@ def build_documentation(
             example_model_path=PROJ_ROOT_PATH / ".mf6minsim",
         )
 
-    # build deprecations table for insertion into LaTex release notes
+    # build deprecations table LaTeX
     build_deprecations_tex(force=force)
 
     if full:
-        # convert benchmarks to LaTex, running them first if necessary
-        build_benchmark_tex(output_path=output_path, force=force, repo_owner=repo_owner)
+        # build benchmarks table LaTex, running benchmarks first if necessary
+        build_benchmark_tex(output_path=output_path, force=force)
 
         # download example docs
         pdf_name = "mf6examples.pdf"
