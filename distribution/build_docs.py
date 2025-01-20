@@ -482,5 +482,5 @@ Additional LaTeX files may be included in the distribution by specifying --tex-p
         force=args.force,
         full=args.full,
         models=models,
-        repo_owner=args.repo_owner
+        repo_owner=args.repo_owner,
     )
