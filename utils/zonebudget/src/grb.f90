@@ -53,10 +53,10 @@ contains
     ! -- grid type, allocate mshape accordingly
     call urword(hdrtxt, lloc, istart, istop, 0, i, r, iout, inunit)
     if (hdrtxt(istart:istop) == 'DIS') then
-      write (iout, '(2x, a)') 'Detected regular MODFLOW grid (DIS)'
+      write (iout, '(2x, a)') 'Detected structured grid (DIS)'
       allocate (mshape(3))
     elseif (hdrtxt(istart:istop) == 'DISV') then
-      write (iout, '(2x, a)') 'Detected Discretization by Vertices grid (DISV)'
+      write (iout, '(2x, a)') 'Detected vertex grid (DISV)'
       allocate (mshape(2))
     elseif (hdrtxt(istart:istop) == 'DISU') then
       write (iout, '(2x, a)') 'Detected unstructured grid (DISU)'

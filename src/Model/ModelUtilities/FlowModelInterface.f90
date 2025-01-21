@@ -10,7 +10,7 @@ module FlowModelInterfaceModule
   use ListModule, only: ListType
   use BudgetFileReaderModule, only: BudgetFileReaderType
   use HeadFileReaderModule, only: HeadFileReaderType
-  use GridFileReaderModule, only: GridFileReaderType
+  use GridFileReaderModule, only: GridFileReaderType, read_grb
   use PackageBudgetModule, only: PackageBudgetType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr_bfr
 
@@ -59,7 +59,6 @@ module FlowModelInterfaceModule
     procedure :: deallocate_gwfpackages
     procedure :: finalize_bfr
     procedure :: finalize_hfr
-    procedure :: finalize_gfr
     procedure :: fmi_ar
     procedure :: fmi_da
     procedure :: fmi_df
@@ -68,7 +67,6 @@ module FlowModelInterfaceModule
     procedure :: initialize_gwfterms_from_bfr
     procedure :: initialize_gwfterms_from_gwfbndlist
     procedure :: initialize_hfr
-    procedure :: initialize_gfr
     procedure :: read_options
     procedure :: read_packagedata
   end type FlowModelInterfaceType
@@ -350,6 +348,7 @@ contains
     integer(I4B) :: ierr
     integer(I4B) :: inunit
     integer(I4B) :: iapt
+    integer(I4B) :: nodes
     logical :: isfound, endOfBlock
     logical :: blockrequired
     logical :: exist
@@ -444,13 +443,14 @@ contains
           end if
           call this%parser%GetString(fname)
           inunit = getunit()
-          call openfile(inunit, this%iout, fname, 'DATA(BINARY)', FORM, &
-                        ACCESS, 'UNKNOWN')
+          call openfile(inunit, this%iout, fname, 'DATA(BINARY)', &
+                        FORM, ACCESS, 'UNKNOWN')
           this%iugrb = inunit
-          call this%initialize_gfr()
+          call this%gfr%initialize(this%iugrb)
 
           ! check node count
-          if (this%dis%nodes /= this%gfr%get_nodes()) then
+          nodes = this%gfr%read_int("NCELLS")
+          if (nodes /= this%dis%nodes) then
             write (errmsg, fmtdiserr) trim(this%text)
             call store_error(errmsg, terminate=.TRUE.)
           end if
@@ -458,27 +458,27 @@ contains
           ! check idomain
           select case (this%gfr%grid_type)
           case ('DIS')
-            call this%gfr%get_idomain(idomain3d)
             select type (dis => this%dis)
             type is (DisType)
+              idomain3d = this%gfr%read_idomain_dis()
               if (.not. all(dis%idomain == idomain3d)) then
                 write (errmsg, fmtidomerr) trim(this%text)
                 call store_error(errmsg, terminate=.TRUE.)
               end if
             end select
           case ('DISV')
-            call this%gfr%get_idomain(idomain2d)
             select type (dis => this%dis)
             type is (DisvType)
+              idomain2d = this%gfr%read_idomain_disv()
               if (.not. all(dis%idomain == idomain2d)) then
                 write (errmsg, fmtidomerr) trim(this%text)
                 call store_error(errmsg, terminate=.TRUE.)
               end if
             end select
           case ('DISU')
-            call this%gfr%get_idomain(idomain1d)
             select type (dis => this%dis)
             type is (DisuType)
+              idomain1d = this%gfr%read_idomain_disu()
               if (.not. all(dis%idomain == idomain1d)) then
                 write (errmsg, fmtidomerr) trim(this%text)
                 call store_error(errmsg, terminate=.TRUE.)
@@ -764,18 +764,6 @@ contains
     class(FlowModelInterfaceType) :: this
     close (this%iuhds)
   end subroutine finalize_hfr
-
-  !> @brief Initialize the grid file reader
-  subroutine initialize_gfr(this)
-    class(FlowModelInterfaceType) :: this
-    call this%gfr%initialize(this%iugrb, this%iout)
-  end subroutine initialize_gfr
-
-  !> @brief Finalize the grid file reader
-  subroutine finalize_gfr(this)
-    class(FlowModelInterfaceType) :: this
-    call this%gfr%finalize()
-  end subroutine finalize_gfr
 
   !> @brief Initialize gwf terms from budget file
   !!

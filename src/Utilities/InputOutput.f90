@@ -40,6 +40,7 @@ contains
     character(len=*), intent(in), optional :: filstat_opt !< file status, default is 'old'. Use 'REPLACE' for output file.
     integer(I4B), intent(in), optional :: mode_opt !< simulation mode that is evaluated to determine if the file should be opened
     ! -- local
+    character(len=MAXCHARLEN) :: iomsg
     character(len=20) :: fmtarg
     character(len=20) :: accarg
     character(len=20) :: filstat
@@ -107,11 +108,12 @@ contains
         ivar = -1
       else
         open (unit=iu, file=fname(1:iflen), form=fmtarg, access=accarg, &
-              status=filstat, action=filact, iostat=ivar)
+              status=filstat, action=filact, iostat=ivar, iomsg=iomsg)
       end if
       !
       ! -- Check for an error
       if (ivar /= 0) then
+        print *, "iomsg: ", iomsg
         write (errmsg, '(3a,1x,i0,a)') &
           'Could not open "', fname(1:iflen), '" on unit', iu, '.'
         if (iuop > 0) then
@@ -1853,10 +1855,12 @@ contains
     ! -- dummy
     integer(I4B), intent(in) :: lun
     character(len=:), intent(out), allocatable :: line
+    
     integer(I4B), intent(out) :: iostat
     ! -- local
     integer(I4B), parameter :: buffer_len = MAXCHARLEN
     character(len=buffer_len) :: buffer
+    character(len=buffer_len) :: iomsg
     character(len=:), allocatable :: linetemp
     integer(I4B) :: size_read, linesize
     character(len=1), parameter :: cr = CHAR(13)
@@ -1868,7 +1872,7 @@ contains
     !
     ! -- process
     do
-      read (lun, '(A)', iostat=iostat, advance='no', size=size_read) buffer
+      read (lun, '(A)', iomsg=iomsg, iostat=iostat, advance='no', size=size_read) buffer
       if (is_iostat_eor(iostat)) then
         linesize = len(line)
         deallocate (linetemp)
