@@ -25,6 +25,7 @@
 	\item A regression was recently introduced into the PRT model's generalized tracking method, in which a coordinate transformation was carried out prematurely. This could result in incorrect particle positions in and near quad-refined cells. This bug has been fixed.
 	\item The PRT model previously allowed particles to be released at any time. Release times falling outside the bounds of the simulation's time discretization could produce undefined behavior. Any release times occurring before the simulation begins (i.e. negative times) will now be skipped with a warning message. If EXTEND\_TRACKING is not enabled, release times occurring after the end of the simulation will now be skipped with a warning message as well. If EXTEND\_TRACKING is enabled, release times after the end of the simulation are allowed.
 	\item A profiling module is added for more enhanced performance diagnostics of the program. It can be activated through the PROFILE\_OPTION in the simulation name file.
+	\item Energy decay in the solid phase was added to the EST Package.  This capability is described in the Supplemental Technical Information document, but no actual support was provided in the source code.  Users can now specify distinct zeroth-order decay rates in either the aqueous or solid phases.
 \end{itemize}
 
 \underline{INTERNAL FLOW PACKAGES}

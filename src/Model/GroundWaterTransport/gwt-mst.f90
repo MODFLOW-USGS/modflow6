@@ -441,7 +441,6 @@ contains
   !> @ brief Fill sorption-decay coefficient method for package
   !!
   !!  Method to calculate and fill sorption-decay coefficients for the package.
-  !!
   !<
   subroutine mst_fc_dcy_srb(this, nodes, cold, nja, matrix_sln, idxglo, &
                             rhs, cnew, kiter)
