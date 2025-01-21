@@ -10,7 +10,7 @@ module FlowModelInterfaceModule
   use ListModule, only: ListType
   use BudgetFileReaderModule, only: BudgetFileReaderType
   use HeadFileReaderModule, only: HeadFileReaderType
-  use GridFileReaderModule, only: load_grb
+  use GridFileReaderModule, only: GridFileReaderType
   use PackageBudgetModule, only: PackageBudgetType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr_bfr
 
@@ -24,8 +24,7 @@ module FlowModelInterfaceModule
     logical, pointer :: flows_from_file => null() !< if .false., then flows come from GWF through GWF-Model exg
     type(ListType), pointer :: gwfbndlist => null() !< list of gwf stress packages
     integer(I4B), pointer :: iflowsupdated => null() !< flows were updated for this time step
-    integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to Model ibound
-    class(DisBaseType), pointer :: gwfdis => null() !< flow model discretization object
+    integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to this model ibound
     real(DP), dimension(:), pointer, contiguous :: gwfflowja => null() !< pointer to the GWF flowja array
     real(DP), dimension(:, :), pointer, contiguous :: gwfspdis => null() !< pointer to npf specific discharge array
     real(DP), dimension(:), pointer, contiguous :: gwfhead => null() !< pointer to the GWF head array
@@ -44,6 +43,7 @@ module FlowModelInterfaceModule
     integer(I4B), dimension(:), pointer, contiguous :: igwfmvrterm => null() !< flag to indicate that gwf package is a mover term
     type(BudgetFileReaderType) :: bfr !< budget file reader
     type(HeadFileReaderType) :: hfr !< head file reader
+    type(GridFileReaderType) :: gfr !< grid file reader
     type(PackageBudgetType), dimension(:), allocatable :: gwfpackages !< used to get flows between a package and gwf
     type(BudgetObjectType), pointer :: mvrbudobj => null() !< pointer to the mover budget object
     character(len=16), dimension(:), allocatable :: flowpacknamearray !< array of boundary package names (e.g. LAK-1, SFR-3, etc.)
@@ -59,6 +59,7 @@ module FlowModelInterfaceModule
     procedure :: deallocate_gwfpackages
     procedure :: finalize_bfr
     procedure :: finalize_hfr
+    procedure :: finalize_gfr
     procedure :: fmi_ar
     procedure :: fmi_da
     procedure :: fmi_df
@@ -67,6 +68,7 @@ module FlowModelInterfaceModule
     procedure :: initialize_gwfterms_from_bfr
     procedure :: initialize_gwfterms_from_gwfbndlist
     procedure :: initialize_hfr
+    procedure :: initialize_gfr
     procedure :: read_options
     procedure :: read_packagedata
   end type FlowModelInterfaceType
@@ -338,6 +340,9 @@ contains
     use ConstantsModule, only: LINELENGTH, DEM6, LENPACKAGENAME
     use InputOutputModule, only: getunit, openfile, urdaux
     use SimModule, only: store_error, store_error_unit
+    use DisModule, only: DisType
+    use DisvModule, only: DisvType
+    use DisuModule, only: DisuType
     ! -- dummy
     class(FlowModelInterfaceType) :: this
     ! -- local
@@ -348,6 +353,19 @@ contains
     logical :: isfound, endOfBlock
     logical :: blockrequired
     logical :: exist
+    integer(I4B), allocatable :: idomain1d(:), idomain2d(:, :), idomain3d(:, :, :)
+    ! -- formats
+    character(len=*), parameter :: fmtdiserr = &
+      "('GWF and PRT Models do not have the same discretization for FMI&
+      & ',a,'.&
+      &  GWF Model has ', i0, ' user nodes and ', i0, ' reduced nodes.&
+      &  PRT Model has ', i0, ' user nodes and ', i0, ' reduced nodes.&
+      &  Ensure discretization packages, including IDOMAIN, are identical.')"
+    character(len=*), parameter :: fmtidomerr = &
+      "('GWF and PRT Models do not have the same discretization for FMI&
+      & ',a,'.&
+      &  GWF Model and PRT Model have different IDOMAIN arrays.&
+      &  Ensure discretization packages, including IDOMAIN, are identical.')"
     !
     ! -- initialize
     iapt = 0
@@ -429,7 +447,44 @@ contains
           call openfile(inunit, this%iout, fname, 'DATA(BINARY)', FORM, &
                         ACCESS, 'UNKNOWN')
           this%iugrb = inunit
-          this%gwfdis => load_grb(this%iugrb, this%iout)
+          call this%initialize_gfr()
+
+          ! check node count
+          if (this%dis%nodes /= this%gfr%get_nodes()) then
+            write (errmsg, fmtdiserr) trim(this%text)
+            call store_error(errmsg, terminate=.TRUE.)
+          end if
+
+          ! check idomain
+          select case (this%gfr%grid_type)
+          case ('DIS')
+            call this%gfr%get_idomain(idomain3d)
+            select type (dis => this%dis)
+            type is (DisType)
+              if (.not. all(dis%idomain == idomain3d)) then
+                write (errmsg, fmtidomerr) trim(this%text)
+                call store_error(errmsg, terminate=.TRUE.)
+              end if
+            end select
+          case ('DISV')
+            call this%gfr%get_idomain(idomain2d)
+            select type (dis => this%dis)
+            type is (DisvType)
+              if (.not. all(dis%idomain == idomain2d)) then
+                write (errmsg, fmtidomerr) trim(this%text)
+                call store_error(errmsg, terminate=.TRUE.)
+              end if
+            end select
+          case ('DISU')
+            call this%gfr%get_idomain(idomain1d)
+            select type (dis => this%dis)
+            type is (DisuType)
+              if (.not. all(dis%idomain == idomain1d)) then
+                write (errmsg, fmtidomerr) trim(this%text)
+                call store_error(errmsg, terminate=.TRUE.)
+              end if
+            end select
+          end select
         case default
           write (errmsg, '(a,3(1x,a))') &
             'UNKNOWN', trim(adjustl(this%text)), 'PACKAGEDATA:', trim(keyword)
@@ -709,6 +764,18 @@ contains
     class(FlowModelInterfaceType) :: this
     close (this%iuhds)
   end subroutine finalize_hfr
+
+  !> @brief Initialize the grid file reader
+  subroutine initialize_gfr(this)
+    class(FlowModelInterfaceType) :: this
+    call this%gfr%initialize(this%iugrb, this%iout)
+  end subroutine initialize_gfr
+
+  !> @brief Finalize the grid file reader
+  subroutine finalize_gfr(this)
+    class(FlowModelInterfaceType) :: this
+    call this%gfr%finalize()
+  end subroutine finalize_gfr
 
   !> @brief Initialize gwf terms from budget file
   !!
