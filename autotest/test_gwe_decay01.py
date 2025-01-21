@@ -128,6 +128,13 @@ def build_models(idx, test):
 
 def check_output(idx, test):
     print("evaluating results...")
+    msg = (
+        "Differences detected between the simulated results for zeroth-order "
+        "energy decay and the expected solution for decay specified in "
+    )
+    msg0 = msg + "the aqueous phase."
+    msg1 = msg + "the solid phase."
+    msg2 = msg + "both the aqueous and solid phases."
 
     # read transport results from GWE model
     name = cases[idx]
@@ -152,13 +159,13 @@ def check_output(idx, test):
     print("temperature evaluation: " + str(temp_analy_w))
 
     if "aqe" in name:
-        assert temp_ts[-1, 1] == temp_analy_w[-1]
+        assert np.isclose(temp_ts[-1, 1], temp_analy_w[-1], atol=1e-10), msg0
 
     if "sld" in name:
-        assert temp_ts[-1, 1] == temp_analy_s[-1]
+        assert np.isclose(temp_ts[-1, 1], temp_analy_s[-1], atol=1e-10), msg1
 
     if "both" in name:
-        assert temp_ts[-1, 1] == temp_analy_ws[-1]
+        assert np.isclose(temp_ts[-1, 1], temp_analy_ws[-1], atol=1e-10), msg2
 
 
 # - No need to change any code below
