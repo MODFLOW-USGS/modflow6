@@ -48,7 +48,7 @@ module GweEstModule
     !
     ! -- decay
     integer(I4B), pointer :: idcy => null() !< order of decay rate (0:none, 1:first, 2:zero (aqueous and/or solid))
-    integer(I4B), pointer :: idcytype => null() !< decay source (or sink) (1: aqueous only, 2: solid only, 3: both phases
+    integer(I4B), pointer :: idcysrc => null() !< decay source (or sink) (1: aqueous only, 2: solid only, 3: both phases
     real(DP), dimension(:), pointer, contiguous :: decay_water => null() !< first or zero order decay rate (aqueous)
     real(DP), dimension(:), pointer, contiguous :: decay_solid => null() !< first or zero order decay rate (solid)
     real(DP), dimension(:), pointer, contiguous :: ratedcyw => null() !< rate of decay in aqueous phase
@@ -277,8 +277,8 @@ contains
         hhcof = -this%decay_water(n) * vcell * swtpdt * this%porosity(n) &
                 * this%eqnsclfac
         call matrix_sln%add_value_pos(idxglo(idiag), hhcof)
-      elseif (this%idcy == 2 .and. (this%idcytype == 1 .or. &
-                                    this%idcytype == 3)) then
+      elseif (this%idcy == 2 .and. (this%idcysrc == 1 .or. &
+                                    this%idcysrc == 3)) then
         !
         ! -- Call function to get zero-order decay rate, which may be changed
         !    from the user-specified rate to prevent negative temperatures     ! Important note: still need to think through negative temps
@@ -336,8 +336,8 @@ contains
       ! -- add sorbed mass decay rate terms to accumulators
       if (this%idcy == 1) then
         ! -- first order decay rate not supported in GWE
-      elseif (this%idcy == 2 .and. (this%idcytype == 2 .or. &
-                                    this%idcytype == 3)) then
+      elseif (this%idcy == 2 .and. (this%idcysrc == 2 .or. &
+                                    this%idcysrc == 3)) then
         !
         ! -- Call function to get zero-order decay rate for the solid phase,
         !    which may be changed from the user-specified rate to prevent
@@ -371,10 +371,10 @@ contains
     !
     ! -- decay
     if (this%idcy /= 0) then
-      if (this%idcytype == 1 .or. this%idcytype == 3) then
+      if (this%idcysrc == 1 .or. this%idcysrc == 3) then
         call this%est_cq_dcy(nodes, cnew, cold, flowja)
       end if
-      if (this%idcytype == 2 .or. this%idcytype == 3) then
+      if (this%idcysrc == 2 .or. this%idcysrc == 3) then
         call this%est_cq_dcy_solid(nodes, cnew, cold, flowja)
       end if
     end if
@@ -472,8 +472,8 @@ contains
       if (this%idcy == 1) then ! Important note: do we need/want first-order decay for temperature???
         hhcof = -this%decay_water(n) * vcell * swtpdt * this%porosity(n) &
                 * this%eqnsclfac
-      elseif (this%idcy == 2 .and. this%idcytype == 1 .or. &
-              this%idcytype == 3) then ! zero order decay aqueous phase
+      elseif (this%idcy == 2 .and. this%idcysrc == 1 .or. &
+              this%idcysrc == 3) then ! zero order decay aqueous phase
         decay_rate = get_zero_order_decay(this%decay_water(n), &
                                           this%decaylastw(n), 0, cold(n), &
                                           cnew(n), delt)
@@ -527,8 +527,8 @@ contains
       if (this%idcy == 1) then ! Important note: do we need/want first-order decay for temperature???
         hhcof = -this%decay_solid(n) * vcell * (1 - this%porosity(n)) &
                 * this%eqnsclfac
-      elseif (this%idcy == 2 .and. this%idcytype == 2 .or. &
-              this%idcytype == 3) then ! zero order decay in the solid phase
+      elseif (this%idcy == 2 .and. this%idcysrc == 2 .or. &
+              this%idcysrc == 3) then ! zero order decay in the solid phase
         decay_rate = get_zero_order_decay(this%decay_solid(n), &
                                           this%decaylasts(n), 0, cold(n), &
                                           cnew(n), delt)
@@ -565,13 +565,13 @@ contains
     !
     ! -- dcy
     if (this%idcy /= 0) then
-      if (this%idcytype == 1 .or. this%idcytype == 3) then
+      if (this%idcysrc == 1 .or. this%idcysrc == 3) then
         ! -- aqueous phase
         call rate_accumulator(this%ratedcyw, rin, rout)
         call model_budget%addentry(rin, rout, delt, budtxt(2), &
                                    isuppress_output, rowlabel=this%packName)
       end if
-      if (this%idcytype == 2 .or. this%idcytype == 3) then
+      if (this%idcysrc == 2 .or. this%idcysrc == 3) then
         ! -- solid phase
         call rate_accumulator(this%ratedcys, rin, rout)
         call model_budget%addentry(rin, rout, delt, budtxt(3), &
@@ -617,13 +617,13 @@ contains
       !
       ! -- dcy
       if (this%idcy /= 0) then
-        if (this%idcytype == 1 .or. this%idcytype == 3) then
+        if (this%idcysrc == 1 .or. this%idcysrc == 3) then
           ! -- aqueous phase
           call this%dis%record_array(this%ratedcyw, this%iout, iprint, &
                                      -ibinun, budtxt(2), cdatafmp, nvaluesp, &
                                      nwidthp, editdesc, dinact)
         end if
-        if (this%idcytype == 2 .or. this%idcytype == 3) then
+        if (this%idcysrc == 2 .or. this%idcysrc == 3) then
           ! -- solid phase
           call this%dis%record_array(this%ratedcys, this%iout, iprint, &
                                      -ibinun, budtxt(3), cdatafmp, nvaluesp, &
@@ -648,7 +648,7 @@ contains
       call mem_deallocate(this%porosity)
       call mem_deallocate(this%ratesto)
       call mem_deallocate(this%idcy)
-      call mem_deallocate(this%idcytype)
+      call mem_deallocate(this%idcysrc)
       call mem_deallocate(this%decay_water)
       call mem_deallocate(this%decay_solid)
       call mem_deallocate(this%ratedcyw)
@@ -688,14 +688,14 @@ contains
     call mem_allocate(this%rhow, 'RHOW', this%memoryPath)
     call mem_allocate(this%latheatvap, 'LATHEATVAP', this%memoryPath)
     call mem_allocate(this%idcy, 'IDCY', this%memoryPath)
-    call mem_allocate(this%idcytype, 'IDCYTYPE', this%memoryPath)
+    call mem_allocate(this%idcysrc, 'IDCYSRC', this%memoryPath)
     !
     ! -- Initialize
     this%cpw = DZERO
     this%rhow = DZERO
     this%latheatvap = DZERO
     this%idcy = IZERO
-    this%idcytype = IZERO
+    this%idcysrc = IZERO
   end subroutine allocate_scalars
 
   !> @ brief Allocate arrays for package
@@ -801,18 +801,18 @@ contains
           write (this%iout, fmtidcy1)
         case ('ZERO_ORDER_DECAY_WATER')
           this%idcy = 2
-          if (this%idcytype > IZERO) then
-            this%idcytype = 3
+          if (this%idcysrc > IZERO) then
+            this%idcysrc = 3
           else
-            this%idcytype = 1
+            this%idcysrc = 1
           end if
           write (this%iout, fmtidcy2)
         case ('ZERO_ORDER_DECAY_SOLID')
           this%idcy = 2
-          if (this%idcytype > IZERO) then
-            this%idcytype = 3
+          if (this%idcysrc > IZERO) then
+            this%idcysrc = 3
           else
-            this%idcytype = 2
+            this%idcysrc = 2
           end if
           write (this%iout, fmtidcy3)
         case ('HEAT_CAPACITY_WATER')
