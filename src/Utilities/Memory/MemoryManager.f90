@@ -2436,8 +2436,6 @@ contains
     use InputOutputModule, only: UPCASE
     ! -- local
     class(MemoryType), pointer :: mt
-    character(len=LINELENGTH) :: error_msg
-    character(len=LENVARNAME) :: ucname
     type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
     itr = memorystore%iterator()
