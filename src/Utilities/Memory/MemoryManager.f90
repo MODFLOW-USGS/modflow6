@@ -1926,36 +1926,8 @@ contains
     character(len=*), pointer, intent(inout) :: sclr !< pointer to string
     character(len=*), intent(in), optional :: name !< variable name
     character(len=*), intent(in), optional :: mem_path !< path where variable is stored
-    ! -- local
-    type(MemoryType), pointer :: mt
-    logical(LGP) :: found
-    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
-    found = .false.
-    if (present(name) .and. present(mem_path)) then
-      call get_from_memorystore(name, mem_path, mt, found)
-      nullify (mt%strsclr)
-    else
-      itr = memorystore%iterator()
-      do while (itr%has_next())
-        call itr%next()
-        mt => itr%value()
-        if (associated(mt%strsclr, sclr)) then
-          nullify (mt%strsclr)
-          found = .true.
-          exit
-        end if
-      end do
-    end if
-    if (.not. found) then
-      call store_error('Programming error in deallocate_str.', terminate=.TRUE.)
-    else
-      if (mt%master) then
-        deallocate (sclr)
-      else
-        nullify (sclr)
-      end if
-    end if
+    return
   end subroutine deallocate_str
 
   !> @brief Deallocate an array of defined-length character strings
@@ -1965,38 +1937,8 @@ contains
     character(len=*), dimension(:), pointer, contiguous, intent(inout) :: astr1d !< array of strings
     character(len=*), optional, intent(in) :: name !< variable name
     character(len=*), optional, intent(in) :: mem_path !< path where variable is stored
-    ! -- local
-    type(MemoryType), pointer :: mt
-    logical(LGP) :: found
-    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
-    !
-    ! -- process optional variables
-    found = .false.
-    if (present(name) .and. present(mem_path)) then
-      call get_from_memorystore(name, mem_path, mt, found)
-      nullify (mt%astr1d)
-    else
-      itr = memorystore%iterator()
-      do while (itr%has_next())
-        call itr%next()
-        mt => itr%value()
-        if (associated(mt%astr1d, astr1d)) then
-          nullify (mt%astr1d)
-          found = .true.
-          exit
-        end if
-      end do
-    end if
-    if (.not. found .and. size(astr1d) > 0) then
-      call store_error('programming error in deallocate_str1d', terminate=.TRUE.)
-    else
-      if (mt%master) then
-        deallocate (astr1d)
-      else
-        nullify (astr1d)
-      end if
-    end if
+    return
   end subroutine deallocate_str1d
 
   !> @brief Deallocate an array of deferred-length character strings
@@ -2007,137 +1949,32 @@ contains
       intent(inout) :: astr1d !< array of strings
     character(len=*), optional, intent(in) :: name !< variable name
     character(len=*), optional, intent(in) :: mem_path !< path where variable is stored
-    ! -- local
-    type(MemoryType), pointer :: mt
-    logical(LGP) :: found
-    type(MemoryContainerIteratorType), allocatable :: itr
-    integer(I4B) :: n
     ! -- code
-    !
-    ! -- process optional variables
-    found = .false.
-    if (present(name) .and. present(mem_path)) then
-      call get_from_memorystore(name, mem_path, mt, found)
-      nullify (mt%acharstr1d)
-    else
-      itr = memorystore%iterator()
-      do while (itr%has_next())
-        call itr%next()
-        mt => itr%value()
-        if (associated(mt%acharstr1d, astr1d)) then
-          nullify (mt%acharstr1d)
-          found = .true.
-          exit
-        end if
-      end do
-    end if
-    if (.not. found .and. size(astr1d) > 0) then
-      call store_error('programming error in deallocate_charstr1d', &
-                       terminate=.TRUE.)
-    else
-      if (mt%master) then
-        do n = 1, size(astr1d)
-          call astr1d(n)%destroy()
-        end do
-        deallocate (astr1d)
-      else
-        nullify (astr1d)
-      end if
-    end if
+    return
   end subroutine deallocate_charstr1d
 
   !> @brief Deallocate a logical scalar
   !<
   subroutine deallocate_logical(sclr)
     logical(LGP), pointer, intent(inout) :: sclr !< logical scalar to deallocate
-    ! -- local
-    class(MemoryType), pointer :: mt
-    logical(LGP) :: found
-    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
-    found = .false.
-    itr = memorystore%iterator()
-    do while (itr%has_next())
-      call itr%next()
-      mt => itr%value()
-      if (associated(mt%logicalsclr, sclr)) then
-        nullify (mt%logicalsclr)
-        found = .true.
-        exit
-      end if
-    end do
-    if (.not. found) then
-      call store_error('programming error in deallocate_logical', &
-                       terminate=.TRUE.)
-    else
-      if (mt%master) then
-        deallocate (sclr)
-      else
-        nullify (sclr)
-      end if
-    end if
+    return
   end subroutine deallocate_logical
 
   !> @brief Deallocate a integer scalar
   !<
   subroutine deallocate_int(sclr)
     integer(I4B), pointer, intent(inout) :: sclr !< integer variable to deallocate
-    ! -- local
-    class(MemoryType), pointer :: mt
-    logical(LGP) :: found
-    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
-    found = .false.
-    itr = memorystore%iterator()
-    do while (itr%has_next())
-      call itr%next()
-      mt => itr%value()
-      if (associated(mt%intsclr, sclr)) then
-        nullify (mt%intsclr)
-        found = .true.
-        exit
-      end if
-    end do
-    if (.not. found) then
-      call store_error('Programming error in deallocate_int.', terminate=.TRUE.)
-    else
-      if (mt%master) then
-        deallocate (sclr)
-      else
-        nullify (sclr)
-      end if
-    end if
+    return
   end subroutine deallocate_int
 
   !> @brief Deallocate a real scalar
   !<
   subroutine deallocate_dbl(sclr)
     real(DP), pointer, intent(inout) :: sclr !< real variable to deallocate
-    ! -- local
-    class(MemoryType), pointer :: mt
-    logical(LGP) :: found
-    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
-    found = .false.
-    itr = memorystore%iterator()
-    do while (itr%has_next())
-      call itr%next()
-      mt => itr%value()
-      if (associated(mt%dblsclr, sclr)) then
-        nullify (mt%dblsclr)
-        found = .true.
-        exit
-      end if
-    end do
-    if (.not. found) then
-      call store_error('Programming error in deallocate_dbl.', terminate=.TRUE.)
-    else
-      if (mt%master) then
-        deallocate (sclr)
-      else
-        nullify (sclr)
-      end if
-    end if
+    return
   end subroutine deallocate_dbl
 
   !> @brief Deallocate a 1-dimensional integer array
@@ -2146,38 +1983,8 @@ contains
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint !< 1d integer array to deallocate
     character(len=*), optional :: name !< variable name
     character(len=*), optional :: mem_path !< path where variable is stored
-    ! -- local
-    type(MemoryType), pointer :: mt
-    logical(LGP) :: found
-    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
-    !
-    ! -- process optional variables
-    found = .false.
-    if (present(name) .and. present(mem_path)) then
-      call get_from_memorystore(name, mem_path, mt, found)
-      nullify (mt%aint1d)
-    else
-      itr = memorystore%iterator()
-      do while (itr%has_next())
-        call itr%next()
-        mt => itr%value()
-        if (associated(mt%aint1d, aint)) then
-          nullify (mt%aint1d)
-          found = .true.
-          exit
-        end if
-      end do
-    end if
-    if (.not. found .and. size(aint) > 0) then
-      call store_error('programming error in deallocate_int1d', terminate=.TRUE.)
-    else
-      if (mt%master) then
-        deallocate (aint)
-      else
-        nullify (aint)
-      end if
-    end if
+    return
   end subroutine deallocate_int1d
 
   !> @brief Deallocate a 2-dimensional integer array
@@ -2186,38 +1993,8 @@ contains
     integer(I4B), dimension(:, :), pointer, contiguous, intent(inout) :: aint !< 2d integer array to deallocate
     character(len=*), optional :: name !< variable name
     character(len=*), optional :: mem_path !< path where variable is stored
-    ! -- local
-    type(MemoryType), pointer :: mt
-    logical(LGP) :: found
-    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
-    !
-    ! -- process optional variables
-    found = .false.
-    if (present(name) .and. present(mem_path)) then
-      call get_from_memorystore(name, mem_path, mt, found)
-      nullify (mt%aint2d)
-    else
-      itr = memorystore%iterator()
-      do while (itr%has_next())
-        call itr%next()
-        mt => itr%value()
-        if (associated(mt%aint2d, aint)) then
-          nullify (mt%aint2d)
-          found = .true.
-          exit
-        end if
-      end do
-    end if
-    if (.not. found .and. size(aint) > 0) then
-      call store_error('programming error in deallocate_int2d', terminate=.TRUE.)
-    else
-      if (mt%master) then
-        deallocate (aint)
-      else
-        nullify (aint)
-      end if
-    end if
+    return
   end subroutine deallocate_int2d
 
   !> @brief Deallocate a 3-dimensional integer array
@@ -2226,38 +2003,8 @@ contains
     integer(I4B), dimension(:, :, :), pointer, contiguous, intent(inout) :: aint !< 3d integer array to deallocate
     character(len=*), optional :: name !< variable name
     character(len=*), optional :: mem_path !< path where variable is stored
-    ! -- local
-    type(MemoryType), pointer :: mt
-    logical(LGP) :: found
-    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
-    !
-    ! -- process optional variables
-    found = .false.
-    if (present(name) .and. present(mem_path)) then
-      call get_from_memorystore(name, mem_path, mt, found)
-      nullify (mt%aint3d)
-    else
-      itr = memorystore%iterator()
-      do while (itr%has_next())
-        call itr%next()
-        mt => itr%value()
-        if (associated(mt%aint3d, aint)) then
-          nullify (mt%aint3d)
-          found = .true.
-          exit
-        end if
-      end do
-    end if
-    if (.not. found .and. size(aint) > 0) then
-      call store_error('programming error in deallocate_int3d', terminate=.TRUE.)
-    else
-      if (mt%master) then
-        deallocate (aint)
-      else
-        nullify (aint)
-      end if
-    end if
+    return
   end subroutine deallocate_int3d
 
   !> @brief Deallocate a 1-dimensional real array
@@ -2266,38 +2013,8 @@ contains
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl !< 1d real array to deallocate
     character(len=*), optional :: name !< variable name
     character(len=*), optional :: mem_path !< path where variable is stored
-    ! -- local
-    type(MemoryType), pointer :: mt
-    logical(LGP) :: found
-    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
-    !
-    ! -- process optional variables
-    found = .false.
-    if (present(name) .and. present(mem_path)) then
-      call get_from_memorystore(name, mem_path, mt, found)
-      nullify (mt%adbl1d)
-    else
-      itr = memorystore%iterator()
-      do while (itr%has_next())
-        call itr%next()
-        mt => itr%value()
-        if (associated(mt%adbl1d, adbl)) then
-          nullify (mt%adbl1d)
-          found = .true.
-          exit
-        end if
-      end do
-    end if
-    if (.not. found .and. size(adbl) > 0) then
-      call store_error('programming error in deallocate_dbl1d', terminate=.TRUE.)
-    else
-      if (mt%master) then
-        deallocate (adbl)
-      else
-        nullify (adbl)
-      end if
-    end if
+    return
   end subroutine deallocate_dbl1d
 
   !> @brief Deallocate a 2-dimensional real array
@@ -2306,38 +2023,8 @@ contains
     real(DP), dimension(:, :), pointer, contiguous, intent(inout) :: adbl !< 2d real array to deallocate
     character(len=*), optional :: name !< variable name
     character(len=*), optional :: mem_path !< path where variable is stored
-    ! -- local
-    type(MemoryType), pointer :: mt
-    logical(LGP) :: found
-    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
-    !
-    ! -- process optional variables
-    found = .false.
-    if (present(name) .and. present(mem_path)) then
-      call get_from_memorystore(name, mem_path, mt, found)
-      nullify (mt%adbl2d)
-    else
-      itr = memorystore%iterator()
-      do while (itr%has_next())
-        call itr%next()
-        mt => itr%value()
-        if (associated(mt%adbl2d, adbl)) then
-          nullify (mt%adbl2d)
-          found = .true.
-          exit
-        end if
-      end do
-    end if
-    if (.not. found .and. size(adbl) > 0) then
-      call store_error('programming error in deallocate_dbl2d', terminate=.TRUE.)
-    else
-      if (mt%master) then
-        deallocate (adbl)
-      else
-        nullify (adbl)
-      end if
-    end if
+    return
   end subroutine deallocate_dbl2d
 
   !> @brief Deallocate a 3-dimensional real array
@@ -2346,38 +2033,8 @@ contains
     real(DP), dimension(:, :, :), pointer, contiguous, intent(inout) :: adbl !< 3d real array to deallocate
     character(len=*), optional :: name !< variable name
     character(len=*), optional :: mem_path !< path where variable is stored
-    ! -- local
-    type(MemoryType), pointer :: mt
-    logical(LGP) :: found
-    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
-    !
-    ! -- process optional variables
-    found = .false.
-    if (present(name) .and. present(mem_path)) then
-      call get_from_memorystore(name, mem_path, mt, found)
-      nullify (mt%adbl3d)
-    else
-      itr = memorystore%iterator()
-      do while (itr%has_next())
-        call itr%next()
-        mt => itr%value()
-        if (associated(mt%adbl3d, adbl)) then
-          nullify (mt%adbl3d)
-          found = .true.
-          exit
-        end if
-      end do
-    end if
-    if (.not. found .and. size(adbl) > 0) then
-      call store_error('programming error in deallocate_dbl3d', terminate=.TRUE.)
-    else
-      if (mt%master) then
-        deallocate (adbl)
-      else
-        nullify (adbl)
-      end if
-    end if
+    return
   end subroutine deallocate_dbl3d
 
   !> @brief Set the memory print option
@@ -2787,35 +2444,10 @@ contains
     do while (itr%has_next())
       call itr%next()
       mt => itr%value()
-      if (IDEVELOPMODE == 1) then
-        !
-        ! -- check if memory has been deallocated
-        if (mt%mt_associated() .and. mt%element_size == -1) then
-          error_msg = trim(adjustl(mt%path))//' '// &
-                      trim(adjustl(mt%name))//' has invalid element size'
-          call store_error(trim(error_msg))
-        end if
-        !
-        ! -- check if memory has been deallocated
-        if (mt%mt_associated() .and. mt%isize > 0) then
-          error_msg = trim(adjustl(mt%path))//' '// &
-                      trim(adjustl(mt%name))//' not deallocated'
-          call store_error(trim(error_msg))
-        end if
-        !
-        ! -- check case of varname
-        ucname = mt%name
-        call UPCASE(ucname)
-        if (mt%name /= ucname) then
-          error_msg = trim(adjustl(mt%path))//' '// &
-                      trim(adjustl(mt%name))//' not upper case'
-          call store_error(trim(error_msg))
-        end if
-      end if
-      !
-      ! -- deallocate instance of memory type
+      call mt%mt_deallocate()
       deallocate (mt)
     end do
+
     call memorystore%clear()
     if (count_errors() > 0) then
       call store_error('Could not clear memory list.', terminate=.TRUE.)
