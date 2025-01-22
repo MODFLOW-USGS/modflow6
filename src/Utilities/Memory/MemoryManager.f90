@@ -1937,35 +1937,8 @@ contains
     character(len=*), dimension(:), pointer, contiguous, intent(inout) :: astr1d !< array of strings
     character(len=*), optional, intent(in) :: name !< variable name
     character(len=*), optional, intent(in) :: mem_path !< path where variable is stored
-    ! -- local
-    type(MemoryType), pointer :: mt
-    logical(LGP) :: found
-    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
-    !
-    found = .false.
-    if (present(name) .and. present(mem_path)) then
-      call get_from_memorystore(name, mem_path, mt, found)
-      nullify (mt%astr1d)
-    else
-      itr = memorystore%iterator()
-      do while (itr%has_next())
-        call itr%next()
-        mt => itr%value()
-        if (associated(mt%astr1d, astr1d)) then
-          found = .true.
-          exit
-        end if
-      end do
-    end if
-
-    if (found) then
-      if (mt%master) then
-        deallocate (astr1d)
-      else
-        nullify (astr1d)
-      end if
-    end if
+    return
 
   end subroutine deallocate_str1d
 
