@@ -113,7 +113,7 @@ contains
   function Mf6Update() result(hasConverged)
     logical(LGP) :: hasConverged
     ! start timer
-    call g_timer%start(SECTION_UPDATE)
+    call g_timer%start("Update", SECTION_UPDATE)
     !
     ! -- prepare timestep
     call Mf6PrepareTimestep()
@@ -155,9 +155,10 @@ contains
     class(BaseModelType), pointer :: mp => null()
     class(BaseExchangeType), pointer :: ep => null()
     class(SpatialModelConnectionType), pointer :: mc => null()
+    integer(I4B) :: tmr_dealloc
 
     ! start timer
-    call g_timer%start(SECTION_FINALIZE)
+    call g_timer%start("Finalize", SECTION_FINALIZE)
 
     !
     ! -- FINAL PROCESSING (FP)
@@ -178,6 +179,11 @@ contains
       sp => GetBaseSolutionFromList(basesolutionlist, is)
       call sp%sln_fp()
     end do
+
+    ! start timer for deallocation
+    tmr_dealloc = -1
+    call g_timer%start("Deallocate", tmr_dealloc)
+    
     !
     ! -- DEALLOCATE (DA)
     ! -- Deallocate tdis
@@ -223,7 +229,8 @@ contains
     call simulation_da()
     call lists_da()
     
-    ! stop timer
+    ! stop timers
+    call g_timer%stop(tmr_dealloc)
     call g_timer%stop(SECTION_FINALIZE)
 
     ! finish gently (No calls after this)
@@ -510,7 +517,7 @@ contains
     integer(I4B) :: is
 
     ! start timer
-    call g_timer%start(SECTION_PREP_TSTP)
+    call g_timer%start("Initialize time step", SECTION_PREP_TSTP)
 
     !
     ! -- initialize fmt
@@ -618,7 +625,7 @@ contains
     logical :: finishedTrying
 
     ! start timer
-    call g_timer%start(SECTION_DO_TSTP)
+    call g_timer%start("Do time step", SECTION_DO_TSTP)
 
     ! -- By default, the solution groups will be solved once, and
     !    may fail.  But if adaptive stepping is active, then
@@ -723,7 +730,7 @@ contains
     line = 'end timestep'
 
     ! start timer
-    call g_timer%start(SECTION_FINAL_TSTP)
+    call g_timer%start("Finalize time step", SECTION_FINAL_TSTP)
 
     !
     ! -- evaluate simulation mode

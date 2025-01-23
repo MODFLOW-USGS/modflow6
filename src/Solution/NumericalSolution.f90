@@ -135,6 +135,7 @@ module NumericalSolutionModule
     integer(I4B) :: tmr_final_solve !< timer - finalize solve
     integer(I4B) :: tmr_formulate !< timer - formulate
     integer(I4B) :: tmr_linsolve !< timer - linear solve
+    character(len=24) :: id_postfix !< solution id based postfix for timer titles
     !
     ! -- adaptive time step
     real(DP), pointer :: atsfrac => null() !< adaptive time step faction
@@ -434,7 +435,6 @@ contains
     integer(I4B), allocatable, dimension(:) :: rowmaxnnz
     integer(I4B) :: ncol, irow_start, irow_end
     integer(I4B) :: mod_offset
-    character(len=LEN_SECTION_TITLE) :: sec_title
     !
     ! -- set sol id and determine nr. of equation in this solution
     do i = 1, this%modellist%Count()
@@ -504,15 +504,12 @@ contains
     call this%sln_connect()
 
     ! add timers
-    write(sec_title,'(a,i0,a)') "Prepare solve (", this%id, ")"
-    this%tmr_prep_solve = g_timer%add_section(sec_title, SECTION_DO_TSTP)
-    write(sec_title,'(a,i0,a)') "Solve (", this%id, ")"
-    this%tmr_solve = g_timer%add_section(sec_title, SECTION_DO_TSTP)
-    write(sec_title,'(a,i0,a)') "Finalize solve (", this%id, ")"
-    this%tmr_final_solve = g_timer%add_section(sec_title, SECTION_DO_TSTP)
-
-    this%tmr_formulate = g_timer%add_section("Formulate", this%tmr_solve)
-    this%tmr_linsolve = g_timer%add_section("Linear solve", this%tmr_solve)
+    write(this%id_postfix,'(a,i0,a)') " (", this%id, ")"
+    this%tmr_prep_solve = -1
+    this%tmr_solve = -1
+    this%tmr_final_solve = -1
+    this%tmr_formulate = -1
+    this%tmr_linsolve = -1
 
   end subroutine sln_df
 
@@ -1443,7 +1440,7 @@ contains
     class(NumericalModelType), pointer :: mp => null()
 
     ! start timer
-    call g_timer%start(this%tmr_prep_solve)
+    call g_timer%start("Prepare solve"//this%id_postfix, this%tmr_prep_solve)
 
     ! synchronize for AD
     call this%synchronize(STG_BFR_EXG_AD, this%synchronize_ctx)
@@ -1522,7 +1519,7 @@ contains
     real(DP) :: outer_hncg
 
     ! start timer
-    call g_timer%start(this%tmr_solve)
+    call g_timer%start("Solve"//this%id_postfix, this%tmr_solve)
 
     !
     ! -- initialize local variables
@@ -1577,7 +1574,7 @@ contains
     end if
     !
     call code_timer(0, ttform, this%ttform)
-    call g_timer%start(this%tmr_formulate)
+    call g_timer%start("Formulate", this%tmr_formulate)
     !
     ! -- (re)build the solution matrix
     call this%sln_buildsystem(kiter, inewton=1)
@@ -1595,7 +1592,7 @@ contains
     !
     ! -- linear solve
     call code_timer(0, ttsoln, this%ttsoln)
-    call g_timer%start(this%tmr_linsolve)
+    call g_timer%start("Linear solve", this%tmr_linsolve)
     call this%sln_ls(kiter, kstp, kper, iter, iptc, ptcf)
     call g_timer%stop(this%tmr_linsolve)
     call code_timer(1, ttsoln, this%ttsoln)
@@ -1861,7 +1858,7 @@ contains
       &' STRESS PERIOD ',I0,/1X,I0,' TOTAL ITERATIONS')"
     
     ! start timer
-    call g_timer%start(this%tmr_final_solve)
+    call g_timer%start("Finalize solve"//this%id_postfix, this%tmr_final_solve)
 
     !
     ! -- finalize the outer iteration table

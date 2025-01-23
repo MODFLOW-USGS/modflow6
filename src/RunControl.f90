@@ -20,6 +20,7 @@ module RunControlModule
     procedure :: at_stage => ctrl_at_stage
     procedure :: finish => ctrl_finish
     procedure :: after_con_cr => ctrl_after_con_cr
+
     ! private
     procedure, private :: init_handler
     procedure, private :: before_con_df
@@ -42,8 +43,8 @@ contains
     ! initialize and start timers, if not done so in the derived class
     if (.not. g_timer%is_initialized()) then
       call g_timer%initialize()
-      call g_timer%start(SECTION_RUN)
-      call g_timer%start(SECTION_INIT)
+      call g_timer%start("Run", SECTION_RUN)
+      call g_timer%start("Initialize", SECTION_INIT)
     end if
 
     allocate (this%virtual_data_mgr)

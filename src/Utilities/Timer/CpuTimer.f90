@@ -5,24 +5,25 @@ module CpuTimerModule
   implicit none
   private
 
-  ! predefined sections as integers
-  ! root:
-  integer(I4B), public :: SECTION_RUN
+  ! predefined skeleton of section ids
+  ! level 0 (root):
+  integer(I4B), public :: SECTION_RUN = -1
 
   ! level 1 (BMI):
-  integer(I4B), public :: SECTION_INIT
-  integer(I4B), public :: SECTION_UPDATE
-  integer(I4B), public :: SECTION_FINALIZE
+  integer(I4B), public :: SECTION_INIT = -1
+  integer(I4B), public :: SECTION_UPDATE = -1
+  integer(I4B), public :: SECTION_FINALIZE = -1
 
   ! level 2 (XMI):
-  integer(I4B), public :: SECTION_PREP_TSTP
-  integer(I4B), public :: SECTION_DO_TSTP
-  integer(I4B), public :: SECTION_FINAL_TSTP
+  integer(I4B), public :: SECTION_PREP_TSTP = -1
+  integer(I4B), public :: SECTION_DO_TSTP = -1
+  integer(I4B), public :: SECTION_FINAL_TSTP = -1
 
   ! constants for memory allocation
-  integer(I4B), parameter :: MAX_NR_TIMED_SECTIONS = 20
+  integer(I4B), parameter :: MAX_NR_TIMED_SECTIONS = 50
   integer(I4B), public, parameter :: LEN_SECTION_TITLE = 128
 
+  ! data structure to store measurements for a section
   type, private :: TimedSectionType
     character(len=LEN_SECTION_TITLE) :: title !< title to identify timed section in log
     real(DP) :: walltime !< walltime spent in section
@@ -32,11 +33,13 @@ module CpuTimerModule
     type(STLVecInt) :: children !< ids of children
   end type TimedSectionType
 
+  ! this is the timer object
   type, public :: CpuTimerType
     private
     integer(I4B) :: nr_sections
-    integer(I4B) :: root_id
-    type(TimedSectionType), dimension(:), pointer :: all_sections => null()
+    integer(I4B) :: root_id !< 
+    type(TimedSectionType), dimension(:), pointer :: all_sections => null() !< all timed sections, dynamic up to MAX_NR_TIMED_SECTIONS
+    type(STLVecInt) :: callstack !< call stack of section ids
   contains
     procedure :: initialize
     procedure :: add_section
@@ -46,8 +49,10 @@ module CpuTimerModule
     procedure :: destroy
     procedure :: is_initialized
     ! private
-    procedure, private :: get_section_id
     procedure, private :: print_section
+    procedure, private :: print_total
+    procedure, private :: aggregate_walltime
+    procedure, private :: aggregate_counts
   end type CpuTimerType
 
   type(CpuTimerType), public :: g_timer !< the global timer object (to reduce trivial lines of code)
@@ -80,6 +85,8 @@ contains
     ! local
     integer(I4B) :: i
 
+    call this%callstack%init()
+
     allocate(this%all_sections(MAX_NR_TIMED_SECTIONS))
     do i = 1, MAX_NR_TIMED_SECTIONS
       this%all_sections(i)%title = "undefined"
@@ -93,16 +100,6 @@ contains
     this%nr_sections = 0
     this%root_id = 0
 
-    SECTION_RUN = g_timer%add_section("Run")
-
-    SECTION_INIT = g_timer%add_section("Init", SECTION_RUN)
-    SECTION_UPDATE = g_timer%add_section("Update", SECTION_RUN)
-    SECTION_FINALIZE = g_timer%add_section("Finalize", SECTION_RUN)
-
-    SECTION_PREP_TSTP = g_timer%add_section("Prepare timestep", SECTION_UPDATE)
-    SECTION_DO_TSTP = g_timer%add_section("Do timestep", SECTION_UPDATE)
-    SECTION_FINAL_TSTP = g_timer%add_section("Finalize timestep", SECTION_UPDATE)
-
   end subroutine initialize
 
   !> @brief Add a new timed section to the tree,
@@ -111,7 +108,7 @@ contains
   function add_section(this, title, parent_id) result(section_id)
     class(CpuTimerType) :: this
     character(len=*) :: title
-    integer(I4B), optional :: parent_id
+    integer(I4B) :: parent_id
     integer(I4B) :: section_id
 
     ! increment to new section id
@@ -124,7 +121,7 @@ contains
     this%all_sections(section_id)%status = 0
     
     ! if parent, otherwise root section
-    if (present(parent_id)) then
+    if (parent_id > 0) then
       ! add child to parent
       this%all_sections(section_id)%parent_id = parent_id
       call this%all_sections(parent_id)%children%push_back(section_id)
@@ -136,35 +133,28 @@ contains
 
   end function add_section
 
-  !> @brief Return section id for title, 0 when not found
-  !! @note Currently not used, but could be useful later on, else remove
+  !> @brief Start section timing, add when not exist yet (i.e. when id < 1)
   !<
-  function get_section_id(this, title) result(section_id)
+  subroutine start(this, title, section_id)
     class(CpuTimerType) :: this
     character(len=*) :: title
-    integer(I4B) :: section_id
-    ! local
-    integer(I4B) :: i
-
-    section_id = 0
-    do i = 1, this%nr_sections
-      if (this%all_sections(i)%title == title) then
-        section_id = i
-        exit
-      end if
-    end do
-
-  end function get_section_id
-
-  subroutine start(this, section_id)
-    class(CpuTimerType) :: this
-    integer(I4B) :: section_id
+    integer(I4B) :: section_id, parent_id
     ! local
     real(DP) :: start_time
     type(TimedSectionType), pointer :: section
 
     call cpu_time(start_time)
     
+    if (section_id < 1) then
+      ! add section if not exist
+      parent_id = 0 ! root
+      if (this%callstack%size > 0) then
+        parent_id = this%callstack%at(this%callstack%size)
+      end if
+      section_id = this%add_section(title, parent_id)
+    end if
+    call this%callstack%push_back(section_id)
+
     section => this%all_sections(section_id)
     section%count = section%count + 1
     section%status = 1
@@ -186,6 +176,9 @@ contains
     section%status = 0
     section%walltime = section%walltime + end_time
 
+    ! pop from call stack
+    call this%callstack%pop()
+
   end subroutine stop
 
   subroutine print_timings(this)
@@ -195,10 +188,15 @@ contains
 
     ! print timing call stack
     level = 0
+    write(*,'(a/)') "-------------------- Timing: Call Stack --------------------"
     call this%print_section(this%root_id, level)
 
-    ! print walltime per category
-    
+    ! print walltime per category from substring (if exist)
+    write(*,'(a/)') "-------------------- Timing: Cumulative --------------------"
+    call this%print_total("Formulate")
+    call this%print_total("Linear solve")
+    call this%print_total("MPI_WaitAll")
+    write(*,'(/a/)') "------------------------------------------------------------"
 
   end subroutine print_timings
 
@@ -214,10 +212,11 @@ contains
     section => this%all_sections(section_id)
 
     ! calculate percentage
-    percent = 100.0_DP
+    percent = 1.0_DP
     if (section%parent_id /= 0) then
-      percent = section%walltime / this%all_sections(this%root_id)%walltime * 100.0_DP
+      percent = section%walltime / this%all_sections(this%root_id)%walltime
     end if
+    percent = percent * 100.0_DP
 
     ! print section timing
     write(*,'(3a,f0.2,3a,f14.6,2a,i0,a)') &
@@ -235,11 +234,70 @@ contains
 
   end subroutine print_section
 
+  subroutine print_total(this, subtitle)
+    class(CpuTimerType) :: this
+    character(len=*) :: subtitle
+    ! local
+    integer(I4B) :: count
+    real(DP) :: walltime, percent
+    
+    count = this%aggregate_counts(subtitle)
+    if (count > 0) then
+      walltime = aggregate_walltime(this, subtitle)
+      percent = (walltime / this%all_sections(this%root_id)%walltime) * 100.0_DP
+      write(*,'(2a,f0.2,3a,f14.6,2a,i0,a)') &
+        " ", "[", percent, "%] ", &
+        trim(subtitle), ": ", walltime, "s", " (", &
+        count, "x)"
+    end if
+
+  end subroutine print_total
+
+  !> @brief Aggregate walltime over sections with a certain title
+  !<
+  function aggregate_walltime(this, title) result(walltime)
+    class(CpuTimerType) :: this
+    character(len=*) :: title
+    real(DP) :: walltime
+    ! local
+    integer(I4B) :: i
+
+    walltime = DZERO
+    do i = 1, this%nr_sections
+      if (index(this%all_sections(i)%title, trim(title)) > 0) then
+        walltime = walltime + this%all_sections(i)%walltime
+      end if
+    end do
+
+  end function aggregate_walltime
+
+  !> @brief Aggregate counts over sections with a certain title
+  !<
+  function aggregate_counts(this, title) result(counts)
+    class(CpuTimerType) :: this
+    character(len=*) :: title
+    integer(I4B) :: counts
+    ! local
+    integer(I4B) :: i
+
+    counts = 0
+    do i = 1, this%nr_sections
+      if (index(this%all_sections(i)%title, trim(title)) > 0) then
+        counts = counts + this%all_sections(i)%count
+      end if
+    end do
+
+  end function aggregate_counts
+
+  !> @brief Clean up the CPU timer object
+  !<
   subroutine destroy(this)
     class(CpuTimerType) :: this
     ! local
     integer(I4B) :: i
     
+    call this%callstack%destroy()
+
     do i = 1, this%nr_sections
       call this%all_sections(i)%children%destroy()
     end do

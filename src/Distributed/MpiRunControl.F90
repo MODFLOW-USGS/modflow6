@@ -58,10 +58,10 @@ contains
     tmr_func => mpi_walltime
     call set_timer_func(tmr_func)
     call g_timer%initialize()
-    tmr_init_par = g_timer%add_section("Init parallel", SECTION_INIT)
-    call g_timer%start(SECTION_RUN)
-    call g_timer%start(SECTION_INIT)
-    call g_timer%start(tmr_init_par)
+    call g_timer%start("Run", SECTION_RUN)
+    call g_timer%start("Initialize", SECTION_INIT)
+    tmr_init_par = -1
+    call g_timer%start("Initialize parallel", tmr_init_par)
 
     ! set mpi abort function
     pstop_alternative => mpi_stop
@@ -147,8 +147,8 @@ contains
     integer(I4B) :: tmr_final_par
 
     ! timer
-    tmr_final_par = g_timer%add_section("Finalize parallel", SECTION_FINALIZE)
-    call g_timer%start(tmr_final_par)
+    tmr_final_par = -1
+    call g_timer%start("Finalize parallel", tmr_final_par)
 
     ! finish mpi
 #if defined(__WITH_PETSC__)

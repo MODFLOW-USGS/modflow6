@@ -6,6 +6,7 @@ module RouterBaseModule
 
   type, abstract, public :: RouterBaseType
     logical(LGP) :: halo_activated !< when true, the halo has been activated
+    integer(I4B) :: nr_virt_solutions !< number of virtual solution to be routed
     !< (allowing more efficient routing of virtual data)
   contains
     procedure(initialize_if), deferred :: initialize
