@@ -5,6 +5,7 @@ module RunControlModule
   use MapperModule
   use ListsModule, only: basesolutionlist
   use NumericalSolutionModule, only: NumericalSolutionType
+  use CpuTimerModule
   implicit none
   private
 
@@ -38,6 +39,13 @@ contains
   subroutine ctrl_start(this)
     class(RunControlType) :: this
 
+    ! initialize and start timers, if not done so in the derived class
+    if (.not. g_timer%is_initialized()) then
+      call g_timer%initialize()
+      call g_timer%start(SECTION_RUN)
+      call g_timer%start(SECTION_INIT)
+    end if
+
     allocate (this%virtual_data_mgr)
 
   end subroutine ctrl_start
@@ -56,6 +64,11 @@ contains
     call mem_write_usage(iout)
     call mem_da()
     call elapsed_time(iout, 1)
+
+    ! stop and print timings
+    call g_timer%stop(SECTION_RUN)
+    call g_timer%print_timings()
+
     call final_message()
 
   end subroutine ctrl_finish

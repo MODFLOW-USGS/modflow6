@@ -9,7 +9,8 @@ module MpiRunControlModule
   use MpiWorldModule
   use SimVariablesModule, only: proc_id, nr_procs
   use SimStagesModule
-  use KindModule, only: I4B, LGP
+  use CpuTimerModule
+  use KindModule, only: I4B, LGP, DP
   use STLVecIntModule
   use NumericalSolutionModule
   use RunControlModule, only: RunControlType
@@ -42,6 +43,8 @@ contains
 
   subroutine mpi_ctrl_start(this)
     use ErrorUtilModule, only: pstop_alternative
+    ! local
+    integer(I4B) :: tmr_init_par
 
     class(MpiRunControlType) :: this
     ! local
@@ -49,6 +52,16 @@ contains
     character(len=*), parameter :: petsc_db_file = '.petscrc'
     logical(LGP) :: petsc_db_exists, wait_dbg, is_parallel_mode
     type(MpiWorldType), pointer :: mpi_world
+    procedure(timer_func_iface), pointer :: tmr_func => null()
+
+    ! add timed section for parallel stuff and start timers
+    tmr_func => mpi_walltime
+    call set_timer_func(tmr_func)
+    call g_timer%initialize()
+    tmr_init_par = g_timer%add_section("Init parallel", SECTION_INIT)
+    call g_timer%start(SECTION_RUN)
+    call g_timer%start(SECTION_INIT)
+    call g_timer%start(tmr_init_par)
 
     ! set mpi abort function
     pstop_alternative => mpi_stop
@@ -101,6 +114,9 @@ contains
     ! possibly wait to attach debugger here
     if (wait_dbg) call this%wait_for_debugger()
 
+    ! done with parallel pre-work
+    call g_timer%stop(tmr_init_par)
+
     ! start everything else by calling parent
     call this%RunControlType%start()
 
@@ -128,6 +144,11 @@ contains
     class(MpiRunControlType) :: this
     ! local
     integer :: ierr
+    integer(I4B) :: tmr_final_par
+
+    ! timer
+    tmr_final_par = g_timer%add_section("Finalize parallel", SECTION_FINALIZE)
+    call g_timer%start(tmr_final_par)
 
     ! finish mpi
 #if defined(__WITH_PETSC__)
@@ -141,6 +162,8 @@ contains
 #endif
 
     pstop_alternative => null()
+
+    call g_timer%stop(tmr_final_par)
 
     ! finish everything else by calling parent
     call this%RunControlType%finish()
@@ -270,5 +293,15 @@ contains
     deallocate (remote_exgs_per_process)
 
   end subroutine mpi_ctrl_after_con_cr
+
+  subroutine mpi_walltime(walltime)
+    real(DP), intent(inout) :: walltime
+    ! local
+    integer :: ierr
+
+    walltime = MPI_Wtime()
+    call CHECK_MPI(ierr)
+
+  end subroutine mpi_walltime
 
 end module MpiRunControlModule

@@ -356,6 +356,7 @@ modflow_sources = files(
     'Utilities' / 'OutputControl' / 'OutputControl.f90',
     'Utilities' / 'OutputControl' / 'OutputControlData.f90',
     'Utilities' / 'OutputControl' / 'PrintSaveManager.f90',
+    'Utilities' / 'Timer' / 'CpuTimer.f90',
     'Utilities' / 'TimeSeries' / 'TimeArray.f90',
     'Utilities' / 'TimeSeries' / 'TimeArraySeries.f90',
     'Utilities' / 'TimeSeries' / 'TimeArraySeriesLink.f90',

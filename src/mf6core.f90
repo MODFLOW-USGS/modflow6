@@ -18,6 +18,7 @@ module Mf6CoreModule
   use SolutionGroupModule, only: SolutionGroupType, GetSolutionGroupFromList
   use RunControlModule, only: RunControlType
   use SimStagesModule
+  use CpuTimerModule
   implicit none
 
   class(RunControlType), pointer :: run_ctrl => null() !< the run controller for this simulation
@@ -97,6 +98,9 @@ contains
     ! -- create model exports
     call export_cr()
 
+    ! -- stop the timer
+    call g_timer%stop(SECTION_INIT)
+
   end subroutine Mf6Initialize
 
   !> @brief Run a time step
@@ -107,8 +111,9 @@ contains
     !!
   !<
   function Mf6Update() result(hasConverged)
-    ! -- return variable
     logical(LGP) :: hasConverged
+    ! start timer
+    call g_timer%start(SECTION_UPDATE)
     !
     ! -- prepare timestep
     call Mf6PrepareTimestep()
@@ -118,7 +123,10 @@ contains
     !
     ! -- after timestep
     hasConverged = Mf6FinalizeTimestep()
-    !
+
+    ! stop timer
+    call g_timer%stop(SECTION_UPDATE)
+
   end function Mf6Update
 
   !> @brief Finalize the simulation
@@ -147,7 +155,10 @@ contains
     class(BaseModelType), pointer :: mp => null()
     class(BaseExchangeType), pointer :: ep => null()
     class(SpatialModelConnectionType), pointer :: mc => null()
-    !
+
+    ! start timer
+    call g_timer%start(SECTION_FINALIZE)
+
     !
     ! -- FINAL PROCESSING (FP)
     ! -- Final processing for each model
@@ -211,10 +222,13 @@ contains
     call export_da()
     call simulation_da()
     call lists_da()
-    !
-    ! -- finish gently (No calls after this)
+    
+    ! stop timer
+    call g_timer%stop(SECTION_FINALIZE)
+
+    ! finish gently (No calls after this)
     call run_ctrl%finish()
-    !
+
   end subroutine Mf6Finalize
 
   !> @brief print initial message
@@ -494,6 +508,10 @@ contains
     integer(I4B) :: ie
     integer(I4B) :: ic
     integer(I4B) :: is
+
+    ! start timer
+    call g_timer%start(SECTION_PREP_TSTP)
+
     !
     ! -- initialize fmt
     fmt = "(/,a,/)"
@@ -574,6 +592,9 @@ contains
     ! -- set time step
     call tdis_set_timestep()
 
+    ! stop timer
+    call g_timer%stop(SECTION_PREP_TSTP)
+
   end subroutine Mf6PrepareTimestep
 
   !> @brief Run time step
@@ -596,6 +617,9 @@ contains
     integer(I4B) :: isg
     logical :: finishedTrying
 
+    ! start timer
+    call g_timer%start(SECTION_DO_TSTP)
+
     ! -- By default, the solution groups will be solved once, and
     !    may fail.  But if adaptive stepping is active, then
     !    the solution groups may be solved over and over with
@@ -617,6 +641,9 @@ contains
       iFailedStepRetry = iFailedStepRetry + 1
 
     end do retryloop
+
+    ! stop timer
+    call g_timer%stop(SECTION_DO_TSTP)
 
   end subroutine Mf6DoTimestep
 
@@ -694,6 +721,10 @@ contains
     ! -- initialize format and line
     fmt = "(/,a,/)"
     line = 'end timestep'
+
+    ! start timer
+    call g_timer%start(SECTION_FINAL_TSTP)
+
     !
     ! -- evaluate simulation mode
     select case (isim_mode)
@@ -737,6 +768,10 @@ contains
     !
     ! -- Check if we're done
     call converge_check(hasConverged)
+
+    ! stop timer
+    call g_timer%stop(SECTION_FINAL_TSTP)
+    
   end function Mf6FinalizeTimestep
 
 end module Mf6CoreModule

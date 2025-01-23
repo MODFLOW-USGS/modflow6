@@ -1,6 +1,7 @@
 module MpiRouterModule
   use RouterBaseModule
   use KindModule, only: I4B, LGP
+  use CpuTimerModule, only: g_timer
   use STLVecIntModule
   use SimVariablesModule, only: proc_id, nr_procs
   use SimStagesModule, only: STG_TO_STR
