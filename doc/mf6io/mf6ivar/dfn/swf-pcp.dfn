@@ -1,4 +1,4 @@
-# --------------------- olf flw options ---------------------
+# --------------------- swf pcp options ---------------------
 # flopy multi-package
 
 block options
@@ -8,7 +8,7 @@ shape (naux)
 reader urword
 optional true
 longname keyword to specify aux variables
-description REPLACE auxnames {'{#1}': 'Stream Network Flow'}
+description REPLACE auxnames {'{#1}': 'Surface Water Flow'}
 
 block options
 name auxmultname
@@ -17,7 +17,7 @@ shape
 reader urword
 optional true
 longname name of auxiliary variable for multiplier
-description REPLACE auxmultname {'{#1}': 'flow rate'}
+description REPLACE auxmultname {'{#1}': 'precipitation'}
 
 block options
 name boundnames
@@ -26,7 +26,7 @@ shape
 reader urword
 optional true
 longname
-description REPLACE boundnames {'{#1}': 'inflow'}
+description REPLACE boundnames {'{#1}': 'precipitation'}
 
 block options
 name print_input
@@ -34,23 +34,26 @@ type keyword
 reader urword
 optional true
 longname print input to listing file
-description REPLACE print_input {'{#1}': 'inflow'}
+description REPLACE print_input {'{#1}': 'precipitation'}
+mf6internal iprpak
 
 block options
 name print_flows
 type keyword
 reader urword
 optional true
-longname print calculated flows to listing file
-description REPLACE print_flows {'{#1}': 'inflow'}
+longname print precipitation rates to listing file
+description REPLACE print_flows {'{#1}': 'precipitation'}
+mf6internal iprflow
 
 block options
 name save_flows
 type keyword
 reader urword
 optional true
-longname save well flows to budget file
-description REPLACE save_flows {'{#1}': 'inflow'}
+longname save precipitation to budget file
+description REPLACE save_flows {'{#1}': 'precipitation'}
+mf6internal ipakcb
 
 block options
 name ts_filerecord
@@ -125,20 +128,20 @@ tagged false
 reader urword
 optional false
 longname obs6 input filename
-description REPLACE obs6_filename {'{#1}': 'inflow'}
+description REPLACE obs6_filename {'{#1}': 'Precipitation'}
 
-# --------------------- olf flw dimensions ---------------------
+# --------------------- swf pcp dimensions ---------------------
 
 block dimensions
 name maxbound
 type integer
 reader urword
 optional false
-longname maximum number of inflow
-description REPLACE maxbound {'{#1}': 'inflow'}
+longname maximum number of precipitation cells
+description REPLACE maxbound {'{#1}': 'precipitation cells'}
 
 
-# --------------------- olf flw period ---------------------
+# --------------------- swf pcp period ---------------------
 
 block period
 name iper
@@ -155,7 +158,7 @@ description REPLACE iper {}
 
 block period
 name stress_period_data
-type recarray cellid q aux boundname
+type recarray cellid precipitation aux boundname
 shape (maxbound)
 reader urword
 longname
@@ -173,15 +176,15 @@ longname cell identifier
 description REPLACE cellid {}
 
 block period
-name q
+name precipitation
 type double precision
 shape
 tagged false
 in_record true
 reader urword
 time_series true
-longname flow rate
-description is the volumetric inflow rate. A positive value indicates inflow to the stream.  Negative values are not allowed. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
+longname precipitation rate
+description is the precipitation flux rate ($LT^{-1}$).  This rate is multiplied inside the program by the surface area of the cell to calculate the volumetric precipitation rate. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
 
 block period
 name aux
@@ -193,7 +196,8 @@ reader urword
 optional true
 time_series true
 longname auxiliary variables
-description REPLACE aux {'{#1}': 'inflow'}
+description REPLACE aux {'{#1}': 'precipitation'}
+mf6internal auxvar
 
 block period
 name boundname
@@ -203,5 +207,5 @@ tagged false
 in_record true
 reader urword
 optional true
-longname inflow name
-description REPLACE boundname {'{#1}': 'inflow'}
+longname precipitation name
+description REPLACE boundname {'{#1}': 'precipitation'}

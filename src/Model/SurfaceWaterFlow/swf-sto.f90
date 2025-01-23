@@ -209,7 +209,6 @@ contains
     integer(I4B), intent(in), dimension(:) :: idxglo
     real(DP), intent(inout), dimension(:) :: rhs
     ! -- local
-    character(len=LINELENGTH) :: distype = ''
     ! -- formats
     character(len=*), parameter :: fmtsperror = &
       &"('Detected time step length of zero.  SWF Storage Package cannot be ', &
@@ -224,8 +223,7 @@ contains
       call store_error(errmsg, terminate=.TRUE.)
     end if
 
-    call this%dis%get_dis_type(distype)
-    if (distype == 'DISV1D') then
+    if (this%dis%is_1d()) then
       call this%sto_fc_dis1d(kiter, stage_old, stage_new, matrix_sln, idxglo, rhs)
     else
       call this%sto_fc_dis2d(kiter, stage_old, stage_new, matrix_sln, idxglo, rhs)

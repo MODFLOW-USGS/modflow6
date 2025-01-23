@@ -17,12 +17,14 @@ import pytest
 from framework import TestFramework
 
 cases = [
-    "chf-swr-t2",
+    "chf-swrt2-01",
+    "chf-swrt2-02",
 ]
 
 
 def build_models(idx, test):
     dx = 500.0
+    width = dx
     nreach = 11
     nper = 1
     perlen = [5040 * 2 * 60.0]  # 7 days (in seconds)
@@ -89,7 +91,7 @@ def build_models(idx, test):
         export_array_ascii=True,
         nodes=nodes,
         nvert=nvert,
-        width=dx,
+        width=width,
         bottom=reach_bottom,
         idomain=1,
         vertices=vertices,
@@ -131,13 +133,23 @@ def build_models(idx, test):
     # flw
     inflow_reach = 0
     qinflow = 23.570
-    flw = flopy.mf6.ModflowChfflw(
-        chf,
-        maxbound=1,
-        print_input=True,
-        print_flows=True,
-        stress_period_data=[(inflow_reach, qinflow)],
-    )
+    if idx == 0:
+        flw = flopy.mf6.ModflowChfflw(
+            chf,
+            maxbound=1,
+            print_input=True,
+            print_flows=True,
+            stress_period_data=[(inflow_reach, qinflow)],
+        )
+
+    if idx == 1:
+        pcp = flopy.mf6.ModflowOlfpcp(
+            chf,
+            maxbound=1,
+            print_input=True,
+            print_flows=True,
+            stress_period_data=[(inflow_reach, qinflow / dx / width)],
+        )
 
     chd = flopy.mf6.ModflowChfchd(
         chf,

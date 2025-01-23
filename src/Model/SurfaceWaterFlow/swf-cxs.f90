@@ -50,6 +50,7 @@ module SwfCxsModule
     procedure :: get_roughness
     procedure :: get_conveyance => cxs_conveyance
     procedure :: get_hydraulic_radius
+    procedure :: get_wetted_top_width
     procedure :: write_cxs_table
 
   end type SwfCxsType
@@ -721,5 +722,28 @@ contains
                                   width, depth)
     end if
   end function get_hydraulic_radius
+
+  function get_wetted_top_width(this, idcxs, width, depth) result(r)
+    ! modules
+    use SwfCxsUtilsModule, only: get_wetted_topwidth
+    ! dummy
+    class(SwfCxsType) :: this
+    integer(I4B), intent(in) :: idcxs !< cross section id
+    real(DP), intent(in) :: width !< width in reach
+    real(DP), intent(in) :: depth !< stage in reach
+    ! local
+    real(DP) :: r !< calculated hydraulic radius
+    integer(I4B) :: i0
+    integer(I4B) :: i1
+    integer(I4B) :: npts
+    integer(I4B) :: icalcmeth
+    call this%get_cross_section_info(idcxs, i0, i1, npts, icalcmeth)
+    if (npts == 0) then
+      r = width
+    else
+      r = get_wetted_topwidth(npts, this%xfraction(i0:i1), &
+                              this%height(i0:i1), width, depth)
+    end if
+  end function get_wetted_top_width
 
 end module SwfCxsModule
