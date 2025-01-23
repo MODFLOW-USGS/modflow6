@@ -1172,7 +1172,7 @@ contains
     logical(LGP) :: r
     r = .false.
     select case (this%get_dis_enum())
-    case(DIS, DISV, DISU)
+    case (DIS, DISV, DISU)
       r = .true.
     end select
   end function is_3d
@@ -1185,7 +1185,7 @@ contains
     logical(LGP) :: r
     r = .false.
     select case (this%get_dis_enum())
-    case(DIS2D, DISV2D, DISU2D)
+    case (DIS2D, DISV2D, DISU2D)
       r = .true.
     end select
   end function is_2d
@@ -1198,7 +1198,7 @@ contains
     logical(LGP) :: r
     r = .false.
     select case (this%get_dis_enum())
-    case(DIS1D, DISV1D, DISU1D)
+    case (DIS1D, DISV1D, DISU1D)
       r = .true.
     end select
   end function is_1d

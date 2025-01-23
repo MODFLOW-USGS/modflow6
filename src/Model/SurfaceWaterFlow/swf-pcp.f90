@@ -41,7 +41,7 @@ module SwfPcpModule
     type(SwfDfwType), pointer :: dfw
     type(SwfCxsType), pointer :: cxs
 
-    contains
+  contains
 
     procedure :: pcp_allocate_scalars
     procedure :: allocate_arrays => pcp_allocate_arrays
@@ -315,7 +315,8 @@ contains
         idcxs = this%dfw%idcxs(node)
         call this%dis%get_flow_width(node, node, 0, width_channel, dummy)
         depth = this%xnew(node) - this%dis%bot(node)
-        wetted_top_width = this%cxs%get_wetted_top_width(idcxs, width_channel, depth)
+        wetted_top_width = this%cxs%get_wetted_top_width(idcxs, width_channel, &
+                                                         depth)
         area = reach_length(node) * wetted_top_width
       end if
 
