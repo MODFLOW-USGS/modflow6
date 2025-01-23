@@ -1920,7 +1920,7 @@ contains
     mt%masterPath = mem_path_target
   end subroutine reassignptr_dbl2d
 
-  !> @brief Deallocate a variable-length character string
+  !> @brief DEPRECATED. The memory manager will handle the deallocation of the pointer.
   !<
   subroutine deallocate_str(sclr, name, mem_path)
     character(len=*), pointer, intent(inout) :: sclr !< pointer to string
@@ -1969,7 +1969,7 @@ contains
 
   end subroutine deallocate_str1d
 
-  !> @brief Deallocate an array of deferred-length character strings
+  !> @brief DEPRECATED. The memory manager will handle the deallocation of the pointer.
   !!
   !<
   subroutine deallocate_charstr1d(astr1d, name, mem_path)
@@ -1981,7 +1981,7 @@ contains
     return
   end subroutine deallocate_charstr1d
 
-  !> @brief Deallocate a logical scalar
+  !> @brief DEPRECATED. The memory manager will handle the deallocation of the pointer.
   !<
   subroutine deallocate_logical(sclr)
     logical(LGP), pointer, intent(inout) :: sclr !< logical scalar to deallocate
@@ -1989,7 +1989,7 @@ contains
     return
   end subroutine deallocate_logical
 
-  !> @brief Deallocate a integer scalar
+  !> @brief DEPRECATED. The memory manager will handle the deallocation of the pointer.
   !<
   subroutine deallocate_int(sclr)
     integer(I4B), pointer, intent(inout) :: sclr !< integer variable to deallocate
@@ -1997,7 +1997,7 @@ contains
     return
   end subroutine deallocate_int
 
-  !> @brief Deallocate a real scalar
+  !> @brief DEPRECATED. The memory manager will handle the deallocation of the pointer.
   !<
   subroutine deallocate_dbl(sclr)
     real(DP), pointer, intent(inout) :: sclr !< real variable to deallocate
@@ -2005,7 +2005,7 @@ contains
     return
   end subroutine deallocate_dbl
 
-  !> @brief Deallocate a 1-dimensional integer array
+  !> @brief DEPRECATED. The memory manager will handle the deallocation of the pointer.
   !<
   subroutine deallocate_int1d(aint, name, mem_path)
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: aint !< 1d integer array to deallocate
@@ -2015,7 +2015,7 @@ contains
     return
   end subroutine deallocate_int1d
 
-  !> @brief Deallocate a 2-dimensional integer array
+  !> @brief DEPRECATED. The memory manager will handle the deallocation of the pointer.
   !<
   subroutine deallocate_int2d(aint, name, mem_path)
     integer(I4B), dimension(:, :), pointer, contiguous, intent(inout) :: aint !< 2d integer array to deallocate
@@ -2025,7 +2025,7 @@ contains
     return
   end subroutine deallocate_int2d
 
-  !> @brief Deallocate a 3-dimensional integer array
+  !> @brief DEPRECATED. The memory manager will handle the deallocation of the pointer.
   !<
   subroutine deallocate_int3d(aint, name, mem_path)
     integer(I4B), dimension(:, :, :), pointer, contiguous, intent(inout) :: aint !< 3d integer array to deallocate
@@ -2035,7 +2035,7 @@ contains
     return
   end subroutine deallocate_int3d
 
-  !> @brief Deallocate a 1-dimensional real array
+  !> @brief DEPRECATED. The memory manager will handle the deallocation of the pointer.
   !<
   subroutine deallocate_dbl1d(adbl, name, mem_path)
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: adbl !< 1d real array to deallocate
@@ -2045,7 +2045,7 @@ contains
     return
   end subroutine deallocate_dbl1d
 
-  !> @brief Deallocate a 2-dimensional real array
+  !> @brief DEPRECATED. The memory manager will handle the deallocation of the pointer.
   !<
   subroutine deallocate_dbl2d(adbl, name, mem_path)
     real(DP), dimension(:, :), pointer, contiguous, intent(inout) :: adbl !< 2d real array to deallocate
@@ -2055,7 +2055,7 @@ contains
     return
   end subroutine deallocate_dbl2d
 
-  !> @brief Deallocate a 3-dimensional real array
+  !> @brief DEPRECATED. The memory manager will handle the deallocation of the pointer.
   !<
   subroutine deallocate_dbl3d(adbl, name, mem_path)
     real(DP), dimension(:, :, :), pointer, contiguous, intent(inout) :: adbl !< 3d real array to deallocate
