@@ -56,7 +56,7 @@ tagged false
 in_record true
 reader urword
 longname number of points used to define cross section
-description integer value that defines the number of points used to define the define the shape of a section.  NXSPOINTS must be greater than zero or the program will terminate with an error.  NXSPOINTS defines the number of points that must be entered for the reach in the CROSSSECTIONDATA block.  The sum of NXSPOINTS for all sections must equal the NPOINTS dimension.
+description integer value that defines the number of points used to define the define the shape of a section.  NXSPOINTS must be greater than 1 or the program will terminate with an error.  NXSPOINTS defines the number of points that must be entered for the reach in the CROSSSECTIONDATA block.  The sum of NXSPOINTS for all sections must equal the NPOINTS dimension.
 
 # --------------------- chf cxs crosssectiondata ---------------------
 

@@ -11,7 +11,7 @@ module SwfPcpModule
   use MemoryHelperModule, only: create_mem_path
   use BndModule, only: BndType
   use BndExtModule, only: BndExtType
-  use SimModule, only: store_error, store_error_filename
+  use SimModule, only: store_error, store_error_filename, count_errors
   use SimVariablesModule, only: errmsg
   use ObsModule, only: DefaultObsIdProcessor
   use TimeArraySeriesLinkModule, only: TimeArraySeriesLinkType
@@ -50,6 +50,7 @@ module SwfPcpModule
     procedure :: log_pcp_options
     procedure :: read_initial_attr => pcp_read_initial_attr
     procedure :: bnd_rp => pcp_rp
+    procedure :: bnd_ck => pcp_ck
     procedure :: bnd_cf => pcp_cf
     procedure :: bnd_fc => pcp_fc
     procedure :: bnd_da => pcp_da
@@ -266,6 +267,35 @@ contains
     end if
   end subroutine pcp_rp
 
+  !> @brief Ensure precipitation is positive
+  !<
+  subroutine pcp_ck(this)
+    ! dummy
+    class(SwfPcpType), intent(inout) :: this
+    ! local
+    character(len=30) :: nodestr
+    integer(I4B) :: i, nr
+    character(len=*), parameter :: fmterr = &
+      &"('Specified stress ',i0, &
+      &' precipitation (',g0,') is less than zero for cell', a)"
+
+    ! Ensure precipitation rates are positive
+    do i = 1, this%nbound
+      nr = this%nodelist(i)
+      if (nr <= 0) cycle
+      if (this%precipitation(i) < DZERO) then
+        call this%dis%noder_to_string(nr, nodestr)
+        write (errmsg, fmt=fmterr) i, this%precipitation(i), trim(nodestr)
+        call store_error(errmsg)
+      end if
+    end do
+
+    ! write summary of package error messages
+    if (count_errors() > 0) then
+      call store_error_filename(this%input_fname)
+    end if
+  end subroutine pcp_ck
+
   !> @brief Formulate the HCOF and RHS terms
   !!
   !! Skip if no precipitation. Otherwise, calculate hcof and rhs
@@ -280,9 +310,7 @@ contains
     real(DP) :: qpcp
     real(DP) :: area
     real(DP) :: width_channel
-    real(DP) :: wetted_top_width
-    real(DP) :: depth
-    real(DP) :: dummy
+    real(DP) :: top_width
     real(DP), dimension(:), pointer :: reach_length
 
     ! Return if no precipitation
@@ -309,15 +337,13 @@ contains
 
       ! Determine the water surface area
       if (this%dis%is_2d()) then
+        ! this is for overland flow case
         area = this%dis%get_area(node)
       else if (this%dis%is_1d()) then
-        ! this is for channel case; could be improved with newton formulation
+        ! this is for channel case
         idcxs = this%dfw%idcxs(node)
-        call this%dis%get_flow_width(node, node, 0, width_channel, dummy)
-        depth = this%xnew(node) - this%dis%bot(node)
-        wetted_top_width = this%cxs%get_wetted_top_width(idcxs, width_channel, &
-                                                         depth)
-        area = reach_length(node) * wetted_top_width
+        top_width = this%cxs%get_maximum_top_width(idcxs, width_channel)
+        area = reach_length(node) * top_width
       end if
 
       ! calculate volumetric precipitation flow in L^3/T
