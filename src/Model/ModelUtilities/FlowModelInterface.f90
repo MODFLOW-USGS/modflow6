@@ -485,6 +485,7 @@ contains
               end if
             end select
           end select
+          ! TODO other grid types
         case default
           write (errmsg, '(a,3(1x,a))') &
             'UNKNOWN', trim(adjustl(this%text)), 'PACKAGEDATA:', trim(keyword)
