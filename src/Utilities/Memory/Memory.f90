@@ -104,9 +104,9 @@ contains
     use iso_c_binding, only: c_loc, c_ptr, c_null_ptr, c_f_pointer
     class(MemoryType) :: this
     integer(I4B) :: n
-    type(c_ptr) :: astr1d
+    type(c_ptr) :: cptr
 
-    character(len=1), dimension(:), pointer :: key
+    character(len=1), dimension(:), pointer :: astr1d
 
     if (associated(this%strsclr)) then
       if (this%master) deallocate (this%strsclr)
