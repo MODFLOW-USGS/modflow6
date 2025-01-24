@@ -43,8 +43,8 @@ contains
     ! initialize and start timers, if not done so in the derived class
     if (.not. g_prof%is_initialized()) then
       call g_prof%initialize()
-      call g_prof%start("Run", SECTION_RUN)
-      call g_prof%start("Initialize", SECTION_INIT)
+      call g_prof%start("Run", g_prof%tmr_run)
+      call g_prof%start("Initialize", g_prof%tmr_init)
     end if
 
     allocate (this%virtual_data_mgr)
@@ -66,8 +66,9 @@ contains
     call mem_da()
 
     ! stop and print timings
-    call g_prof%stop(SECTION_RUN)
+    call g_prof%stop(g_prof%tmr_init)
     call g_prof%print(iout)
+    call g_prof%destroy()
 
     call elapsed_time(iout, 1)
     call final_message()

@@ -6,20 +6,6 @@ module ProfilerModule
   implicit none
   private
 
-  ! predefined skeleton of section ids
-  ! level 0 (root):
-  integer(I4B), public :: SECTION_RUN = -1
-
-  ! level 1 (BMI):
-  integer(I4B), public :: SECTION_INIT = -1
-  integer(I4B), public :: SECTION_UPDATE = -1
-  integer(I4B), public :: SECTION_FINALIZE = -1
-
-  ! level 2 (XMI):
-  integer(I4B), public :: SECTION_PREP_TSTP = -1
-  integer(I4B), public :: SECTION_DO_TSTP = -1
-  integer(I4B), public :: SECTION_FINAL_TSTP = -1
-
   ! constants for memory allocation
   integer(I4B), parameter :: MAX_NR_TIMED_SECTIONS = 75
   integer(I4B), public, parameter :: LEN_SECTION_TITLE = 128
@@ -39,13 +25,21 @@ module ProfilerModule
   !! parts of the application. It provides mechanisms to start, stop, and
   !< report on the performance metrics collected during execution.
   type, public :: ProfilerType
-    private
-    integer(I4B) :: iout !< output unit number, typically simulation listing file
-    integer(I4B) :: pr_option !< 0 = NONE, 1 = SUMMARY, 2 = DETAIL
-    integer(I4B) :: nr_sections !< number of sections
-    integer(I4B), dimension(3) :: top_three !< top three leaf sections based on walltime
-    integer(I4B) :: max_title_len !< maximum title length
-    integer(I4B) :: root_id
+    ! handles for the main simulation structure
+    integer(I4B) :: tmr_run !< handle to timed section "Run"
+    integer(I4B) :: tmr_init !< handle to timed section "Initialize"
+    integer(I4B) :: tmr_update !< handle to timed section "Update"
+    integer(I4B) :: tmr_finalize !< handle to timed section "Finalize"
+    integer(I4B) :: tmr_prep_tstp !< handle to timed section "Prepare time step"
+    integer(I4B) :: tmr_do_tstp !< handle to timed section "Do time step"
+    integer(I4B) :: tmr_final_tstp !< handle to timed section "Finalize time step"
+    ! private
+    integer(I4B), private :: iout !< output unit number, typically simulation listing file
+    integer(I4B), private :: pr_option !< 0 = NONE, 1 = SUMMARY, 2 = DETAIL
+    integer(I4B), private :: nr_sections !< number of sections
+    integer(I4B), private, dimension(3) :: top_three !< top three leaf sections based on walltime
+    integer(I4B), private :: max_title_len !< maximum title length
+    integer(I4B), private :: root_id !< currently only one root section is supported, this is the id
     type(MeasuredSectionType), dimension(:), pointer :: all_sections => null() !< all timed sections (up to MAX_NR_TIMED_SECTIONS)
     type(STLStackInt) :: callstack !< call stack of section ids
   contains
@@ -94,6 +88,14 @@ contains
     class(ProfilerType) :: this
     ! local
     integer(I4B) :: i
+
+    this%tmr_run = -1
+    this%tmr_init = -1
+    this%tmr_update = -1
+    this%tmr_finalize = -1
+    this%tmr_prep_tstp = -1
+    this%tmr_do_tstp = -1
+    this%tmr_final_tstp = -1
 
     call this%callstack%init()
 

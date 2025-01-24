@@ -58,8 +58,8 @@ contains
     tmr_func => mpi_walltime
     call set_timer_func(tmr_func)
     call g_prof%initialize()
-    call g_prof%start("Run", SECTION_RUN)
-    call g_prof%start("Initialize", SECTION_INIT)
+    call g_prof%start("Run", g_prof%tmr_run)
+    call g_prof%start("Initialize", g_prof%tmr_init)
     tmr_init_par = -1
     call g_prof%start("Initialize parallel", tmr_init_par)
 

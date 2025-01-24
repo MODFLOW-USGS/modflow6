@@ -99,7 +99,7 @@ contains
     call export_cr()
 
     ! -- stop the timer
-    call g_prof%stop(SECTION_INIT)
+    call g_prof%stop(g_prof%tmr_init)
 
   end subroutine Mf6Initialize
 
@@ -113,7 +113,7 @@ contains
   function Mf6Update() result(hasConverged)
     logical(LGP) :: hasConverged
     ! start timer
-    call g_prof%start("Update", SECTION_UPDATE)
+    call g_prof%start("Update", g_prof%tmr_update)
     !
     ! -- prepare timestep
     call Mf6PrepareTimestep()
@@ -125,7 +125,7 @@ contains
     hasConverged = Mf6FinalizeTimestep()
 
     ! stop timer
-    call g_prof%stop(SECTION_UPDATE)
+    call g_prof%stop(g_prof%tmr_update)
 
   end function Mf6Update
 
@@ -158,7 +158,7 @@ contains
     integer(I4B) :: tmr_dealloc
 
     ! start timer
-    call g_prof%start("Finalize", SECTION_FINALIZE)
+    call g_prof%start("Finalize", g_prof%tmr_finalize)
 
     !
     ! -- FINAL PROCESSING (FP)
@@ -231,7 +231,7 @@ contains
 
     ! stop timers
     call g_prof%stop(tmr_dealloc)
-    call g_prof%stop(SECTION_FINALIZE)
+    call g_prof%stop(g_prof%tmr_finalize)
 
     ! finish gently (No calls after this)
     call run_ctrl%finish()
@@ -517,7 +517,7 @@ contains
     integer(I4B) :: is
 
     ! start timer
-    call g_prof%start("Initialize time step", SECTION_PREP_TSTP)
+    call g_prof%start("Prepare time step", g_prof%tmr_prep_tstp)
 
     !
     ! -- initialize fmt
@@ -600,7 +600,7 @@ contains
     call tdis_set_timestep()
 
     ! stop timer
-    call g_prof%stop(SECTION_PREP_TSTP)
+    call g_prof%stop(g_prof%tmr_prep_tstp)
 
   end subroutine Mf6PrepareTimestep
 
@@ -625,7 +625,7 @@ contains
     logical :: finishedTrying
 
     ! start timer
-    call g_prof%start("Do time step", SECTION_DO_TSTP)
+    call g_prof%start("Do time step", g_prof%tmr_do_tstp)
 
     ! -- By default, the solution groups will be solved once, and
     !    may fail.  But if adaptive stepping is active, then
@@ -650,7 +650,7 @@ contains
     end do retryloop
 
     ! stop timer
-    call g_prof%stop(SECTION_DO_TSTP)
+    call g_prof%stop(g_prof%tmr_do_tstp)
 
   end subroutine Mf6DoTimestep
 
@@ -732,7 +732,7 @@ contains
     line = 'end timestep'
 
     ! start timer
-    call g_prof%start("Finalize time step", SECTION_FINAL_TSTP)
+    call g_prof%start("Finalize time step", g_prof%tmr_final_tstp)
 
     !
     ! -- evaluate simulation mode
@@ -785,7 +785,7 @@ contains
     call converge_check(hasConverged)
 
     ! stop timer
-    call g_prof%stop(SECTION_FINAL_TSTP)
+    call g_prof%stop(g_prof%tmr_final_tstp)
 
   end function Mf6FinalizeTimestep
 
