@@ -486,7 +486,7 @@ contains
     ! -- set memory type
     ! this does not work with gfortran 11.3 and 12.1
     ! so we have to disable the pointing to astr1d
-    ! mt%astr1d => astr1d
+    mt%astr1d => astr1d
     mt%element_size = ilen
     mt%isize = isize
     mt%name = name
@@ -1162,6 +1162,7 @@ contains
       deallocate (astrtemp)
       !
       ! -- reset memory manager values
+      mt%astr1d => astr
       mt%element_size = ilen
       mt%isize = isize
       mt%nrealloc = mt%nrealloc + 1
@@ -1596,7 +1597,12 @@ contains
     logical(LGP) :: found
     ! -- code
     call get_from_memorystore(name, mem_path, mt, found)
-    astr1d => mt%astr1d
+    select type (item => mt%astr1d)
+    type is (character(*))
+      astr1d => item
+    class default
+      astr1d => null()
+    end select
   end subroutine setptr_str1d
 
   !> @brief Set pointer to an array of CharacterStringType
