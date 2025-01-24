@@ -18,7 +18,7 @@ module GridFileReaderModule
 
   implicit none
 
-  public :: GridFileReaderType, read_grb
+  public :: GridFileReaderType
 
   type :: GridFileReaderType
     private
@@ -40,9 +40,15 @@ module GridFileReaderModule
     procedure, public :: finalize
     procedure, public :: read_int
     procedure, public :: read_dbl
+    procedure, public :: read_ia
+    procedure, public :: read_ja
+    procedure, public :: read_grid_shape
     procedure, public :: read_idomain_dis
     procedure, public :: read_idomain_disv
     procedure, public :: read_idomain_disu
+    procedure, public :: read_idomain_dis2d
+    procedure, public :: read_idomain_disv2d
+    procedure, public :: read_idomain_disv1d
     procedure, private :: read_header
     procedure, private :: read_header_meta
     procedure, private :: read_header_body
@@ -301,7 +307,64 @@ contains
     rewind (this%inunit)
   end function read_dbl
 
-  !> @brief Read idomain array from a structured grid file.
+  function read_grid_shape(this) result(v)
+    ! dummy
+    class(GridFileReaderType) :: this
+    integer(I4B), allocatable :: v(:)
+
+    select case (this%grid_type)
+    case ("DIS")
+      allocate (v(3))
+      v(1) = this%read_int("NCOL")
+      v(2) = this%read_int("NROW")
+      v(3) = this%read_int("NLAY")
+    case ("DISV")
+      allocate (v(2))
+      v(1) = this%read_int("NCPL")
+      v(2) = this%read_int("NLAY")
+    case ("DISU")
+      allocate (v(1))
+      v(1) = this%read_int("NODES")
+    end select
+  end function read_grid_shape
+
+  function read_ia(this) result(v)
+    ! dummy
+    class(GridFileReaderType) :: this
+    integer(I4B), allocatable :: v(:)
+    ! local
+    character(len=10) :: key
+    integer(I4B) :: idx, nvals, pos
+    integer(I4B), allocatable :: tmp(:)
+
+    key = "IA"
+    idx = this%shp_idx%get(key)
+    pos = this%pos%get(key)
+    nvals = this%shp(idx)
+    allocate (v(nvals))
+    read (this%inunit, pos=pos) v
+    rewind (this%inunit)
+  end function read_ia
+
+  function read_ja(this) result(v)
+    ! dummy
+    class(GridFileReaderType) :: this
+    integer(I4B), allocatable :: v(:)
+    ! local
+    character(len=10) :: key
+    integer(I4B) :: idx, nvals, pos
+    integer(I4B), allocatable :: tmp(:)
+
+    key = "JA"
+    idx = this%shp_idx%get(key)
+    pos = this%pos%get(key)
+    nvals = this%shp(idx)
+    allocate (v(nvals))
+    read (this%inunit, pos=pos) v
+    rewind (this%inunit)
+  end function read_ja
+
+  !> @brief Read idomain array from a DIS grid file.
   function read_idomain_dis(this) result(v)
     ! dummy
     class(GridFileReaderType) :: this
@@ -331,7 +394,7 @@ contains
     rewind (this%inunit)
   end function read_idomain_dis
 
-  !> @brief Read idomain array from a vertex grid file.
+  !> @brief Read idomain array from a DISV grid file.
   function read_idomain_disv(this) result(v)
     ! dummy
     class(GridFileReaderType) :: this
@@ -360,7 +423,7 @@ contains
     rewind (this%inunit)
   end function read_idomain_disv
 
-  !> @brief Read idomain array from an unstructured grid file.
+  !> @brief Read idomain array from a DISU grid file.
   function read_idomain_disu(this) result(v)
     ! dummy
     class(GridFileReaderType) :: this
@@ -383,15 +446,79 @@ contains
     rewind (this%inunit)
   end function read_idomain_disu
 
-  !> Legacy reader for the mf5to6 converter.
-  subroutine read_grb(inunit, ia, ja, mshape)
-    integer(I4B), intent(in) :: inunit
-    integer(I4B), allocatable, intent(out) :: ia(:)
-    integer(I4B), allocatable, intent(out) :: ja(:)
-    integer(I4B), allocatable, intent(out) :: mshape(:)
+  !> @brief Read idomain array from a DIS2D grid file.
+  function read_idomain_dis2d(this) result(v)
+    ! dummy
+    class(GridFileReaderType) :: this
+    integer(I4B), allocatable :: v(:, :)
+    ! local
+    character(len=10) :: key
+    integer(I4B) :: idx, nvals, pos
+    integer(I4B), allocatable :: tmp(:)
 
-    ! TODO port grb.f90
+    if (this%grid_type /= "DIS2D") then
+      write (errmsg, '(a)') 'Grid type is not DIS2D but '//this%grid_type
+      call store_error(errmsg, terminate=.TRUE.)
+    end if
 
-  end subroutine read_grb
+    key = "IDOMAIN"
+    idx = this%shp_idx%get(key)
+    pos = this%pos%get(key)
+    nvals = this%shp(idx)
+    allocate (tmp(nvals))
+    read (this%inunit, pos=pos) tmp
+    v = reshape(tmp, [ &
+                this%read_int("NCOL"), &
+                this%read_int("NLAY") &
+                ])
+    deallocate (tmp)
+    rewind (this%inunit)
+  end function read_idomain_dis2d
+
+  !> @brief Read idomain array from a DISV2D grid file.
+  function read_idomain_disv2d(this) result(v)
+    ! dummy
+    class(GridFileReaderType) :: this
+    integer(I4B), allocatable :: v(:)
+    ! local
+    character(len=10) :: key
+    integer(I4B) :: idx, nvals, pos
+
+    if (this%grid_type /= "DISV2D") then
+      write (errmsg, '(a)') 'Grid type is not DISV2D but '//this%grid_type
+      call store_error(errmsg, terminate=.TRUE.)
+    end if
+
+    key = "IDOMAIN"
+    idx = this%shp_idx%get(key)
+    pos = this%pos%get(key)
+    nvals = this%shp(idx)
+    allocate (v(nvals))
+    read (this%inunit, pos=pos) v
+    rewind (this%inunit)
+  end function read_idomain_disv2d
+
+  !> @brief Read idomain array from a DISV1D grid file.
+  function read_idomain_disv1d(this) result(v)
+    ! dummy
+    class(GridFileReaderType) :: this
+    integer(I4B), allocatable :: v(:)
+    ! local
+    character(len=10) :: key
+    integer(I4B) :: idx, nvals, pos
+
+    if (this%grid_type /= "DISV1D") then
+      write (errmsg, '(a)') 'Grid type is not DISV1D but '//this%grid_type
+      call store_error(errmsg, terminate=.TRUE.)
+    end if
+
+    key = "IDOMAIN"
+    idx = this%shp_idx%get(key)
+    pos = this%pos%get(key)
+    nvals = this%shp(idx)
+    allocate (v(nvals))
+    read (this%inunit, pos=pos) v
+    rewind (this%inunit)
+  end function read_idomain_disv1d
 
 end module GridFileReaderModule

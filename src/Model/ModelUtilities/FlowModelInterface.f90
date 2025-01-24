@@ -10,7 +10,7 @@ module FlowModelInterfaceModule
   use ListModule, only: ListType
   use BudgetFileReaderModule, only: BudgetFileReaderType
   use HeadFileReaderModule, only: HeadFileReaderType
-  use GridFileReaderModule, only: GridFileReaderType, read_grb
+  use GridFileReaderModule, only: GridFileReaderType
   use PackageBudgetModule, only: PackageBudgetType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr_bfr
 
@@ -341,6 +341,9 @@ contains
     use DisModule, only: DisType
     use DisvModule, only: DisvType
     use DisuModule, only: DisuType
+    use Dis2dModule, only: Dis2dType
+    use Disv2dModule, only: Disv2dType
+    use Disv1dModule, only: Disv1dType
     ! -- dummy
     class(FlowModelInterfaceType) :: this
     ! -- local
@@ -448,18 +451,16 @@ contains
           this%iugrb = inunit
           call this%gfr%initialize(this%iugrb)
 
-          ! check node count
-          nodes = this%gfr%read_int("NCELLS")
-          if (nodes /= this%dis%nodes) then
-            write (errmsg, fmtdiserr) trim(this%text)
-            call store_error(errmsg, terminate=.TRUE.)
-          end if
-
-          ! check idomain
+          ! check grid equivalence
           select case (this%gfr%grid_type)
           case ('DIS')
             select type (dis => this%dis)
             type is (DisType)
+              nodes = this%gfr%read_int("NCELLS")
+              if (nodes /= this%dis%nodes) then
+                write (errmsg, fmtdiserr) trim(this%text)
+                call store_error(errmsg, terminate=.TRUE.)
+              end if
               idomain3d = this%gfr%read_idomain_dis()
               if (.not. all(dis%idomain == idomain3d)) then
                 write (errmsg, fmtidomerr) trim(this%text)
@@ -469,6 +470,11 @@ contains
           case ('DISV')
             select type (dis => this%dis)
             type is (DisvType)
+              nodes = this%gfr%read_int("NCELLS")
+              if (nodes /= this%dis%nodes) then
+                write (errmsg, fmtdiserr) trim(this%text)
+                call store_error(errmsg, terminate=.TRUE.)
+              end if
               idomain2d = this%gfr%read_idomain_disv()
               if (.not. all(dis%idomain == idomain2d)) then
                 write (errmsg, fmtidomerr) trim(this%text)
@@ -478,14 +484,62 @@ contains
           case ('DISU')
             select type (dis => this%dis)
             type is (DisuType)
+              nodes = this%gfr%read_int("NODES")
+              if (nodes /= this%dis%nodes) then
+                write (errmsg, fmtdiserr) trim(this%text)
+                call store_error(errmsg, terminate=.TRUE.)
+              end if
               idomain1d = this%gfr%read_idomain_disu()
               if (.not. all(dis%idomain == idomain1d)) then
                 write (errmsg, fmtidomerr) trim(this%text)
                 call store_error(errmsg, terminate=.TRUE.)
               end if
             end select
+          case ('DIS2D')
+            select type (dis => this%dis)
+            type is (Dis2dType)
+              nodes = this%gfr%read_int("NCELLS")
+              if (nodes /= this%dis%nodes) then
+                write (errmsg, fmtdiserr) trim(this%text)
+                call store_error(errmsg, terminate=.TRUE.)
+              end if
+              idomain2d = this%gfr%read_idomain_dis2d()
+              if (.not. all(dis%idomain == idomain2d)) then
+                write (errmsg, fmtidomerr) trim(this%text)
+                call store_error(errmsg, terminate=.TRUE.)
+              end if
+            end select
+          case ('DISV2D')
+            select type (dis => this%dis)
+            type is (Disv2dType)
+              nodes = this%gfr%read_int("NCELLS")
+              if (nodes /= this%dis%nodes) then
+                write (errmsg, fmtdiserr) trim(this%text)
+                call store_error(errmsg, terminate=.TRUE.)
+              end if
+              idomain1d = this%gfr%read_idomain_disv2d()
+              if (.not. all(dis%idomain == idomain1d)) then
+                write (errmsg, fmtidomerr) trim(this%text)
+                call store_error(errmsg, terminate=.TRUE.)
+              end if
+            end select
+          case ('DISV1D')
+            select type (dis => this%dis)
+            type is (Disv1dType)
+              nodes = this%gfr%read_int("NCELLS")
+              if (nodes /= this%dis%nodes) then
+                write (errmsg, fmtdiserr) trim(this%text)
+                call store_error(errmsg, terminate=.TRUE.)
+              end if
+              idomain1d = this%gfr%read_idomain_disv1d()
+              if (.not. all(dis%idomain == idomain1d)) then
+                write (errmsg, fmtidomerr) trim(this%text)
+                call store_error(errmsg, terminate=.TRUE.)
+              end if
+            end select
           end select
-          ! TODO other grid types
+
+          call this%gfr%finalize()
         case default
           write (errmsg, '(a,3(1x,a))') &
             'UNKNOWN', trim(adjustl(this%text)), 'PACKAGEDATA:', trim(keyword)

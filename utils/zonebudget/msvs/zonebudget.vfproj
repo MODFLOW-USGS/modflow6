@@ -58,7 +58,6 @@
 		<File RelativePath="..\..\..\src\Utilities\sort.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\version.f90"/></Filter>
 		<File RelativePath="..\src\budgetdata.f90"/>
-		<File RelativePath="..\src\grb.f90"/>
 		<File RelativePath="..\src\zbud6.f90"/>
 		<File RelativePath="..\src\zone.f90"/>
 		<File RelativePath="..\src\zoneoutput.f90"/></Filter>
