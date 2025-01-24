@@ -20,14 +20,13 @@ module SwfDisv1DInputModule
     logical :: export_ascii = .false.
     logical :: nodes = .false.
     logical :: nvert = .false.
-    logical :: length = .false.
     logical :: width = .false.
     logical :: bottom = .false.
     logical :: idomain = .false.
     logical :: iv = .false.
     logical :: xv = .false.
     logical :: yv = .false.
-    logical :: icell2d = .false.
+    logical :: icell1d = .false.
     logical :: fdc = .false.
     logical :: ncvert = .false.
     logical :: icvert = .false.
@@ -186,24 +185,6 @@ module SwfDisv1DInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swfdisv1d_length = InputParamDefinitionType &
-    ( &
-    'SWF', & ! component
-    'DISV1D', & ! subcomponent
-    'GRIDDATA', & ! block
-    'LENGTH', & ! tag name
-    'LENGTH', & ! fortran variable
-    'DOUBLE1D', & ! type
-    'NODES', & ! shape
-    'length', & ! longname
-    .true., & ! required
-    .false., & ! multi-record
-    .false., & ! preserve case
-    .false., & ! layered
-    .false. & ! timeseries
-    )
-
-  type(InputParamDefinitionType), parameter :: &
     swfdisv1d_width = InputParamDefinitionType &
     ( &
     'SWF', & ! component
@@ -312,16 +293,16 @@ module SwfDisv1DInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swfdisv1d_icell2d = InputParamDefinitionType &
+    swfdisv1d_icell1d = InputParamDefinitionType &
     ( &
     'SWF', & ! component
     'DISV1D', & ! subcomponent
-    'CELL2D', & ! block
-    'ICELL2D', & ! tag name
-    'ICELL2D', & ! fortran variable
+    'CELL1D', & ! block
+    'ICELL1D', & ! tag name
+    'ICELL1D', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
-    'cell2d number', & ! longname
+    'cell1d number', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
@@ -334,7 +315,7 @@ module SwfDisv1DInputModule
     ( &
     'SWF', & ! component
     'DISV1D', & ! subcomponent
-    'CELL2D', & ! block
+    'CELL1D', & ! block
     'FDC', & ! tag name
     'FDC', & ! fortran variable
     'DOUBLE', & ! type
@@ -352,7 +333,7 @@ module SwfDisv1DInputModule
     ( &
     'SWF', & ! component
     'DISV1D', & ! subcomponent
-    'CELL2D', & ! block
+    'CELL1D', & ! block
     'NCVERT', & ! tag name
     'NCVERT', & ! fortran variable
     'INTEGER', & ! type
@@ -370,7 +351,7 @@ module SwfDisv1DInputModule
     ( &
     'SWF', & ! component
     'DISV1D', & ! subcomponent
-    'CELL2D', & ! block
+    'CELL1D', & ! block
     'ICVERT', & ! tag name
     'ICVERT', & ! fortran variable
     'INTEGER1D', & ! type
@@ -394,14 +375,13 @@ module SwfDisv1DInputModule
     swfdisv1d_export_ascii, &
     swfdisv1d_nodes, &
     swfdisv1d_nvert, &
-    swfdisv1d_length, &
     swfdisv1d_width, &
     swfdisv1d_bottom, &
     swfdisv1d_idomain, &
     swfdisv1d_iv, &
     swfdisv1d_xv, &
     swfdisv1d_yv, &
-    swfdisv1d_icell2d, &
+    swfdisv1d_icell1d, &
     swfdisv1d_fdc, &
     swfdisv1d_ncvert, &
     swfdisv1d_icvert &
@@ -426,16 +406,16 @@ module SwfDisv1DInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    swfdisv1d_cell2d = InputParamDefinitionType &
+    swfdisv1d_cell1d = InputParamDefinitionType &
     ( &
     'SWF', & ! component
     'DISV1D', & ! subcomponent
-    'CELL2D', & ! block
-    'CELL2D', & ! tag name
-    'CELL2D', & ! fortran variable
-    'RECARRAY ICELL2D FDC NCVERT ICVERT', & ! type
+    'CELL1D', & ! block
+    'CELL1D', & ! tag name
+    'CELL1D', & ! fortran variable
+    'RECARRAY ICELL1D FDC NCVERT ICVERT', & ! type
     'NODES', & ! shape
-    'cell2d data', & ! longname
+    'cell1d data', & ! longname
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -447,7 +427,7 @@ module SwfDisv1DInputModule
     swf_disv1d_aggregate_definitions(*) = &
     [ &
     swfdisv1d_vertices, &
-    swfdisv1d_cell2d &
+    swfdisv1d_cell1d &
     ]
 
   type(InputBlockDefinitionType), parameter :: &
@@ -478,7 +458,7 @@ module SwfDisv1DInputModule
     .false. & ! block_variable
     ), &
     InputBlockDefinitionType( &
-    'CELL2D', & ! blockname
+    'CELL1D', & ! blockname
     .true., & ! required
     .true., & ! aggregate
     .false. & ! block_variable

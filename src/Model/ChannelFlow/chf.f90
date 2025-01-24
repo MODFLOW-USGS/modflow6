@@ -41,7 +41,7 @@ module ChfModule
   !< candidates for input and these will be loaded in the order specified.
   integer(I4B), parameter :: CHF_NMULTIPKG = 50
   character(len=LENPACKAGETYPE), dimension(CHF_NMULTIPKG) :: CHF_MULTIPKG
-  data CHF_MULTIPKG/'FLW6 ', 'CHD6 ', 'CDB6 ', 'ZDG6 ', '     ', & !  5
+  data CHF_MULTIPKG/'FLW6 ', 'CHD6 ', 'CDB6 ', 'ZDG6 ', 'PCP6 ', & !  5
                    &45*'     '/ ! 50
 
   ! size of supported model package arrays

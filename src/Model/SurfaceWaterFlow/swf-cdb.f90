@@ -36,7 +36,7 @@ module SwfCdbModule
     real(DP), dimension(:), pointer, contiguous :: width => null() !< channel width
     real(DP), pointer :: gravconv => null() !< conversion factor gravity in m/s^2 to model units
 
-    ! -- pointers other objects
+    ! pointers other objects
     type(SwfCxsType), pointer :: cxs
 
   contains

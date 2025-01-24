@@ -163,18 +163,12 @@ contains
     ! dummy
     class(SwfDfwType) :: this !< this instance
     class(DisBaseType), pointer, intent(inout) :: dis !< the pointer to the discretization
-    ! locals
-    character(len=10) :: distype = ''
 
     ! Set a pointers to passed in objects
     this%dis => dis
 
     ! Set the distype (either DISV1D or DIS2D)
-    call this%dis%get_dis_type(distype)
-    if (distype == "DIS2D") then
-      this%is2d = 1
-    end if
-    if (distype == "DISV2D") then
+    if (this%dis%is_2d()) then
       this%is2d = 1
     end if
 

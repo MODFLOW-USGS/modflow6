@@ -42,6 +42,21 @@ gwe-disv.dfn
 gwe-disu.dfn
 gwe-dis.dfn
 
+# swf model
+swf-nam.dfn
+swf-disv1d.dfn
+swf-dis2d.dfn
+swf-disv2d.dfn
+swf-cxs.dfn
+swf-dfw.dfn
+swf-ic.dfn
+swf-cdb.dfn
+swf-chd.dfn
+swf-flw.dfn
+swf-pcp.dfn
+swf-sto.dfn
+swf-zdg.dfn
+
 # chf model
 chf-nam.dfn
 chf-disv1d.dfn
@@ -51,6 +66,7 @@ chf-ic.dfn
 chf-cdb.dfn
 chf-chd.dfn
 chf-flw.dfn
+chf-pcp.dfn
 chf-sto.dfn
 chf-zdg.dfn
 
@@ -63,6 +79,7 @@ olf-ic.dfn
 olf-cdb.dfn
 olf-chd.dfn
 olf-flw.dfn
+olf-pcp.dfn
 olf-sto.dfn
 olf-zdg.dfn
 
