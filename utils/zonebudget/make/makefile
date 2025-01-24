@@ -34,7 +34,9 @@ $(OBJDIR)/BlockParser.o \
 $(OBJDIR)/ArrayReaders.o \
 $(OBJDIR)/zone.o \
 $(OBJDIR)/Budget.o \
+$(OBJDIR)/HashTable.o \
 $(OBJDIR)/zoneoutput.o \
+$(OBJDIR)/GridFileReader.o \
 $(OBJDIR)/budgetdata.o \
 $(OBJDIR)/MathUtil.o \
 $(OBJDIR)/GeomUtil.o \

@@ -186,7 +186,6 @@ $(OBJDIR)/Exchange.o \
 $(OBJDIR)/ExchangeWriter.o \
 $(OBJDIR)/SimFileWriter.o \
 $(OBJDIR)/NWT1_xmdlib.o \
-$(OBJDIR)/GridFileReader.o \
 $(OBJDIR)/mf5to6.o \
 $(OBJDIR)/SimVariablesPHMF.o \
 $(OBJDIR)/NWT1_xmd.o \
