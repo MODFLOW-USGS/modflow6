@@ -484,8 +484,6 @@ contains
     allocate (mt)
     !
     ! -- set memory type
-    ! this does not work with gfortran 11.3 and 12.1
-    ! so we have to disable the pointing to astr1d
     mt%astr1d => astr1d
     mt%element_size = ilen
     mt%isize = isize
