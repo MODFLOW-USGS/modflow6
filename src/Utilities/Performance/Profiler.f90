@@ -1,6 +1,7 @@
-module CpuTimerModule
+module ProfilerModule
   use KindModule, only: I4B, DP, LGP
-  use ConstantsModule, only: DNODATA, DZERO
+  use ConstantsModule, only: DNODATA, DZERO, LENMEMPATH, LINELENGTH
+  use STLStackIntModule
   use STLVecIntModule
   implicit none
   private
@@ -20,42 +21,52 @@ module CpuTimerModule
   integer(I4B), public :: SECTION_FINAL_TSTP = -1
 
   ! constants for memory allocation
-  integer(I4B), parameter :: MAX_NR_TIMED_SECTIONS = 50
+  integer(I4B), parameter :: MAX_NR_TIMED_SECTIONS = 75
   integer(I4B), public, parameter :: LEN_SECTION_TITLE = 128
 
   ! data structure to store measurements for a section
-  type, private :: TimedSectionType
+  type, private :: MeasuredSectionType
     character(len=LEN_SECTION_TITLE) :: title !< title to identify timed section in log
     real(DP) :: walltime !< walltime spent in section
     integer(I4B) :: count !< number of times section was entered
     integer(I4B) :: status !< =1 means section timer started, =0 otherwise
     integer(I4B) :: parent_id !< id of parent, or 0 when root
     type(STLVecInt) :: children !< ids of children
-  end type TimedSectionType
+  end type MeasuredSectionType
 
-  ! this is the timer object
-  type, public :: CpuTimerType
+  !> @brief A public type for profiling performance in the application.
+  !! The ProfilerType is used to measure and record the performance of various
+  !! parts of the application. It provides mechanisms to start, stop, and
+  !< report on the performance metrics collected during execution.
+  type, public :: ProfilerType
     private
-    integer(I4B) :: nr_sections
-    integer(I4B) :: root_id !< 
-    type(TimedSectionType), dimension(:), pointer :: all_sections => null() !< all timed sections, dynamic up to MAX_NR_TIMED_SECTIONS
-    type(STLVecInt) :: callstack !< call stack of section ids
+    integer(I4B) :: iout !< output unit number, typically simulation listing file
+    integer(I4B) :: pr_option !< 0 = NONE, 1 = SUMMARY, 2 = DETAIL
+    integer(I4B) :: nr_sections !< number of sections
+    integer(I4B), dimension(3) :: top_three !< top three leaf sections based on walltime
+    integer(I4B) :: max_title_len !< maximum title length
+    integer(I4B) :: root_id
+    type(MeasuredSectionType), dimension(:), pointer :: all_sections => null() !< all timed sections (up to MAX_NR_TIMED_SECTIONS)
+    type(STLStackInt) :: callstack !< call stack of section ids
   contains
     procedure :: initialize
     procedure :: add_section
     procedure :: start
     procedure :: stop
-    procedure :: print_timings
+    procedure :: print
     procedure :: destroy
     procedure :: is_initialized
+    procedure :: set_print_option
     ! private
     procedure, private :: print_section
     procedure, private :: print_total
     procedure, private :: aggregate_walltime
     procedure, private :: aggregate_counts
-  end type CpuTimerType
+    procedure, private :: largest_title_length
+    procedure, private :: sort_by_walltime
+  end type ProfilerType
 
-  type(CpuTimerType), public :: g_timer !< the global timer object (to reduce trivial lines of code)
+  type(ProfilerType), public :: g_prof !< the global timer object (to reduce trivial lines of code)
   public :: set_timer_func, timer_func_iface
   procedure(timer_func_iface), private, pointer :: g_timer_func => serial_timer ! typically set to use MPI_Wtime for parallel, using the method below
 
@@ -77,17 +88,16 @@ contains
 
   end subroutine set_timer_func
 
-  
   !< @brief Initialize the CPU timer object
   !<
   subroutine initialize(this)
-    class(CpuTimerType) :: this
+    class(ProfilerType) :: this
     ! local
     integer(I4B) :: i
 
     call this%callstack%init()
 
-    allocate(this%all_sections(MAX_NR_TIMED_SECTIONS))
+    allocate (this%all_sections(MAX_NR_TIMED_SECTIONS))
     do i = 1, MAX_NR_TIMED_SECTIONS
       this%all_sections(i)%title = "undefined"
       this%all_sections(i)%status = 0
@@ -96,9 +106,10 @@ contains
       this%all_sections(i)%parent_id = 0
       call this%all_sections(i)%children%init()
     end do
-    
+
     this%nr_sections = 0
     this%root_id = 0
+    this%top_three = [0, 0, 0]
 
   end subroutine initialize
 
@@ -106,7 +117,8 @@ contains
   !! passing the parent id will add it as a child
   !< in the tree
   function add_section(this, title, parent_id) result(section_id)
-    class(CpuTimerType) :: this
+    use SimModule, only: ustop
+    class(ProfilerType) :: this
     character(len=*) :: title
     integer(I4B) :: parent_id
     integer(I4B) :: section_id
@@ -114,12 +126,17 @@ contains
     ! increment to new section id
     this%nr_sections = this%nr_sections + 1
     section_id = this%nr_sections
+    if (section_id > size(this%all_sections)) then
+      write (*, *) "Internal error: Too many profiled sections, "&
+        &"increase MAX_NR_TIMED_SECTIONS"
+      call ustop()
+    end if
 
     ! initialize new section
     this%all_sections(section_id)%title = title
     this%all_sections(section_id)%walltime = DZERO
     this%all_sections(section_id)%status = 0
-    
+
     ! if parent, otherwise root section
     if (parent_id > 0) then
       ! add child to parent
@@ -136,24 +153,25 @@ contains
   !> @brief Start section timing, add when not exist yet (i.e. when id < 1)
   !<
   subroutine start(this, title, section_id)
-    class(CpuTimerType) :: this
+    class(ProfilerType) :: this
     character(len=*) :: title
-    integer(I4B) :: section_id, parent_id
+    integer(I4B) :: section_id
     ! local
+    integer(I4B) :: parent_id
     real(DP) :: start_time
-    type(TimedSectionType), pointer :: section
+    type(MeasuredSectionType), pointer :: section
 
     call cpu_time(start_time)
-    
+
     if (section_id < 1) then
       ! add section if not exist
       parent_id = 0 ! root
-      if (this%callstack%size > 0) then
-        parent_id = this%callstack%at(this%callstack%size)
+      if (this%callstack%size() > 0) then
+        parent_id = this%callstack%top()
       end if
       section_id = this%add_section(title, parent_id)
     end if
-    call this%callstack%push_back(section_id)
+    call this%callstack%push(section_id)
 
     section => this%all_sections(section_id)
     section%count = section%count + 1
@@ -163,11 +181,11 @@ contains
   end subroutine start
 
   subroutine stop(this, section_id)
-    class(CpuTimerType) :: this
+    class(ProfilerType) :: this
     integer(I4B) :: section_id
     ! local
     real(DP) :: end_time
-    type(TimedSectionType), pointer :: section    
+    type(MeasuredSectionType), pointer :: section
 
     call cpu_time(end_time)
 
@@ -181,33 +199,66 @@ contains
 
   end subroutine stop
 
-  subroutine print_timings(this)
-    class(CpuTimerType) :: this
+  subroutine print(this, output_unit)
+    class(ProfilerType) :: this
+    integer(I4B), intent(in) :: output_unit
     ! local
-    integer(I4B) :: level
+    integer(I4B) :: level, i, top_idx
+    integer(I4B), dimension(:), allocatable :: sorted_idxs
 
-    ! print timing call stack
-    level = 0
-    write(*,'(a/)') "-------------------- Timing: Call Stack --------------------"
-    call this%print_section(this%root_id, level)
+    this%iout = output_unit
+    if (this%pr_option == 0) return
+
+    ! get top three leaf sections based on walltime
+    top_idx = 1
+    sorted_idxs = (/(i, i=1, this%nr_sections)/)
+    call this%sort_by_walltime(sorted_idxs)
+    do i = 1, this%nr_sections
+      if (this%all_sections(sorted_idxs(i))%children%size == 0) then ! leaf node
+        if (top_idx > 3) exit
+        this%top_three(top_idx) = sorted_idxs(i)
+        top_idx = top_idx + 1
+      end if
+    end do
+
+    this%max_title_len = this%largest_title_length()
+
+    if (this%pr_option > 1) then
+      ! print timing call stack
+      level = 0
+      write (this%iout, '(/1x,a/)') &
+        repeat('-', 18)//" Profiler: Call Stack "//repeat('-', 18)
+      call this%print_section(this%root_id, level)
+    end if
 
     ! print walltime per category from substring (if exist)
-    write(*,'(a/)') "-------------------- Timing: Cumulative --------------------"
+    ! note: the sections containing the substring should not be nested,
+    !       otherwise the walltime will be counted multiple times
+    write (this%iout, '(1x,a/)') &
+      repeat('-', 20)//" Profiler: Totals "//repeat('-', 20)
     call this%print_total("Formulate")
     call this%print_total("Linear solve")
+    call this%print_total("Calculate flows")
+    call this%print_total("Calculate budgets")
+    call this%print_total("Write output")
+    call this%print_total("Parallel Solution")
     call this%print_total("MPI_WaitAll")
-    write(*,'(/a/)') "------------------------------------------------------------"
+    write (this%iout, '(/1x,a/)') &
+      repeat('-', 22)//" End Profiler "//repeat('-', 22)
 
-  end subroutine print_timings
+  end subroutine print
 
   recursive subroutine print_section(this, section_id, level)
-    class(CpuTimerType) :: this
+    use ArrayHandlersModule, only: ifind
+    class(ProfilerType) :: this
     integer(I4B) :: section_id
     integer(I4B) :: level
     ! local
-    integer(I4B) :: i, new_level
+    integer(I4B) :: i, new_level, nr_padding, idx_top
     real(DP) :: percent
-    type(TimedSectionType), pointer :: section
+    type(MeasuredSectionType), pointer :: section
+    character(len=:), allocatable :: title_padded
+    character(len=LINELENGTH) :: top_marker
 
     section => this%all_sections(section_id)
 
@@ -218,37 +269,50 @@ contains
     end if
     percent = percent * 100.0_DP
 
+    ! determine if section should be marked as top three
+    top_marker = ""
+    idx_top = ifind(this%top_three, section_id)
+    if (idx_top > 0) then
+      nr_padding = max(0, 32 - level * 4)
+      write (top_marker, '(a,i0)') repeat(" ", nr_padding)//"<== #", idx_top
+    end if
+
     ! print section timing
-    write(*,'(3a,f0.2,3a,f14.6,2a,i0,a)') &
-      " ", repeat('....', level), "[", percent, "%] ", &
-      trim(section%title), ": ", section%walltime, "s", " (", &
-      section%count, "x)"
-    
+    nr_padding = this%max_title_len - len_trim(section%title) + 2
+    title_padded = trim(section%title)//":"//repeat(' ', nr_padding)
+    write (this%iout, '(3a,f6.2,2a,f14.6,2a,i0,a,a)') " ", &
+      repeat('....', level), "[", percent, "%] ", title_padded, &
+      section%walltime, "s", " (", section%count, "x)", trim(top_marker)
+
     ! print children
     new_level = level + 1
     do i = 1, section%children%size
       call this%print_section(section%children%at(i), new_level)
     end do
 
-    if (level == 0) write(*,*)
+    if (level == 0) write (this%iout, *)
 
   end subroutine print_section
 
   subroutine print_total(this, subtitle)
-    class(CpuTimerType) :: this
+    class(ProfilerType) :: this
     character(len=*) :: subtitle
     ! local
     integer(I4B) :: count
     real(DP) :: walltime, percent
-    
+    integer(I4B) :: nr_padding
+    character(len=:), allocatable :: title_padded
+
+    ! get maximum length of title
+    nr_padding = this%max_title_len - len_trim(subtitle)
+    title_padded = trim(subtitle)//repeat(' ', nr_padding)
+
     count = this%aggregate_counts(subtitle)
     if (count > 0) then
       walltime = aggregate_walltime(this, subtitle)
       percent = (walltime / this%all_sections(this%root_id)%walltime) * 100.0_DP
-      write(*,'(2a,f0.2,3a,f14.6,2a,i0,a)') &
-        " ", "[", percent, "%] ", &
-        trim(subtitle), ": ", walltime, "s", " (", &
-        count, "x)"
+      write (this%iout, '(2a,f6.2,3a,f14.6,2a,i0,a)') " ", "[", percent, &
+        "%] ", title_padded, ": ", walltime, "s", " (", count, "x)"
     end if
 
   end subroutine print_total
@@ -256,7 +320,7 @@ contains
   !> @brief Aggregate walltime over sections with a certain title
   !<
   function aggregate_walltime(this, title) result(walltime)
-    class(CpuTimerType) :: this
+    class(ProfilerType) :: this
     character(len=*) :: title
     real(DP) :: walltime
     ! local
@@ -274,7 +338,7 @@ contains
   !> @brief Aggregate counts over sections with a certain title
   !<
   function aggregate_counts(this, title) result(counts)
-    class(CpuTimerType) :: this
+    class(ProfilerType) :: this
     character(len=*) :: title
     integer(I4B) :: counts
     ! local
@@ -289,13 +353,32 @@ contains
 
   end function aggregate_counts
 
+  !> @brief Set the profile option from the user input
+  !<
+  subroutine set_print_option(this, profile_option)
+    class(ProfilerType) :: this
+    character(len=*), intent(in) :: profile_option
+
+    select case (trim(profile_option))
+    case ("NONE")
+      this%pr_option = 0
+    case ("SUMMARY")
+      this%pr_option = 1
+    case ("DETAIL")
+      this%pr_option = 2
+    case default
+      this%pr_option = 0
+    end select
+
+  end subroutine set_print_option
+
   !> @brief Clean up the CPU timer object
   !<
   subroutine destroy(this)
-    class(CpuTimerType) :: this
+    class(ProfilerType) :: this
     ! local
     integer(I4B) :: i
-    
+
     call this%callstack%destroy()
 
     do i = 1, this%nr_sections
@@ -307,7 +390,7 @@ contains
   end subroutine destroy
 
   function is_initialized(this) result(initialized)
-    class(CpuTimerType) :: this
+    class(ProfilerType) :: this
     logical(LGP) :: initialized
 
     initialized = associated(this%all_sections)
@@ -319,4 +402,39 @@ contains
     call cpu_time(walltime)
   end subroutine serial_timer
 
-end module CpuTimerModule
+  !> @brief Calculate the largest title length
+  !<
+  function largest_title_length(this) result(max_length)
+    class(ProfilerType) :: this
+    integer(I4B) :: max_length
+    integer(I4B) :: i
+
+    max_length = 0
+    do i = 1, this%nr_sections
+      max_length = max(max_length, len_trim(this%all_sections(i)%title))
+    end do
+
+  end function largest_title_length
+
+  !> @brief Sort section indexes based on walltime
+  !<
+  subroutine sort_by_walltime(this, idxs)
+    class(ProfilerType) :: this
+    integer(I4B), dimension(:), allocatable :: idxs !< array with unsorted section idxs
+    integer(I4B) :: i, j, temp
+
+    ! Simple bubble sort for demonstration purposes
+    do i = 1, size(idxs) - 1
+      do j = 1, size(idxs) - i
+        if (this%all_sections(idxs(j))%walltime < &
+            this%all_sections(idxs(j + 1))%walltime) then
+          temp = idxs(j)
+          idxs(j) = idxs(j + 1)
+          idxs(j + 1) = temp
+        end if
+      end do
+    end do
+
+  end subroutine sort_by_walltime
+
+end module ProfilerModule

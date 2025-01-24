@@ -5,7 +5,7 @@ module RunControlModule
   use MapperModule
   use ListsModule, only: basesolutionlist
   use NumericalSolutionModule, only: NumericalSolutionType
-  use CpuTimerModule
+  use ProfilerModule
   implicit none
   private
 
@@ -41,10 +41,10 @@ contains
     class(RunControlType) :: this
 
     ! initialize and start timers, if not done so in the derived class
-    if (.not. g_timer%is_initialized()) then
-      call g_timer%initialize()
-      call g_timer%start("Run", SECTION_RUN)
-      call g_timer%start("Initialize", SECTION_INIT)
+    if (.not. g_prof%is_initialized()) then
+      call g_prof%initialize()
+      call g_prof%start("Run", SECTION_RUN)
+      call g_prof%start("Initialize", SECTION_INIT)
     end if
 
     allocate (this%virtual_data_mgr)
@@ -64,12 +64,12 @@ contains
     ! -- Write memory usage, elapsed time and terminate
     call mem_write_usage(iout)
     call mem_da()
-    call elapsed_time(iout, 1)
 
     ! stop and print timings
-    call g_timer%stop(SECTION_RUN)
-    call g_timer%print_timings()
+    call g_prof%stop(SECTION_RUN)
+    call g_prof%print(iout)
 
+    call elapsed_time(iout, 1)
     call final_message()
 
   end subroutine ctrl_finish

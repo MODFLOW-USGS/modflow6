@@ -1,7 +1,7 @@
 module MpiRouterModule
   use RouterBaseModule
   use KindModule, only: I4B, LGP
-  use CpuTimerModule, only: g_timer
+  use ProfilerModule, only: g_prof
   use STLVecIntModule
   use SimVariablesModule, only: proc_id, nr_procs
   use SimStagesModule, only: STG_TO_STR, NR_SIM_STAGES
@@ -33,7 +33,7 @@ module MpiRouterModule
     type(MpiWorldType), pointer :: mpi_world => null()
     integer(I4B) :: imon !< the output file unit for the mpi monitor
     logical(LGP) :: enable_monitor !< when true, log diagnostics
-    integer(I4B), dimension(:,:), allocatable :: tmr_mpi_wait !< array with timer handles for MPI_Wait calls
+    integer(I4B), dimension(:, :), allocatable :: tmr_mpi_wait !< array with timer handles for MPI_Wait calls
   contains
     procedure :: initialize => mr_initialize
     procedure :: route_all => mr_route_all
@@ -328,10 +328,10 @@ contains
     end do
 
     ! wait for exchange of all messages
-    call g_timer%start("MPI_WaitAll ("//trim(STG_TO_STR(stage))//")", &
-                       this%tmr_mpi_wait(stage, unit + 1))
+    call g_prof%start("MPI_WaitAll ("//trim(STG_TO_STR(stage))//")", &
+                      this%tmr_mpi_wait(stage, unit + 1))
     call MPI_WaitAll(this%senders%size, rcv_req, rcv_stat, ierr)
-    call g_timer%stop(this%tmr_mpi_wait(stage, unit + 1))
+    call g_prof%stop(this%tmr_mpi_wait(stage, unit + 1))
     call CHECK_MPI(ierr)
 
     deallocate (rcv_req, snd_req, rcv_stat)
@@ -447,10 +447,10 @@ contains
     end do
 
     ! wait for exchange of all headers
-    call g_timer%start("MPI_WaitAll ("//trim(STG_TO_STR(stage))//")", &
-                       this%tmr_mpi_wait(stage, unit + 1))
+    call g_prof%start("MPI_WaitAll ("//trim(STG_TO_STR(stage))//")", &
+                      this%tmr_mpi_wait(stage, unit + 1))
     call MPI_WaitAll(this%receivers%size, rcv_req, rcv_stat, ierr)
-    call g_timer%stop(this%tmr_mpi_wait(stage, unit + 1))
+    call g_prof%stop(this%tmr_mpi_wait(stage, unit + 1))
     call CHECK_MPI(ierr)
 
     ! reinit handles
@@ -520,10 +520,10 @@ contains
     end do
 
     ! wait on receiving maps
-    call g_timer%start("MPI_WaitAll ("//trim(STG_TO_STR(stage))//")", &
-                       this%tmr_mpi_wait(stage, unit + 1))
+    call g_prof%start("MPI_WaitAll ("//trim(STG_TO_STR(stage))//")", &
+                      this%tmr_mpi_wait(stage, unit + 1))
     call MPI_WaitAll(this%receivers%size, rcv_req, rcv_stat, ierr)
-    call g_timer%stop(this%tmr_mpi_wait(stage, unit + 1))
+    call g_prof%stop(this%tmr_mpi_wait(stage, unit + 1))
     call CHECK_MPI(ierr)
 
     ! print maps

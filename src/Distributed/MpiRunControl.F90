@@ -9,7 +9,7 @@ module MpiRunControlModule
   use MpiWorldModule
   use SimVariablesModule, only: proc_id, nr_procs
   use SimStagesModule
-  use CpuTimerModule
+  use ProfilerModule
   use KindModule, only: I4B, LGP, DP
   use STLVecIntModule
   use NumericalSolutionModule
@@ -57,11 +57,11 @@ contains
     ! add timed section for parallel stuff and start timers
     tmr_func => mpi_walltime
     call set_timer_func(tmr_func)
-    call g_timer%initialize()
-    call g_timer%start("Run", SECTION_RUN)
-    call g_timer%start("Initialize", SECTION_INIT)
+    call g_prof%initialize()
+    call g_prof%start("Run", SECTION_RUN)
+    call g_prof%start("Initialize", SECTION_INIT)
     tmr_init_par = -1
-    call g_timer%start("Initialize parallel", tmr_init_par)
+    call g_prof%start("Initialize parallel", tmr_init_par)
 
     ! set mpi abort function
     pstop_alternative => mpi_stop
@@ -115,7 +115,7 @@ contains
     if (wait_dbg) call this%wait_for_debugger()
 
     ! done with parallel pre-work
-    call g_timer%stop(tmr_init_par)
+    call g_prof%stop(tmr_init_par)
 
     ! start everything else by calling parent
     call this%RunControlType%start()
@@ -148,7 +148,7 @@ contains
 
     ! timer
     tmr_final_par = -1
-    call g_timer%start("Finalize parallel", tmr_final_par)
+    call g_prof%start("Finalize parallel", tmr_final_par)
 
     ! finish mpi
 #if defined(__WITH_PETSC__)
@@ -163,7 +163,7 @@ contains
 
     pstop_alternative => null()
 
-    call g_timer%stop(tmr_final_par)
+    call g_prof%stop(tmr_final_par)
 
     ! finish everything else by calling parent
     call this%RunControlType%finish()

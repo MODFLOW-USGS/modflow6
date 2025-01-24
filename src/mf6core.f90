@@ -18,7 +18,7 @@ module Mf6CoreModule
   use SolutionGroupModule, only: SolutionGroupType, GetSolutionGroupFromList
   use RunControlModule, only: RunControlType
   use SimStagesModule
-  use CpuTimerModule
+  use ProfilerModule
   implicit none
 
   class(RunControlType), pointer :: run_ctrl => null() !< the run controller for this simulation
@@ -99,7 +99,7 @@ contains
     call export_cr()
 
     ! -- stop the timer
-    call g_timer%stop(SECTION_INIT)
+    call g_prof%stop(SECTION_INIT)
 
   end subroutine Mf6Initialize
 
@@ -113,7 +113,7 @@ contains
   function Mf6Update() result(hasConverged)
     logical(LGP) :: hasConverged
     ! start timer
-    call g_timer%start("Update", SECTION_UPDATE)
+    call g_prof%start("Update", SECTION_UPDATE)
     !
     ! -- prepare timestep
     call Mf6PrepareTimestep()
@@ -125,7 +125,7 @@ contains
     hasConverged = Mf6FinalizeTimestep()
 
     ! stop timer
-    call g_timer%stop(SECTION_UPDATE)
+    call g_prof%stop(SECTION_UPDATE)
 
   end function Mf6Update
 
@@ -158,7 +158,7 @@ contains
     integer(I4B) :: tmr_dealloc
 
     ! start timer
-    call g_timer%start("Finalize", SECTION_FINALIZE)
+    call g_prof%start("Finalize", SECTION_FINALIZE)
 
     !
     ! -- FINAL PROCESSING (FP)
@@ -182,8 +182,8 @@ contains
 
     ! start timer for deallocation
     tmr_dealloc = -1
-    call g_timer%start("Deallocate", tmr_dealloc)
-    
+    call g_prof%start("Deallocate", tmr_dealloc)
+
     !
     ! -- DEALLOCATE (DA)
     ! -- Deallocate tdis
@@ -228,10 +228,10 @@ contains
     call export_da()
     call simulation_da()
     call lists_da()
-    
+
     ! stop timers
-    call g_timer%stop(tmr_dealloc)
-    call g_timer%stop(SECTION_FINALIZE)
+    call g_prof%stop(tmr_dealloc)
+    call g_prof%stop(SECTION_FINALIZE)
 
     ! finish gently (No calls after this)
     call run_ctrl%finish()
@@ -517,7 +517,7 @@ contains
     integer(I4B) :: is
 
     ! start timer
-    call g_timer%start("Initialize time step", SECTION_PREP_TSTP)
+    call g_prof%start("Initialize time step", SECTION_PREP_TSTP)
 
     !
     ! -- initialize fmt
@@ -600,7 +600,7 @@ contains
     call tdis_set_timestep()
 
     ! stop timer
-    call g_timer%stop(SECTION_PREP_TSTP)
+    call g_prof%stop(SECTION_PREP_TSTP)
 
   end subroutine Mf6PrepareTimestep
 
@@ -625,7 +625,7 @@ contains
     logical :: finishedTrying
 
     ! start timer
-    call g_timer%start("Do time step", SECTION_DO_TSTP)
+    call g_prof%start("Do time step", SECTION_DO_TSTP)
 
     ! -- By default, the solution groups will be solved once, and
     !    may fail.  But if adaptive stepping is active, then
@@ -650,7 +650,7 @@ contains
     end do retryloop
 
     ! stop timer
-    call g_timer%stop(SECTION_DO_TSTP)
+    call g_prof%stop(SECTION_DO_TSTP)
 
   end subroutine Mf6DoTimestep
 
@@ -724,13 +724,15 @@ contains
     integer(I4B) :: ix
     integer(I4B) :: ic
     integer(I4B) :: is
+    integer(I4B), save :: tmr_output = -1 !< timer for output
+    integer(I4B), save :: tmr_nc_export = -1 !< timer for netcdf output
     !
     ! -- initialize format and line
     fmt = "(/,a,/)"
     line = 'end timestep'
 
     ! start timer
-    call g_timer%start("Finalize time step", SECTION_FINAL_TSTP)
+    call g_prof%start("Finalize time step", SECTION_FINAL_TSTP)
 
     !
     ! -- evaluate simulation mode
@@ -743,6 +745,8 @@ contains
         call mp%model_message(line, fmt=fmt)
       end do
     case (MNORMAL)
+
+      call g_prof%start("Write output", tmr_output)
       !
       ! -- Write output and final message for timestep for each model
       do im = 1, basemodellist%Count()
@@ -770,15 +774,19 @@ contains
       end do
       !
       ! -- update exports
+      call g_prof%start("NetCDF export", tmr_nc_export)
       call export_post_step()
+      call g_prof%stop(tmr_nc_export)
+
+      call g_prof%stop(tmr_output)
     end select
     !
     ! -- Check if we're done
     call converge_check(hasConverged)
 
     ! stop timer
-    call g_timer%stop(SECTION_FINAL_TSTP)
-    
+    call g_prof%stop(SECTION_FINAL_TSTP)
+
   end function Mf6FinalizeTimestep
 
 end module Mf6CoreModule
