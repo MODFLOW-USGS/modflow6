@@ -285,6 +285,16 @@ contains
     case ("DISU")
       allocate (v(1))
       v(1) = this%read_int("NODES")
+    case ("DIS2D")
+      allocate (v(2))
+      v(1) = this%read_int("NROW")
+      v(2) = this%read_int("NCOL")
+    case ("DISV2D")
+      allocate (v(1))
+      v(1) = this%read_int("NODES")
+    case ("DISV1D")
+      allocate (v(1))
+      v(1) = this%read_int("NCELLS")
     end select
   end function read_grid_shape
 
