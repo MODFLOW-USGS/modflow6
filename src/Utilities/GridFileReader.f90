@@ -4,7 +4,7 @@ module GridFileReaderModule
   use SimModule, only: store_error, store_error_unit
   use SimVariablesModule, only: errmsg
   use ConstantsModule, only: LINELENGTH
-  use InputOutputModule, only: urword, upcase, openfile
+  use InputOutputModule, only: urword, openfile
   use Integer1dReaderModule, only: read_int1d
   use Integer2dReaderModule, only: read_int2d
   use Double1dReaderModule, only: read_dbl1d
@@ -48,7 +48,6 @@ module GridFileReaderModule
     procedure, private :: read_header
     procedure, private :: read_header_meta
     procedure, private :: read_header_body
-    ! procedure, private :: build_index
   end type GridFileReaderType
 
 contains
@@ -108,7 +107,6 @@ contains
     end if
     call urword(line, lloc, istart, istop, 1, ival, rval, 0, 0)
     this%grid_type = line(istart:istop)
-    call upcase(this%grid_type)
 
     ! version
     read (this%inunit) line
@@ -162,14 +160,12 @@ contains
       lloc = 1
       call urword(line, lloc, istart, istop, 1, ival, rval, 0, 0)
       key = line(istart:istop)
-      call upcase(key)
       nvars = nvars + 1
       this%keys(nvars) = key
 
       ! type
       call urword(line, lloc, istart, istop, 1, ival, rval, 0, 0)
       dtype = line(istart:istop)
-      call upcase(dtype)
       if (dtype == "INTEGER") then
         call this%typ%add(key, 1)
       else if (dtype == "DOUBLE") then
