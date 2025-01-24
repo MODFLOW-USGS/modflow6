@@ -69,6 +69,7 @@ module FlowModelInterfaceModule
     procedure :: initialize_hfr
     procedure :: read_options
     procedure :: read_packagedata
+
   end type FlowModelInterfaceType
 
 contains
@@ -112,7 +113,6 @@ contains
     if (this%inunit /= 0) then
       call this%read_options()
     end if
-
     !
     ! -- Read packagedata options
     if (this%inunit /= 0 .and. this%flows_from_file) then
@@ -154,7 +154,6 @@ contains
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(FlowModelInterfaceType) :: this
-
     ! -- todo: finalize hfr and bfr either here or in a finalize routine
     !
     ! -- deallocate any memory stored with gwfpackages
@@ -358,15 +357,15 @@ contains
     integer(I4B), allocatable :: idomain1d(:), idomain2d(:, :), idomain3d(:, :, :)
     ! -- formats
     character(len=*), parameter :: fmtdiserr = &
-      "('GWF and PRT Models do not have the same discretization for FMI&
+      "('Models do not have the same discretization&
       & ',a,'.&
-      &  GWF Model has ', i0, ' user nodes and ', i0, ' reduced nodes.&
-      &  PRT Model has ', i0, ' user nodes and ', i0, ' reduced nodes.&
+      &  GWF model has ', i0, ' user nodes and ', i0, ' reduced nodes.&
+      &  This model has ', i0, ' user nodes and ', i0, ' reduced nodes.&
       &  Ensure discretization packages, including IDOMAIN, are identical.')"
     character(len=*), parameter :: fmtidomerr = &
-      "('GWF and PRT Models do not have the same discretization for FMI&
+      "('Models do not have the same discretization&
       & ',a,'.&
-      &  GWF Model and PRT Model have different IDOMAIN arrays.&
+      &  Models have different IDOMAIN arrays.&
       &  Ensure discretization packages, including IDOMAIN, are identical.')"
     !
     ! -- initialize

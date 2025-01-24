@@ -153,7 +153,7 @@ contains
       call store_error(errmsg, terminate=.true.)
     end if
     !
-    ! -- Set pointer to gwf arrays
+    ! -- Set pointer to flowja
     prtmodel%fmi%gwfflowja => gwfmodel%flowja
     call mem_checkin(prtmodel%fmi%gwfflowja, &
                      'GWFFLOWJA', prtmodel%fmi%memoryPath, &
