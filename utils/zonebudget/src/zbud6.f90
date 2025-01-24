@@ -198,8 +198,8 @@ subroutine process_budget(iunit_csv, iunit_bud, iunit_zon, iunit_grb)
       hasiaja = .true.
       call gfr%initialize(iunit_grb)
       mshape = gfr%read_grid_shape()
-      ia = gfr%read_ia()
-      ja = gfr%read_ja()
+      ia = gfr%read_int_1d("IA")
+      ja = gfr%read_int_1d("JA")
       call gfr%finalize()
       ncrgrb = size(ia) - 1
     else

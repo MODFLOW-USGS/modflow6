@@ -460,7 +460,12 @@ contains
                 write (errmsg, fmtdiserr) trim(this%text)
                 call store_error(errmsg, terminate=.TRUE.)
               end if
-              idomain3d = this%gfr%read_idomain_dis()
+              idomain1d = this%gfr%read_int_1d("IDOMAIN")
+              idomain3d = reshape(idomain1d, [ &
+                                  this%gfr%read_int("NCOL"), &
+                                  this%gfr%read_int("NROW"), &
+                                  this%gfr%read_int("NLAY") &
+                                  ])
               if (.not. all(dis%idomain == idomain3d)) then
                 write (errmsg, fmtidomerr) trim(this%text)
                 call store_error(errmsg, terminate=.TRUE.)
@@ -474,7 +479,11 @@ contains
                 write (errmsg, fmtdiserr) trim(this%text)
                 call store_error(errmsg, terminate=.TRUE.)
               end if
-              idomain2d = this%gfr%read_idomain_disv()
+              idomain1d = this%gfr%read_int_1d("IDOMAIN")
+              idomain2d = reshape(idomain1d, [ &
+                                  this%gfr%read_int("NCPL"), &
+                                  this%gfr%read_int("NLAY") &
+                                  ])
               if (.not. all(dis%idomain == idomain2d)) then
                 write (errmsg, fmtidomerr) trim(this%text)
                 call store_error(errmsg, terminate=.TRUE.)
@@ -488,7 +497,7 @@ contains
                 write (errmsg, fmtdiserr) trim(this%text)
                 call store_error(errmsg, terminate=.TRUE.)
               end if
-              idomain1d = this%gfr%read_idomain_disu()
+              idomain1d = this%gfr%read_int_1d("IDOMAIN")
               if (.not. all(dis%idomain == idomain1d)) then
                 write (errmsg, fmtidomerr) trim(this%text)
                 call store_error(errmsg, terminate=.TRUE.)
@@ -502,7 +511,11 @@ contains
                 write (errmsg, fmtdiserr) trim(this%text)
                 call store_error(errmsg, terminate=.TRUE.)
               end if
-              idomain2d = this%gfr%read_idomain_dis2d()
+              idomain1d = this%gfr%read_int_1d("IDOMAIN")
+              idomain2d = reshape(idomain1d, [ &
+                                  this%gfr%read_int("NCOL"), &
+                                  this%gfr%read_int("NROW") &
+                                  ])
               if (.not. all(dis%idomain == idomain2d)) then
                 write (errmsg, fmtidomerr) trim(this%text)
                 call store_error(errmsg, terminate=.TRUE.)
@@ -511,12 +524,12 @@ contains
           case ('DISV2D')
             select type (dis => this%dis)
             type is (Disv2dType)
-              nodes = this%gfr%read_int("NCELLS")
+              nodes = this%gfr%read_int("NODES")
               if (nodes /= this%dis%nodes) then
                 write (errmsg, fmtdiserr) trim(this%text)
                 call store_error(errmsg, terminate=.TRUE.)
               end if
-              idomain1d = this%gfr%read_idomain_disv2d()
+              idomain1d = this%gfr%read_int_1d("IDOMAIN")
               if (.not. all(dis%idomain == idomain1d)) then
                 write (errmsg, fmtidomerr) trim(this%text)
                 call store_error(errmsg, terminate=.TRUE.)
@@ -530,13 +543,17 @@ contains
                 write (errmsg, fmtdiserr) trim(this%text)
                 call store_error(errmsg, terminate=.TRUE.)
               end if
-              idomain1d = this%gfr%read_idomain_disv1d()
+              idomain1d = this%gfr%read_int_1d("IDOMAIN")
               if (.not. all(dis%idomain == idomain1d)) then
                 write (errmsg, fmtidomerr) trim(this%text)
                 call store_error(errmsg, terminate=.TRUE.)
               end if
             end select
           end select
+
+          if (allocated(idomain3d)) deallocate (idomain3d)
+          if (allocated(idomain2d)) deallocate (idomain2d)
+          if (allocated(idomain1d)) deallocate (idomain1d)
 
           call this%gfr%finalize()
         case default
