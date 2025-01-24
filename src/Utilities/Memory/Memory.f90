@@ -30,7 +30,7 @@ module MemoryTypeModule
     integer(I4B), pointer :: intsclr => null() !< pointer to the integer
     real(DP), pointer :: dblsclr => null() !< pointer to the double
     ! The 1d character string array is handled differently than the other arrays due to a bug in gfortran 11.3 and 12.1.
-    ! Due to this bug the length of the string is not stored in the array descriptor. With a segementation fault as a result
+    ! Due to this bug the length of the string is not stored in the array descriptor. With a segmentation fault as a result
     ! on deallocation.
     class(*), dimension(:), pointer, contiguous :: astr1d => null() !< pointer to the 1d character string array
     integer(I4B), dimension(:), pointer, contiguous :: aint1d => null() !< pointer to 1d integer array
