@@ -148,7 +148,7 @@ contains
     character(len=10) :: key, dtype
     real(DP) :: rval
     integer(I4B) :: i, lloc, istart, istop, ival
-    integer(I4B) :: nvars, narrs, ndim, dim, ishp
+    integer(I4B) :: nvars, ndim, dim, ishp
     integer(I4B), allocatable :: shp(:)
 
     allocate (this%keys(this%ntxt))
@@ -156,7 +156,6 @@ contains
     allocate (character(len=this%lentxt) :: line)
 
     nvars = 0
-    narrs = 0
     read (this%inunit) body
     do i = 1, this%lentxt * this%ntxt, this%lentxt
       line = body(i:i + this%lentxt - 1)
