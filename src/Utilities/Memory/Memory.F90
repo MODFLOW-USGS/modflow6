@@ -142,7 +142,7 @@ contains
 
       call c_f_pointer(cptr, astr1d, [this%isize * this%element_size])
 
-#if __GNUC__ < 13
+#if __GFORTRAN__  &&__GNUC__ < 13
       if (this%master) deallocate (astr1d)
 #else
       if (this%master) deallocate (this%astr1d)
