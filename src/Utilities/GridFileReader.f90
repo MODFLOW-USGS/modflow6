@@ -4,10 +4,6 @@ module GridFileReaderModule
   use SimModule, only: store_error, store_error_unit
   use SimVariablesModule, only: errmsg
   use ConstantsModule, only: LINELENGTH
-  use BaseDisModule, only: DisBaseType
-  use DisModule, only: DisType
-  use DisvModule, only: DisvType
-  use DisuModule, only: DisuType
   use InputOutputModule, only: urword, upcase, openfile
   use Integer1dReaderModule, only: read_int1d
   use Integer2dReaderModule, only: read_int2d
