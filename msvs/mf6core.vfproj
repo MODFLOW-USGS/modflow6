@@ -564,6 +564,8 @@
 			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/></File></Filter>
+		<Filter Name="Performance">
+		<File RelativePath="..\src\Utilities\Performance\Profiler.f90"/></Filter>
 		<Filter Name="Observation">
 		<File RelativePath="..\src\Utilities\Observation\Obs.f90"/>
 		<File RelativePath="..\src\Utilities\Observation\ObsContainer.f90"/>
@@ -651,6 +653,7 @@
 		<File RelativePath="..\src\Utilities\SmoothingFunctions.f90"/>
 		<File RelativePath="..\src\Utilities\sort.f90"/>
 		<File RelativePath="..\src\Utilities\Sparse.f90"/>
+		<File RelativePath="..\src\Utilities\STLStackInt.f90"/>
 		<File RelativePath="..\src\Utilities\STLVecInt.f90"/>
 		<File RelativePath="..\src\Utilities\StringList.f90"/>
 		<File RelativePath="..\src\Utilities\Table.f90"/>
