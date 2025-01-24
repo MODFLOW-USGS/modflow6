@@ -2,7 +2,11 @@ module BaseDisModule
 
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LENMODELNAME, LENAUXNAME, LINELENGTH, &
-                             DZERO, LENMEMPATH, DPIO180
+                             DZERO, LENMEMPATH, DPIO180, DISUNDEF, &
+                             DIS, DISV, DISU, &
+                             DIS2D, DISV2D, DISU2D, &
+                             DIS1D, DISV1D, DISU1D
+
   use SmoothingModule, only: sQuadraticSaturation
   use ConnectionsModule, only: ConnectionsType
   use InputOutputModule, only: URWORD, ubdsv1, ubdsvd
@@ -112,7 +116,9 @@ module BaseDisModule
     procedure, public :: get_area
     procedure, public :: get_area_factor
     procedure, public :: get_flow_width
-
+    procedure, public :: is_3d
+    procedure, public :: is_2d
+    procedure, public :: is_1d
   end type DisBaseType
 
 contains
@@ -1157,5 +1163,44 @@ contains
     width_m = width_n
 
   end subroutine get_flow_width
+
+  !> @Brief return true if grid is three dimensional
+  function is_3d(this) result(r)
+    ! dummy
+    class(DisBaseType) :: this
+    ! return
+    logical(LGP) :: r
+    r = .false.
+    select case (this%get_dis_enum())
+    case (DIS, DISV, DISU)
+      r = .true.
+    end select
+  end function is_3d
+
+  !> @Brief return true if grid is two dimensional
+  function is_2d(this) result(r)
+    ! dummy
+    class(DisBaseType) :: this
+    ! return
+    logical(LGP) :: r
+    r = .false.
+    select case (this%get_dis_enum())
+    case (DIS2D, DISV2D, DISU2D)
+      r = .true.
+    end select
+  end function is_2d
+
+  !> @Brief return true if grid is one dimensional
+  function is_1d(this) result(r)
+    ! dummy
+    class(DisBaseType) :: this
+    ! return
+    logical(LGP) :: r
+    r = .false.
+    select case (this%get_dis_enum())
+    case (DIS1D, DISV1D, DISU1D)
+      r = .true.
+    end select
+  end function is_1d
 
 end module BaseDisModule

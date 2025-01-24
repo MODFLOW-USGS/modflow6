@@ -836,6 +836,7 @@ contains
     use ChdModule, only: chd_create
     use SwfCdbModule, only: cdb_create
     use SwfZdgModule, only: zdg_create
+    use SwfPcpModule, only: pcp_create
     ! dummy
     class(SwfModelType) :: this
     character(len=*), intent(in) :: filtyp
@@ -867,6 +868,9 @@ contains
     case ('ZDG6')
       call zdg_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, mempath, this%dis, this%cxs, this%dfw%unitconv)
+    case ('PCP6')
+      call pcp_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      pakname, mempath, this%dis, this%dfw, this%cxs)
     case default
       write (errmsg, *) 'Invalid package type: ', filtyp
       call store_error(errmsg)
@@ -1071,7 +1075,7 @@ contains
         this%inoc = inunit
       case ('OBS6')
         this%inobs = inunit
-      case ('CHD6', 'FLW6', 'CDB6', 'ZDG6')
+      case ('CHD6', 'FLW6', 'CDB6', 'ZDG6', 'PCP6')
         call expandarray(bndpkgs)
         bndpkgs(size(bndpkgs)) = n
       case default

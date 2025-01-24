@@ -41,7 +41,7 @@ module OlfModule
   !< candidates for input and these will be loaded in the order specified.
   integer(I4B), parameter :: OLF_NMULTIPKG = 50
   character(len=LENPACKAGETYPE), dimension(OLF_NMULTIPKG) :: OLF_MULTIPKG
-  data OLF_MULTIPKG/'FLW6 ', 'CHD6 ', 'CDB6 ', 'ZDG6 ', '     ', & !  5
+  data OLF_MULTIPKG/'FLW6 ', 'CHD6 ', 'CDB6 ', 'ZDG6 ', 'PCP6 ', & !  5
                    &45*'     '/ ! 50
 
   ! size of supported model package arrays

@@ -1,51 +1,51 @@
-# makefile created by pymake (version 1.2.10.dev0) for the 'mf6' executable.
+# makefile created by pymake (version 1.2.11.dev0) for the 'mf6' executable.
 
 
 include ./makedefaults
 
 # Define the source file directories
 SOURCEDIR1=../src
-SOURCEDIR2=../src/Distributed
-SOURCEDIR3=../src/Exchange
-SOURCEDIR4=../src/Idm
-SOURCEDIR5=../src/Idm/selector
-SOURCEDIR6=../src/Model
-SOURCEDIR7=../src/Model/ChannelFlow
-SOURCEDIR8=../src/Model/Connection
-SOURCEDIR9=../src/Model/Discretization
-SOURCEDIR10=../src/Model/Geometry
-SOURCEDIR11=../src/Model/GroundWaterEnergy
-SOURCEDIR12=../src/Model/GroundWaterFlow
-SOURCEDIR13=../src/Model/GroundWaterFlow/submodules
-SOURCEDIR14=../src/Model/GroundWaterTransport
-SOURCEDIR15=../src/Model/ModelUtilities
-SOURCEDIR16=../src/Model/OverlandFlow
-SOURCEDIR17=../src/Model/ParticleTracking
-SOURCEDIR18=../src/Model/SurfaceWaterFlow
-SOURCEDIR19=../src/Model/TransportModel
-SOURCEDIR20=../src/Solution
-SOURCEDIR21=../src/Solution/LinearMethods
-SOURCEDIR22=../src/Solution/ParticleTracker
-SOURCEDIR23=../src/Solution/PETSc
-SOURCEDIR24=../src/Timing
-SOURCEDIR25=../src/Utilities
-SOURCEDIR26=../src/Utilities/ArrayRead
-SOURCEDIR27=../src/Utilities/Export
-SOURCEDIR28=../src/Utilities/Idm
-SOURCEDIR29=../src/Utilities/Idm/mf6blockfile
-SOURCEDIR30=../src/Utilities/Idm/netcdf
-SOURCEDIR31=../src/Utilities/Libraries
-SOURCEDIR32=../src/Utilities/Libraries/blas
-SOURCEDIR33=../src/Utilities/Libraries/daglib
-SOURCEDIR34=../src/Utilities/Libraries/rcm
-SOURCEDIR35=../src/Utilities/Libraries/sparsekit
-SOURCEDIR36=../src/Utilities/Libraries/sparskit2
-SOURCEDIR37=../src/Utilities/Matrix
-SOURCEDIR38=../src/Utilities/Memory
-SOURCEDIR39=../src/Utilities/Observation
-SOURCEDIR40=../src/Utilities/OutputControl
-SOURCEDIR41=../src/Utilities/TimeSeries
-SOURCEDIR42=../src/Utilities/Vector
+SOURCEDIR2=../src/Idm
+SOURCEDIR3=../src/Idm/selector
+SOURCEDIR4=../src/Exchange
+SOURCEDIR5=../src/Distributed
+SOURCEDIR6=../src/Solution
+SOURCEDIR7=../src/Solution/LinearMethods
+SOURCEDIR8=../src/Solution/ParticleTracker
+SOURCEDIR9=../src/Solution/PETSc
+SOURCEDIR10=../src/Timing
+SOURCEDIR11=../src/Utilities
+SOURCEDIR12=../src/Utilities/Idm
+SOURCEDIR13=../src/Utilities/Idm/mf6blockfile
+SOURCEDIR14=../src/Utilities/Idm/netcdf
+SOURCEDIR15=../src/Utilities/TimeSeries
+SOURCEDIR16=../src/Utilities/Memory
+SOURCEDIR17=../src/Utilities/OutputControl
+SOURCEDIR18=../src/Utilities/ArrayRead
+SOURCEDIR19=../src/Utilities/Libraries
+SOURCEDIR20=../src/Utilities/Libraries/rcm
+SOURCEDIR21=../src/Utilities/Libraries/blas
+SOURCEDIR22=../src/Utilities/Libraries/sparskit2
+SOURCEDIR23=../src/Utilities/Libraries/daglib
+SOURCEDIR24=../src/Utilities/Libraries/sparsekit
+SOURCEDIR25=../src/Utilities/Export
+SOURCEDIR26=../src/Utilities/Vector
+SOURCEDIR27=../src/Utilities/Matrix
+SOURCEDIR28=../src/Utilities/Observation
+SOURCEDIR29=../src/Model
+SOURCEDIR30=../src/Model/Connection
+SOURCEDIR31=../src/Model/ChannelFlow
+SOURCEDIR32=../src/Model/OverlandFlow
+SOURCEDIR33=../src/Model/ParticleTracking
+SOURCEDIR34=../src/Model/SurfaceWaterFlow
+SOURCEDIR35=../src/Model/GroundWaterTransport
+SOURCEDIR36=../src/Model/ModelUtilities
+SOURCEDIR37=../src/Model/GroundWaterFlow
+SOURCEDIR38=../src/Model/GroundWaterFlow/submodules
+SOURCEDIR39=../src/Model/Discretization
+SOURCEDIR40=../src/Model/TransportModel
+SOURCEDIR41=../src/Model/Geometry
+SOURCEDIR42=../src/Model/GroundWaterEnergy
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -125,6 +125,7 @@ $(OBJDIR)/utl-ncfidm.o \
 $(OBJDIR)/utl-hpcidm.o \
 $(OBJDIR)/swf-zdgidm.o \
 $(OBJDIR)/swf-stoidm.o \
+$(OBJDIR)/swf-pcpidm.o \
 $(OBJDIR)/swf-namidm.o \
 $(OBJDIR)/swf-icidm.o \
 $(OBJDIR)/swf-flwidm.o \
@@ -143,14 +144,13 @@ $(OBJDIR)/prt-disvidm.o \
 $(OBJDIR)/prt-disidm.o \
 $(OBJDIR)/olf-zdgidm.o \
 $(OBJDIR)/olf-stoidm.o \
+$(OBJDIR)/olf-pcpidm.o \
 $(OBJDIR)/olf-namidm.o \
 $(OBJDIR)/olf-icidm.o \
 $(OBJDIR)/olf-flwidm.o \
 $(OBJDIR)/olf-disv2didm.o \
-$(OBJDIR)/olf-disv1didm.o \
 $(OBJDIR)/olf-dis2didm.o \
 $(OBJDIR)/olf-dfwidm.o \
-$(OBJDIR)/olf-cxsidm.o \
 $(OBJDIR)/olf-chdidm.o \
 $(OBJDIR)/olf-cdbidm.o \
 $(OBJDIR)/gwt-namidm.o \
@@ -193,12 +193,11 @@ $(OBJDIR)/exg-gwegweidm.o \
 $(OBJDIR)/exg-chfgwfidm.o \
 $(OBJDIR)/chf-zdgidm.o \
 $(OBJDIR)/chf-stoidm.o \
+$(OBJDIR)/chf-pcpidm.o \
 $(OBJDIR)/chf-namidm.o \
 $(OBJDIR)/chf-icidm.o \
 $(OBJDIR)/chf-flwidm.o \
-$(OBJDIR)/chf-disv2didm.o \
 $(OBJDIR)/chf-disv1didm.o \
-$(OBJDIR)/chf-dis2didm.o \
 $(OBJDIR)/chf-dfwidm.o \
 $(OBJDIR)/chf-cxsidm.o \
 $(OBJDIR)/chf-chdidm.o \
@@ -256,17 +255,17 @@ $(OBJDIR)/TimeArraySeriesManager.o \
 $(OBJDIR)/PackageMover.o \
 $(OBJDIR)/Obs.o \
 $(OBJDIR)/NumericalPackage.o \
+$(OBJDIR)/Particle.o \
 $(OBJDIR)/PackageBudget.o \
 $(OBJDIR)/HeadFileReader.o \
 $(OBJDIR)/BudgetObject.o \
 $(OBJDIR)/BoundaryPackage.o \
 $(OBJDIR)/CellDefn.o \
-$(OBJDIR)/Particle.o \
+$(OBJDIR)/TrackFile.o \
 $(OBJDIR)/sort.o \
 $(OBJDIR)/FlowModelInterface.o \
 $(OBJDIR)/Cell.o \
 $(OBJDIR)/Subcell.o \
-$(OBJDIR)/TrackFile.o \
 $(OBJDIR)/TrackControl.o \
 $(OBJDIR)/TimeSelect.o \
 $(OBJDIR)/prt-fmi.o \
@@ -308,6 +307,7 @@ $(OBJDIR)/MethodSubcellPool.o \
 $(OBJDIR)/CellPoly.o \
 $(OBJDIR)/CellRectQuad.o \
 $(OBJDIR)/CellRect.o \
+$(OBJDIR)/SwfCxsUtils.o \
 $(OBJDIR)/VirtualModel.o \
 $(OBJDIR)/BaseExchange.o \
 $(OBJDIR)/TspSpc.o \
@@ -332,8 +332,9 @@ $(OBJDIR)/MethodCellTernary.o \
 $(OBJDIR)/MethodCellPollockQuad.o \
 $(OBJDIR)/MethodCellPollock.o \
 $(OBJDIR)/MethodCellPassToBot.o \
-$(OBJDIR)/SwfCxsUtils.o \
 $(OBJDIR)/Disv1dGeom.o \
+$(OBJDIR)/VectorInterpolation.o \
+$(OBJDIR)/swf-cxs.o \
 $(OBJDIR)/CellWithNbrs.o \
 $(OBJDIR)/NumericalExchange.o \
 $(OBJDIR)/tsp-ssm.o \
@@ -360,20 +361,19 @@ $(OBJDIR)/VirtualSolution.o \
 $(OBJDIR)/SparseMatrix.o \
 $(OBJDIR)/LinearSolverBase.o \
 $(OBJDIR)/ImsReordering.o \
-$(OBJDIR)/StructVector.o \
 $(OBJDIR)/ModflowInput.o \
+$(OBJDIR)/DefinitionSelect.o \
+$(OBJDIR)/StructVector.o \
 $(OBJDIR)/IdmLogger.o \
 $(OBJDIR)/NCFileVars.o \
 $(OBJDIR)/Integer1dReader.o \
 $(OBJDIR)/Double2dReader.o \
 $(OBJDIR)/Double1dReader.o \
-$(OBJDIR)/DefinitionSelect.o \
 $(OBJDIR)/MethodCellPool.o \
 $(OBJDIR)/CellUtil.o \
-$(OBJDIR)/swf-cxs.o \
 $(OBJDIR)/Disv1d.o \
+$(OBJDIR)/swf-dfw.o \
 $(OBJDIR)/swf-ic.o \
-$(OBJDIR)/VectorInterpolation.o \
 $(OBJDIR)/VirtualExchange.o \
 $(OBJDIR)/GridSorting.o \
 $(OBJDIR)/DisConnExchange.o \
@@ -411,20 +411,20 @@ $(OBJDIR)/gwe-cnd.o \
 $(OBJDIR)/RouterBase.o \
 $(OBJDIR)/ImsLinearSolver.o \
 $(OBJDIR)/ImsLinearBase.o \
+$(OBJDIR)/DynamicPackageParams.o \
 $(OBJDIR)/StructArray.o \
 $(OBJDIR)/LoadNCInput.o \
 $(OBJDIR)/LayeredArrayReader.o \
-$(OBJDIR)/DynamicPackageParams.o \
 $(OBJDIR)/InputLoadType.o \
 $(OBJDIR)/ReleaseSchedule.o \
 $(OBJDIR)/MethodDisv.o \
 $(OBJDIR)/MethodDis.o \
 $(OBJDIR)/swf-zdg.o \
 $(OBJDIR)/swf-sto.o \
+$(OBJDIR)/swf-pcp.o \
 $(OBJDIR)/swf-oc.o \
 $(OBJDIR)/swf-obs.o \
 $(OBJDIR)/swf-flw.o \
-$(OBJDIR)/swf-dfw.o \
 $(OBJDIR)/swf-cdb.o \
 $(OBJDIR)/Disv2d.o \
 $(OBJDIR)/Dis2d.o \
@@ -440,9 +440,9 @@ $(OBJDIR)/Timer.o \
 $(OBJDIR)/LinearSolverFactory.o \
 $(OBJDIR)/ImsLinear.o \
 $(OBJDIR)/BaseSolution.o \
+$(OBJDIR)/BoundInputContext.o \
 $(OBJDIR)/LoadMf6File.o \
 $(OBJDIR)/AsciiInputLoadType.o \
-$(OBJDIR)/BoundInputContext.o \
 $(OBJDIR)/prt-prp.o \
 $(OBJDIR)/prt-oc.o \
 $(OBJDIR)/prt-mip.o \
@@ -513,7 +513,11 @@ $(OBJDIR)/gwf-sfr-constant.o \
 $(OBJDIR)/RectangularGeometry.o \
 $(OBJDIR)/CircularGeometry.o \
 $(OBJDIR)/ExplicitModel.o \
-$(OBJDIR)/exg-swfgwfidm.o
+$(OBJDIR)/olf-disv1didm.o \
+$(OBJDIR)/olf-cxsidm.o \
+$(OBJDIR)/exg-swfgwfidm.o \
+$(OBJDIR)/chf-disv2didm.o \
+$(OBJDIR)/chf-dis2didm.o
 
 # Define the objects that make up the program
 $(PROGRAM) : $(OBJECTS)
