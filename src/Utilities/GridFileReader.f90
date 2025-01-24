@@ -48,7 +48,7 @@ module GridFileReaderModule
     procedure, private :: read_header
     procedure, private :: read_header_meta
     procedure, private :: read_header_body
-    procedure, private :: build_index
+    ! procedure, private :: build_index
   end type GridFileReaderType
 
 contains
@@ -65,7 +65,7 @@ contains
     call hash_table_cr(this%shp_idx)
     allocate (this%shp(0))
     call this%read_header()
-    call this%build_index()
+    ! call this%build_index()
   end subroutine initialize
 
   !> @brief Finalize the grid file reader.
@@ -133,8 +133,8 @@ contains
 
   end subroutine read_header_meta
 
-  !> @brief Read the header body section (text following the first
-  !< four "meta" lines). Internal use only.
+  !> @brief Read the header body section (text following first
+  !< four "meta" lines) and build an index. Internal use only.
   subroutine read_header_body(this)
     ! dummy
     class(GridFileReaderType) :: this
@@ -143,7 +143,7 @@ contains
     character(len=:), allocatable :: line
     character(len=10) :: key, dtype
     real(DP) :: rval
-    integer(I4B) :: i, lloc, istart, istop, ival
+    integer(I4B) :: i, lloc, istart, istop, ival, pos
     integer(I4B) :: nvars, ndim, dim, ishp
     integer(I4B), allocatable :: shp(:)
 
@@ -153,6 +153,7 @@ contains
 
     nvars = 0
     read (this%inunit) body
+    inquire (this%inunit, pos=pos)
     do i = 1, this%lentxt * this%ntxt, this%lentxt
       line = body(i:i + this%lentxt - 1)
       lloc = 1
@@ -194,63 +195,26 @@ contains
         this%shp(ishp + 1:ishp + ndim) = shp
         call this%shp_idx%add(key, ishp + 1)
       end if
-    end do
-  end subroutine read_header_body
 
-  !> @brief Skim the file and build an index. Internal use only.
-  subroutine build_index(this)
-    ! dummy
-    class(GridFileReaderType) :: this
-    ! local
-    character(len=10) :: key
-    integer(I4B) :: i, dim, ndim, nval, shp_idx, pos, typ
-    integer(I4B) :: ival
-    real(DP) :: rval
-    integer(I4B), allocatable :: shp(:)
-    integer(I4B), allocatable :: tmp_int(:)
-    real(DP), allocatable :: tmp_dbl(:)
-
-    do i = 1, this%ntxt
-      key = this%keys(i)
-      typ = this%typ%get(key)
-      ndim = this%dim%get(key)
-
-      ! update position
-      inquire (this%inunit, pos=pos)
+      ! position
       call this%pos%add(key, pos)
-
-      ! read variable
       if (ndim == 0) then
-        ! read scalar
-        if (typ == 1) then
-          read (this%inunit) ival
-        else if (typ == 2) then
-          read (this%inunit) rval
+        if (dtype == "INTEGER") then
+          pos = pos + 4
+        else if (dtype == "DOUBLE") then
+          pos = pos + 8
         end if
       else
-        ! get shape
-        shp_idx = this%shp_idx%get(key)
-        if (allocated(shp)) deallocate (shp)
-        allocate (shp(ndim))
-        shp = this%shp(shp_idx:shp_idx + ndim - 1)
-        nval = 1
-        do dim = 1, ndim
-          nval = nval * shp(dim)
-        end do
-        ! read array
-        if (typ == 1) then
-          allocate (tmp_int(nval))
-          read (this%inunit) tmp_int
-          deallocate (tmp_int)
-        else if (typ == 2) then
-          allocate (tmp_dbl(nval))
-          read (this%inunit) tmp_dbl
-          deallocate (tmp_dbl)
+        if (dtype == "INTEGER") then
+          pos = pos + (product(shp) * 4)
+        else if (dtype == "DOUBLE") then
+          pos = pos + (product(shp) * 8)
         end if
       end if
     end do
+
     rewind (this%inunit)
-  end subroutine build_index
+  end subroutine read_header_body
 
   !> @brief Read an integer from a grid file.
   function read_int(this, key) result(v)
@@ -302,6 +266,7 @@ contains
     rewind (this%inunit)
   end function read_dbl
 
+  !> @brief Read the grid shape from a grid file.
   function read_grid_shape(this) result(v)
     ! dummy
     class(GridFileReaderType) :: this
@@ -323,6 +288,7 @@ contains
     end select
   end function read_grid_shape
 
+  !> @brief Read ia array from a grid file.
   function read_ia(this) result(v)
     ! dummy
     class(GridFileReaderType) :: this
@@ -340,6 +306,7 @@ contains
     rewind (this%inunit)
   end function read_ia
 
+  !> @brief Read ja array from a grid file.
   function read_ja(this) result(v)
     ! dummy
     class(GridFileReaderType) :: this
