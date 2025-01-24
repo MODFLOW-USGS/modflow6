@@ -335,7 +335,6 @@ contains
     ! local
     character(len=10) :: key
     integer(I4B) :: idx, nvals, pos
-    integer(I4B), allocatable :: tmp(:)
 
     key = "IA"
     idx = this%shp_idx%get(key)
@@ -353,7 +352,6 @@ contains
     ! local
     character(len=10) :: key
     integer(I4B) :: idx, nvals, pos
-    integer(I4B), allocatable :: tmp(:)
 
     key = "JA"
     idx = this%shp_idx%get(key)
