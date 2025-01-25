@@ -253,7 +253,7 @@ contains
             if (constant) then
               write(iu,50)'CONSTANT', nlval
             else
-              write(iu,50)'INTERNAL  FACTOR  1  IPRN ',iprni
+              write(iu,50)'INTERNAL FACTOR  1  IPRN ',iprni
               do i=1,nrow
                 write(iu,80)(this%iet(j,i),j=1,ncol)
               enddo
@@ -517,7 +517,7 @@ contains
             write(iu,60)'CONSTANT', rvalpx
           else
             ! write array control line and array to input file
-            write(iu,70)'INTERNAL  FACTOR  1.0  IPRN ',iprnr
+            write(iu,70)'INTERNAL FACTOR  1.0  IPRN ',iprnr
             do i=ii,n
               call currentBlock%GetLine(i, line)
               write(iu,10)trim(line)
@@ -533,7 +533,7 @@ contains
             write(iu,60)'CONSTANT', rvalpe
           else
             ! write array control line and array to input file
-            write(iu,70)'INTERNAL  FACTOR  1.0  IPRN ',iprnr
+            write(iu,70)'INTERNAL FACTOR  1.0  IPRN ',iprnr
             do i=ii,n
               call currentBlock%GetLine(i, line)
               write(iu,10)trim(line)

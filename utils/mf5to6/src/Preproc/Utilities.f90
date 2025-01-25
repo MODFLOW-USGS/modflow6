@@ -230,7 +230,7 @@ contains
     ! formats
     10 format(2x,a)
     20 format(4x,'CONSTANT',2x,g16.9,4x,a)
-    30 format(4x,'INTERNAL  FACTOR',2x,g16.9,2x,'IPRN',2x,i0,4x,a)
+    30 format(4x,'INTERNAL FACTOR',2x,g16.9,2x,'IPRN',2x,i0,4x,a)
     !
     ! write name if requested, indented 2 spaces
     if (writenameline) then
@@ -269,7 +269,7 @@ contains
     ! formats
     10 format(2x,a)
     20 format(4x,'CONSTANT',2x,g14.7)
-    30 format(4x,'INTERNAL  FACTOR',2x,g14.7,2x,'IPRN',2x,i0)
+    30 format(4x,'INTERNAL FACTOR',2x,g14.7,2x,'IPRN',2x,i0)
     !
     ! write name if requested, indented 2 spaces
     if (writenameline) then
@@ -309,7 +309,7 @@ contains
     ! formats
     10 format(2x,a)
     20 format(4x,'CONSTANT',2x,g16.9,4x,a)
-    30 format(4x,'INTERNAL  FACTOR',2x,g16.9,2x,'IPRN',2x,i0,4x,a)
+    30 format(4x,'INTERNAL FACTOR',2x,g16.9,2x,'IPRN',2x,i0,4x,a)
     !
     ! write name if requested, indented 2 spaces
     if (writenameline) then
@@ -501,7 +501,7 @@ contains
     ! formats
     10 format(2x,a)
     20 format(4x,'CONSTANT',2x,i0,2x,a)
-    30 format(4x,'INTERNAL  FACTOR',2x,i0,2x,'IPRN',2x,i0,4x,a)
+    30 format(4x,'INTERNAL FACTOR',2x,i0,2x,'IPRN',2x,i0,4x,a)
     40 format(20(1x,i4))
     !
     ! write name if requested, indented 2 spaces
@@ -544,7 +544,7 @@ contains
     ! formats
     10 format(2x,a)
     20 format(4x,'CONSTANT',2x,i0,2x,a)
-    30 format(4x,'INTERNAL  FACTOR',2x,i0,2x,'IPRN',2x,i0,4x,a)
+    30 format(4x,'INTERNAL FACTOR',2x,i0,2x,'IPRN',2x,i0,4x,a)
     40 format(20(1x,i4))
     !
     ! write name if requested, indented 2 spaces

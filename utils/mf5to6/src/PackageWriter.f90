@@ -468,7 +468,7 @@ contains
           write(iu,60)'CONSTANT', rval
         else
           ! write array control line and array to input file
-          write(iu,80)'INTERNAL  FACTOR  1.0  IPRN ',iprnr
+          write(iu,80)'INTERNAL FACTOR  1.0  IPRN ',iprnr
           n = currentBlock%CountLines()
           do i=1,n
             call currentBlock%GetLine(i, line)

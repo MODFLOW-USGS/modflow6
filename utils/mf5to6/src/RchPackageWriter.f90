@@ -159,7 +159,7 @@ contains
           if (constant) then
             write(iu,50)'CONSTANT', nlval
           else
-            write(iu,50)'INTERNAL  FACTOR  1  IPRN ',iprni
+            write(iu,50)'INTERNAL FACTOR  1  IPRN ',iprni
             do i=1,nrow
               write(iu,80)(IRCH(j,i),j=1,ncol)
             enddo
@@ -187,7 +187,7 @@ contains
             write(iu,60)'CONSTANT', rechval
           else
             ! write array control line and RECH array to input file
-            write(iu,50)'INTERNAL  FACTOR  1.0  IPRN ',iprnr
+            write(iu,50)'INTERNAL FACTOR  1.0  IPRN ',iprnr
             n = this%CurrentBlock%CountLines()
             do i=1,n
               call this%CurrentBlock%GetLine(i, line)

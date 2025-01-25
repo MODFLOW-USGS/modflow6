@@ -165,7 +165,7 @@ contains
       if (constant) then
         write(iu,40)'CONSTANT', val0
       else
-        write(iu,30)'INTERNAL  FACTOR  1.0  IPRN ',iprnr
+        write(iu,30)'INTERNAL FACTOR  1.0  IPRN ',iprnr
         call Write2dValues(iu,NROW,NCOL,this%hk(:,:,k))
       endif
       if (LAYCBD(k) /= 0) then
@@ -252,7 +252,7 @@ contains
         if (constant) then
           write(iu,40)'CONSTANT', val0
         else
-          write(iu,30)'INTERNAL  FACTOR  1.0  IPRN ',iprnr
+          write(iu,30)'INTERNAL FACTOR  1.0  IPRN ',iprnr
           call Write2dValues(iu,NROW,NCOL,this%vk(:,:,k))
         endif
       enddo
@@ -302,7 +302,7 @@ contains
           if (constant) then
             write(iu,40)'CONSTANT', val0
           else
-            write(iu,30)'INTERNAL  FACTOR  1.0  IPRN ',iprnr
+            write(iu,30)'INTERNAL FACTOR  1.0  IPRN ',iprnr
             call Write2dValues(iu,NROW,NCOL,this%WetDry(:,:,k))
           endif
         else
@@ -343,7 +343,7 @@ contains
               this%hani(j,i,k) = this%hani(j,i,k) * this%hk(j,i,k)
             end do
           end do
-          write(iu,30)'INTERNAL  FACTOR  1.0  IPRN ',iprnr
+          write(iu,30)'INTERNAL FACTOR  1.0  IPRN ',iprnr
           call Write2dValues(iu,NROW,NCOL,this%hani(:,:,k))
         endif
         if (LAYCBD(k) /= 0) then
