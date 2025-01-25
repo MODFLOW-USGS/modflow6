@@ -215,7 +215,7 @@ jobs:
             debug: true
           # windows, release mode
           - os: windows-2022
-            debug: false
+            debug: true
     defaults:
       run:
         shell: bash

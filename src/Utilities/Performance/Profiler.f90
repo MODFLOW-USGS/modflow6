@@ -387,7 +387,7 @@ contains
 
     call this%callstack%destroy()
 
-    do i = 1, this%nr_sections
+    do i = 1, MAX_NR_TIMED_SECTIONS
       call this%all_sections(i)%children%destroy()
     end do
     deallocate (this%all_sections)
