@@ -33,8 +33,8 @@ module ProfilerModule
     integer(I4B) :: tmr_prep_tstp !< handle to timed section "Prepare time step"
     integer(I4B) :: tmr_do_tstp !< handle to timed section "Do time step"
     integer(I4B) :: tmr_final_tstp !< handle to timed section "Finalize time step"
-    integer(I4B) :: tmr_output = -1 !< handle to timed section "Write output"
-    integer(I4B) :: tmr_nc_export = -1 !< handle to timed section "NetCDF export"
+    integer(I4B) :: tmr_output !< handle to timed section "Write output"
+    integer(I4B) :: tmr_nc_export !< handle to timed section "NetCDF export"
     ! private
     integer(I4B), private :: iout !< output unit number, typically simulation listing file
     integer(I4B), private :: pr_option !< 0 = NONE, 1 = SUMMARY, 2 = DETAIL
@@ -98,6 +98,8 @@ contains
     this%tmr_prep_tstp = -1
     this%tmr_do_tstp = -1
     this%tmr_final_tstp = -1
+    this%tmr_output = -1
+    this%tmr_nc_export = -1
 
     call this%callstack%init()
 
