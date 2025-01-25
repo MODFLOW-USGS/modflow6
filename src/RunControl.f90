@@ -66,7 +66,7 @@ contains
     call mem_da()
 
     ! stop and print timings
-    call g_prof%stop(g_prof%tmr_init)
+    call g_prof%stop(g_prof%tmr_run)
     call g_prof%print(iout)
     call g_prof%destroy()
 
