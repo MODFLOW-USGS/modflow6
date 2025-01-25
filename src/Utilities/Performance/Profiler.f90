@@ -25,7 +25,7 @@ module ProfilerModule
   !! parts of the application. It provides mechanisms to start, stop, and
   !< report on the performance metrics collected during execution.
   type, public :: ProfilerType
-    ! handles for the main simulation structure
+    ! handles for the global simulation structure (with no simulation objects to store them)
     integer(I4B) :: tmr_run !< handle to timed section "Run"
     integer(I4B) :: tmr_init !< handle to timed section "Initialize"
     integer(I4B) :: tmr_update !< handle to timed section "Update"
@@ -33,6 +33,8 @@ module ProfilerModule
     integer(I4B) :: tmr_prep_tstp !< handle to timed section "Prepare time step"
     integer(I4B) :: tmr_do_tstp !< handle to timed section "Do time step"
     integer(I4B) :: tmr_final_tstp !< handle to timed section "Finalize time step"
+    integer(I4B) :: tmr_output = -1 !< handle to timed section "Write output"
+    integer(I4B) :: tmr_nc_export = -1 !< handle to timed section "NetCDF export"
     ! private
     integer(I4B), private :: iout !< output unit number, typically simulation listing file
     integer(I4B), private :: pr_option !< 0 = NONE, 1 = SUMMARY, 2 = DETAIL
@@ -165,7 +167,7 @@ contains
 
     call cpu_time(start_time)
 
-    if (section_id < 1) then
+    if (section_id == -1) then
       ! add section if not exist
       parent_id = 0 ! root
       if (this%callstack%size() > 0) then

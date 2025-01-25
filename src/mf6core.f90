@@ -724,8 +724,6 @@ contains
     integer(I4B) :: ix
     integer(I4B) :: ic
     integer(I4B) :: is
-    integer(I4B), save :: tmr_output = -1 !< timer for output
-    integer(I4B), save :: tmr_nc_export = -1 !< timer for netcdf output
     !
     ! -- initialize format and line
     fmt = "(/,a,/)"
@@ -746,7 +744,7 @@ contains
       end do
     case (MNORMAL)
 
-      call g_prof%start("Write output", tmr_output)
+      call g_prof%start("Write output", g_prof%tmr_output)
       !
       ! -- Write output and final message for timestep for each model
       do im = 1, basemodellist%Count()
@@ -774,11 +772,11 @@ contains
       end do
       !
       ! -- update exports
-      call g_prof%start("NetCDF export", tmr_nc_export)
+      call g_prof%start("NetCDF export", g_prof%tmr_nc_export)
       call export_post_step()
-      call g_prof%stop(tmr_nc_export)
+      call g_prof%stop(g_prof%tmr_nc_export)
 
-      call g_prof%stop(tmr_output)
+      call g_prof%stop(g_prof%tmr_output)
     end select
     !
     ! -- Check if we're done
