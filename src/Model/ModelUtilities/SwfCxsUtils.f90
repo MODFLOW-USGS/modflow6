@@ -1049,16 +1049,17 @@ contains
     dmin = min(d0, d1)
     dmax = max(d0, d1)
     !
-    ! -- if d is less than or equal to the minimum value the
-    !    station length (xlen) is zero
+    ! -- calculate x0 and x1
     if (d <= dmin) then
+      ! -- if d is less than or equal to the minimum value the
+      !    station length (xlen) is zero
       x1 = x0
-      ! -- if d is between dmin and dmax station length is less
-      !    than d1 - d0
     else if (d >= dmax) then
       ! x0 and x1 unchanged (full wetted width)
       continue
     else
+      ! -- if d is between dmin and dmax, station length is less
+      !    than d1 - d0
       xlen = x1 - x0
       dlen = d1 - d0
       ! because of preceding checks
