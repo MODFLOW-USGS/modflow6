@@ -14,6 +14,7 @@ module IdmOlfDfnSelectorModule
   use OlfChdInputModule
   use OlfFlwInputModule
   use OlfPcpInputModule
+  use OlfEvpInputModule
   use OlfStoInputModule
   use OlfZdgInputModule
 
@@ -69,6 +70,8 @@ contains
       call set_param_pointer(input_definition, olf_flw_param_definitions)
     case ('PCP')
       call set_param_pointer(input_definition, olf_pcp_param_definitions)
+    case ('EVP')
+      call set_param_pointer(input_definition, olf_evp_param_definitions)
     case ('STO')
       call set_param_pointer(input_definition, olf_sto_param_definitions)
     case ('ZDG')
@@ -101,6 +104,8 @@ contains
       call set_param_pointer(input_definition, olf_flw_aggregate_definitions)
     case ('PCP')
       call set_param_pointer(input_definition, olf_pcp_aggregate_definitions)
+    case ('EVP')
+      call set_param_pointer(input_definition, olf_evp_aggregate_definitions)
     case ('STO')
       call set_param_pointer(input_definition, olf_sto_aggregate_definitions)
     case ('ZDG')
@@ -133,6 +138,8 @@ contains
       call set_block_pointer(input_definition, olf_flw_block_definitions)
     case ('PCP')
       call set_block_pointer(input_definition, olf_pcp_block_definitions)
+    case ('EVP')
+      call set_block_pointer(input_definition, olf_evp_block_definitions)
     case ('STO')
       call set_block_pointer(input_definition, olf_sto_block_definitions)
     case ('ZDG')
@@ -164,6 +171,8 @@ contains
       multi_package = olf_flw_multi_package
     case ('PCP')
       multi_package = olf_pcp_multi_package
+    case ('EVP')
+      multi_package = olf_evp_multi_package
     case ('STO')
       multi_package = olf_sto_multi_package
     case ('ZDG')
@@ -198,6 +207,8 @@ contains
       call set_subpkg_pointer(subpackages, olf_flw_subpackages)
     case ('PCP')
       call set_subpkg_pointer(subpackages, olf_pcp_subpackages)
+    case ('EVP')
+      call set_subpkg_pointer(subpackages, olf_evp_subpackages)
     case ('STO')
       call set_subpkg_pointer(subpackages, olf_sto_subpackages)
     case ('ZDG')
@@ -229,6 +240,8 @@ contains
     case ('FLW')
       integrated = .true.
     case ('PCP')
+      integrated = .true.
+    case ('EVP')
       integrated = .true.
     case ('STO')
       integrated = .true.

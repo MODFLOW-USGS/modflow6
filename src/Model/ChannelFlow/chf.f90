@@ -42,7 +42,8 @@ module ChfModule
   integer(I4B), parameter :: CHF_NMULTIPKG = 50
   character(len=LENPACKAGETYPE), dimension(CHF_NMULTIPKG) :: CHF_MULTIPKG
   data CHF_MULTIPKG/'FLW6 ', 'CHD6 ', 'CDB6 ', 'ZDG6 ', 'PCP6 ', & !  5
-                   &45*'     '/ ! 50
+                    'EVP6 ', '     ', '     ', '     ', '     ', & !  10
+                    &40*'     '/ ! 50
 
   ! size of supported model package arrays
   integer(I4B), parameter :: NIUNIT_CHF = CHF_NBASEPKG + CHF_NMULTIPKG

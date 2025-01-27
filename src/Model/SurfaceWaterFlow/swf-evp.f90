@@ -1,13 +1,13 @@
-!> @brief This module contains the precipitation (PCP) package methods
+!> @brief This module contains the evaporation (EVP) package methods
 !!
-!! This module can be used to represent precipitation onto streams and
+!! This module can be used to represent evaporation onto streams and
 !! overland flow cells.
 !<
-module SwfPcpModule
+module SwfEvpModule
 
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: DZERO, LENFTYPE, LENPACKAGENAME, MAXCHARLEN, &
-                             LINELENGTH
+                             LINELENGTH, DONE
   use MemoryHelperModule, only: create_mem_path
   use BndModule, only: BndType
   use BndExtModule, only: BndExtType
@@ -17,6 +17,7 @@ module SwfPcpModule
   use TimeArraySeriesLinkModule, only: TimeArraySeriesLinkType
   use BlockParserModule, only: BlockParserType
   use CharacterStringModule, only: CharacterStringType
+  use SmoothingModule, only: sQSaturation
   use MatrixBaseModule
   use GeomUtilModule, only: get_node
   use BaseDisModule, only: DisBaseType
@@ -27,14 +28,14 @@ module SwfPcpModule
   implicit none
 
   private
-  public :: pcp_create
+  public :: evp_create
 
-  character(len=LENFTYPE) :: ftype = 'PCP'
-  character(len=LENPACKAGENAME) :: text = '             PCP'
-  ! character(len=LENPACKAGENAME) :: texta = '            PCPA'
+  character(len=LENFTYPE) :: ftype = 'EVP'
+  character(len=LENPACKAGENAME) :: text = '             EVP'
+  ! character(len=LENPACKAGENAME) :: texta = '            EVPA'
 
-  type, extends(BndExtType) :: SwfPcpType
-    real(DP), dimension(:), pointer, contiguous :: precipitation => null() !< boundary precipitation array
+  type, extends(BndExtType) :: SwfEvpType
+    real(DP), dimension(:), pointer, contiguous :: evaporation => null() !< boundary evaporation array
     logical, pointer, private :: read_as_arrays
 
     ! pointers to other objects
@@ -43,32 +44,34 @@ module SwfPcpModule
 
   contains
 
-    procedure :: pcp_allocate_scalars
-    procedure :: allocate_arrays => pcp_allocate_arrays
-    procedure :: source_options => pcp_source_options
-    procedure :: source_dimensions => pcp_source_dimensions
-    procedure :: log_pcp_options
-    procedure :: read_initial_attr => pcp_read_initial_attr
-    procedure :: bnd_rp => pcp_rp
-    procedure :: bnd_ck => pcp_ck
-    procedure :: bnd_cf => pcp_cf
-    procedure :: bnd_fc => pcp_fc
-    procedure :: bnd_da => pcp_da
-    procedure :: define_listlabel => pcp_define_listlabel
-    procedure :: bound_value => pcp_bound_value
+    procedure :: evp_allocate_scalars
+    procedure :: allocate_arrays => evp_allocate_arrays
+    procedure :: source_options => evp_source_options
+    procedure :: source_dimensions => evp_source_dimensions
+    procedure :: log_evp_options
+    procedure :: read_initial_attr => evp_read_initial_attr
+    procedure :: bnd_rp => evp_rp
+    procedure :: bnd_ck => evp_ck
+    procedure :: bnd_cf => evp_cf
+    procedure :: bnd_fc => evp_fc
+    procedure :: bnd_da => evp_da
+    procedure :: define_listlabel => evp_define_listlabel
+    procedure :: bound_value => evp_bound_value
     procedure, private :: default_nodelist
     procedure, private :: reach_length_pointer
+    procedure, private :: get_qevp
+    procedure, private :: get_evap_reduce_mult
     ! for observations
-    procedure, public :: bnd_obs_supported => pcp_obs_supported
-    procedure, public :: bnd_df_obs => pcp_df_obs
+    procedure, public :: bnd_obs_supported => evp_obs_supported
+    procedure, public :: bnd_df_obs => evp_df_obs
 
-  end type SwfPcpType
+  end type SwfEvpType
 
 contains
 
-  !> @brief Create a Precipitation Package
+  !> @brief Create a Evaporation Package
   !<
-  subroutine pcp_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
+  subroutine evp_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         mempath, dis, dfw, cxs)
     ! dummy
     class(BndType), pointer :: packobj !< pointer to default package type
@@ -83,18 +86,18 @@ contains
     type(SwfDfwType), pointer, intent(in) :: dfw !< the pointer to the dfw package
     type(SwfCxsType), pointer, intent(in) :: cxs !< the pointer to the cxs package
     ! local
-    type(SwfPcpType), pointer :: pcpobj
+    type(SwfEvpType), pointer :: evpobj
 
-    ! allocate precipitation object and scalar variables
-    allocate (pcpobj)
-    packobj => pcpobj
+    ! allocate evaporation object and scalar variables
+    allocate (evpobj)
+    packobj => evpobj
 
     ! create name and memory path
     call packobj%set_names(ibcnum, namemodel, pakname, ftype, mempath)
     packobj%text = text
 
     ! allocate scalars
-    call pcpobj%pcp_allocate_scalars()
+    call evpobj%evp_allocate_scalars()
 
     ! initialize package
     call packobj%pack_initialize()
@@ -106,20 +109,20 @@ contains
     packobj%ictMemPath = create_mem_path(namemodel, 'DFW')
 
     ! store pointer to dis
-    pcpobj%dis => dis
+    evpobj%dis => dis
 
     ! store pointer to dfw
-    pcpobj%dfw => dfw
+    evpobj%dfw => dfw
 
     ! store pointer to cxs
-    pcpobj%cxs => cxs
-  end subroutine pcp_create
+    evpobj%cxs => cxs
+  end subroutine evp_create
 
   !> @brief Allocate scalar members
   !<
-  subroutine pcp_allocate_scalars(this)
+  subroutine evp_allocate_scalars(this)
     ! dummy
-    class(SwfPcpType), intent(inout) :: this
+    class(SwfEvpType), intent(inout) :: this
 
     ! allocate base scalars
     call this%BndExtType%allocate_scalars()
@@ -129,15 +132,15 @@ contains
 
     ! Set values
     this%read_as_arrays = .false.
-  end subroutine pcp_allocate_scalars
+  end subroutine evp_allocate_scalars
 
   !> @brief Allocate package arrays
   !<
-  subroutine pcp_allocate_arrays(this, nodelist, auxvar)
+  subroutine evp_allocate_arrays(this, nodelist, auxvar)
     ! modules
     use MemoryManagerModule, only: mem_setptr, mem_checkin
     ! dummy
-    class(SwfPcpType) :: this
+    class(SwfEvpType) :: this
     integer(I4B), dimension(:), pointer, contiguous, optional :: nodelist
     real(DP), dimension(:, :), pointer, contiguous, optional :: auxvar
 
@@ -145,21 +148,21 @@ contains
     call this%BndExtType%allocate_arrays(nodelist, auxvar)
 
     ! set input context pointers
-    call mem_setptr(this%precipitation, 'PRECIPITATION', this%input_mempath)
+    call mem_setptr(this%evaporation, 'EVAPORATION', this%input_mempath)
 
     ! checkin input context pointers
-    call mem_checkin(this%precipitation, 'PRECIPITATION', this%memoryPath, &
-                     'PRECIPITATION', this%input_mempath)
-  end subroutine pcp_allocate_arrays
+    call mem_checkin(this%evaporation, 'EVAPORATION', this%memoryPath, &
+                     'EVAPORATION', this%input_mempath)
+  end subroutine evp_allocate_arrays
 
-  !> @brief Source options specific to PCPType
+  !> @brief Source options specific to EVPType
   !<
-  subroutine pcp_source_options(this)
+  subroutine evp_source_options(this)
     ! modules
     use MemoryManagerExtModule, only: mem_set_value
     implicit none
     ! dummy
-    class(SwfPcpType), intent(inout) :: this
+    class(SwfEvpType), intent(inout) :: this
     ! local
     logical(LGP) :: found_readasarrays = .false.
 
@@ -170,20 +173,20 @@ contains
     call mem_set_value(this%read_as_arrays, 'READASARRAYS', this%input_mempath, &
                        found_readasarrays)
 
-    ! log pcp params
-    call this%log_pcp_options(found_readasarrays)
-  end subroutine pcp_source_options
+    ! log evp params
+    call this%log_evp_options(found_readasarrays)
+  end subroutine evp_source_options
 
-  !> @brief Log options specific to SwfPcpType
+  !> @brief Log options specific to SwfEvpType
   !<
-  subroutine log_pcp_options(this, found_readasarrays)
+  subroutine log_evp_options(this, found_readasarrays)
     implicit none
     ! dummy
-    class(SwfPcpType), intent(inout) :: this
+    class(SwfEvpType), intent(inout) :: this
     logical(LGP), intent(in) :: found_readasarrays
     ! formats
     character(len=*), parameter :: fmtreadasarrays = &
-      &"(4x, 'PRECIPITATION INPUT WILL BE READ AS ARRAY(S).')"
+      &"(4x, 'EVAPORATION INPUT WILL BE READ AS ARRAY(S).')"
 
     ! log found options
     write (this%iout, '(/1x,a)') 'PROCESSING '//trim(adjustl(this%text)) &
@@ -196,13 +199,13 @@ contains
     ! close logging block
     write (this%iout, '(1x,a)') &
       'END OF '//trim(adjustl(this%text))//' OPTIONS'
-  end subroutine log_pcp_options
+  end subroutine log_evp_options
 
   !> @brief Source the dimensions for this package
   !<
-  subroutine pcp_source_dimensions(this)
+  subroutine evp_source_dimensions(this)
     ! dummy
-    class(SwfPcpType), intent(inout) :: this
+    class(SwfEvpType), intent(inout) :: this
 
     if (this%read_as_arrays) then
 
@@ -228,35 +231,35 @@ contains
     ! Call define_listlabel to construct the list label that is written
     !    when PRINT_INPUT option is used.
     call this%define_listlabel()
-  end subroutine pcp_source_dimensions
+  end subroutine evp_source_dimensions
 
   !> @brief Part of allocate and read
   !<
-  subroutine pcp_read_initial_attr(this)
+  subroutine evp_read_initial_attr(this)
     ! dummy
-    class(SwfPcpType), intent(inout) :: this
+    class(SwfEvpType), intent(inout) :: this
 
     if (this%read_as_arrays) then
       call this%default_nodelist()
     end if
-  end subroutine pcp_read_initial_attr
+  end subroutine evp_read_initial_attr
 
   !> @brief Read and Prepare
   !!
   !! Read itmp and read new boundaries if itmp > 0
   !<
-  subroutine pcp_rp(this)
+  subroutine evp_rp(this)
     ! modules
     use TdisModule, only: kper
     implicit none
     ! dummy
-    class(SwfPcpType), intent(inout) :: this
+    class(SwfEvpType), intent(inout) :: this
 
     if (this%iper /= kper) return
 
     if (this%read_as_arrays) then
-      ! no need to do anything because this%precipitation points directly to
-      ! the input context precipitation, which is automatically updated by idm
+      ! no need to do anything because this%evaporation points directly to
+      ! the input context evaporation, which is automatically updated by idm
     else
       call this%BndExtType%bnd_rp()
     end if
@@ -265,27 +268,27 @@ contains
     if (this%iprpak /= 0) then
       call this%write_list()
     end if
-  end subroutine pcp_rp
+  end subroutine evp_rp
 
-  !> @brief Ensure precipitation is positive
+  !> @brief Ensure evaporation is positive
   !<
-  subroutine pcp_ck(this)
+  subroutine evp_ck(this)
     ! dummy
-    class(SwfPcpType), intent(inout) :: this
+    class(SwfEvpType), intent(inout) :: this
     ! local
     character(len=30) :: nodestr
     integer(I4B) :: i, nr
     character(len=*), parameter :: fmterr = &
       &"('Specified stress ',i0, &
-      &' precipitation (',g0,') is less than zero for cell', a)"
+      &' evaporation (',g0,') is less than zero for cell', a)"
 
-    ! Ensure precipitation rates are positive
+    ! Ensure evaporation rates are positive
     do i = 1, this%nbound
       nr = this%nodelist(i)
       if (nr <= 0) cycle
-      if (this%precipitation(i) < DZERO) then
+      if (this%evaporation(i) < DZERO) then
         call this%dis%noder_to_string(nr, nodestr)
-        write (errmsg, fmt=fmterr) i, this%precipitation(i), trim(nodestr)
+        write (errmsg, fmt=fmterr) i, this%evaporation(i), trim(nodestr)
         call store_error(errmsg)
       end if
     end do
@@ -294,33 +297,31 @@ contains
     if (count_errors() > 0) then
       call store_error_filename(this%input_fname)
     end if
-  end subroutine pcp_ck
+  end subroutine evp_ck
 
   !> @brief Formulate the HCOF and RHS terms
   !!
-  !! Skip if no precipitation. Otherwise, calculate hcof and rhs
+  !! Skip if no evaporation. Otherwise, calculate hcof and rhs
   !<
-  subroutine pcp_cf(this)
+  subroutine evp_cf(this)
     ! dummy
-    class(SwfPcpType) :: this
+    class(SwfEvpType) :: this
     ! local
     integer(I4B) :: i
     integer(I4B) :: node
-    integer(I4B) :: idcxs
-    real(DP) :: qpcp
-    real(DP) :: area
-    real(DP) :: width_channel
-    real(DP) :: top_width
-    real(DP) :: dummy
+    real(DP) :: qevp
+    real(DP) :: evap
+    real(DP) :: rlen
     real(DP), dimension(:), pointer :: reach_length
 
-    ! Return if no precipitation
+    ! Return if no evaporation
     if (this%nbound == 0) return
 
     ! Set pointer to reach_length for 1d
     reach_length => this%reach_length_pointer()
+    rlen = DZERO
 
-    ! Calculate hcof and rhs for each precipitation entry
+    ! Calculate hcof and rhs for each evaporation entry
     do i = 1, this%nbound
 
       ! Find the node number
@@ -336,29 +337,22 @@ contains
       ! Initialize hcof
       this%hcof(i) = DZERO
 
-      ! Determine the water surface area
-      if (this%dis%is_2d()) then
-        ! this is for overland flow case
-        area = this%dis%get_area(node)
-      else if (this%dis%is_1d()) then
-        ! this is for channel case
-        idcxs = this%dfw%idcxs(node)
-        call this%dis%get_flow_width(node, node, 0, width_channel, &
-                                     dummy)
-        top_width = this%cxs%get_maximum_top_width(idcxs, width_channel)
-        area = reach_length(node) * top_width
-      end if
-
-      ! calculate volumetric precipitation flow in L^3/T
-      qpcp = this%precipitation(i) * area
-
-      ! multiplier
+      ! assign evap rate in length per time and multiply by auxvar
+      evap = this%evaporation(i)
       if (this%iauxmultcol > 0) then
-        qpcp = qpcp * this%auxvar(this%iauxmultcol, i)
+        evap = evap * this%auxvar(this%iauxmultcol, i)
       end if
 
-      ! rhs contribution
-      this%rhs(i) = -qpcp
+      ! get reach length for 1d channel
+      if (this%dis%is_1d()) then
+        rlen = reach_length(node)
+      end if
+
+      ! calculate volumetric evaporation flow in L^3/T
+      qevp = this%get_qevp(node, rlen, this%xnew(node), evap)
+
+      ! rhs contribution (positive value means extraction)
+      this%rhs(i) = qevp
 
       ! zero out contribution if cell is inactive or constant head
       if (this%ibound(node) <= 0) then
@@ -367,13 +361,80 @@ contains
       end if
 
     end do
-  end subroutine pcp_cf
+  end subroutine evp_cf
+
+  !> @brief Calculate qevp
+  !<
+  function get_qevp(this, node, rlen, stage, evaporation) result(qevp)
+    ! dummy
+    class(SwfEvpType) :: this !< this instance
+    integer(I4B), intent(in) :: node !< reduced node number
+    real(DP), intent(in) :: rlen !< length of reach
+    real(DP), intent(in) :: stage !< stage in reach
+    real(DP), intent(in) :: evaporation !< evaporation rate in length per time
+    ! return
+    real(DP) :: qevp
+    ! local
+    integer(I4B) :: idcxs
+    real(DP) :: depth
+    real(DP) :: bt
+    real(DP) :: area
+    real(DP) :: top_width
+    real(DP) :: width_channel
+    real(DP) :: dummy
+    real(DP) :: qmult
+
+    ! calculate depth of water
+    bt = this%dis%bot(node)
+    depth = stage - bt
+
+    ! Determine the water surface area
+    if (this%dis%is_2d()) then
+      ! overland flow case
+      area = this%dis%get_area(node)
+    else if (this%dis%is_1d()) then
+      ! channel case
+      idcxs = this%dfw%idcxs(node)
+      call this%dis%get_flow_width(node, node, 0, width_channel, dummy)
+      top_width = this%cxs%get_wetted_top_width(idcxs, width_channel, depth)
+      area = rlen * top_width
+    end if
+
+    ! Reduce the evap rate as cell goes dry
+    qmult = this%get_evap_reduce_mult(stage, bt)
+
+    ! calculate volumetric evaporation flow in L^3/T
+    qevp = evaporation * area * qmult
+
+  end function get_qevp
+
+  function get_evap_reduce_mult(this, stage, bottom) result(qmult)
+    ! dummy
+    class(SwfEvpType) :: this
+    real(DP), intent(in) :: stage
+    real(DP), intent(in) :: bottom
+    ! return
+    real(DP) :: qmult
+    ! local
+    integer(I4B) :: iflowred
+    real(DP) :: evap_depth
+    real(DP) :: tp
+
+    iflowred = 1
+    qmult = DONE
+    if (iflowred == 1) then
+      evap_depth = 0.1D0
+      tp = bottom + evap_depth
+      qmult = sQSaturation(tp, bottom, stage)
+    end if
+
+  end function get_evap_reduce_mult
 
   !> @brief Copy rhs and hcof into solution rhs and amat
   !<
-  subroutine pcp_fc(this, rhs, ia, idxglo, matrix_sln)
+  subroutine evp_fc(this, rhs, ia, idxglo, matrix_sln)
     ! dummy
-    class(SwfPcpType) :: this
+    class(SwfEvpType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
@@ -389,15 +450,15 @@ contains
       ipos = ia(n)
       call matrix_sln%add_value_pos(idxglo(ipos), this%hcof(i))
     end do
-  end subroutine pcp_fc
+  end subroutine evp_fc
 
   !> @brief Deallocate memory
   !<
-  subroutine pcp_da(this)
+  subroutine evp_da(this)
     ! modules
     use MemoryManagerModule, only: mem_deallocate
     ! dummy
-    class(SwfPcpType) :: this
+    class(SwfEvpType) :: this
 
     ! Deallocate parent package
     call this%BndExtType%bnd_da()
@@ -406,20 +467,20 @@ contains
     deallocate (this%read_as_arrays)
 
     ! arrays
-    call mem_deallocate(this%precipitation, 'PRECIPITATION', this%memoryPath)
+    call mem_deallocate(this%evaporation, 'EVAPORATION', this%memoryPath)
 
     ! pointers
     nullify (this%dis)
     nullify (this%dfw)
     nullify (this%cxs)
-  end subroutine pcp_da
+  end subroutine evp_da
 
   !> @brief Define the list heading that is written to iout when PRINT_INPUT
   !! option is used.
   !<
-  subroutine pcp_define_listlabel(this)
+  subroutine evp_define_listlabel(this)
     ! dummy
-    class(SwfPcpType), intent(inout) :: this
+    class(SwfEvpType), intent(inout) :: this
     !
     ! create the header list label
     this%listlabel = trim(this%filtyp)//' NO.'
@@ -433,19 +494,19 @@ contains
     else
       write (this%listlabel, '(a, a7)') trim(this%listlabel), 'NODE'
     end if
-    write (this%listlabel, '(a, a16)') trim(this%listlabel), 'PRECIPITATION'
+    write (this%listlabel, '(a, a16)') trim(this%listlabel), 'EVAPORATION'
 !    if(this%multindex > 0) &
 !      write(this%listlabel, '(a, a16)') trim(this%listlabel), 'MULTIPLIER'
     if (this%inamedbound == 1) then
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
-  end subroutine pcp_define_listlabel
+  end subroutine evp_define_listlabel
 
   !> @brief Assign default nodelist when READASARRAYS is specified.
   !<
   subroutine default_nodelist(this)
     ! dummy
-    class(SwfPcpType) :: this
+    class(SwfEvpType) :: this
     ! local
     integer(I4B) :: nodeu, noder
 
@@ -468,36 +529,36 @@ contains
   !!
   !! Overrides BndType%bnd_obs_supported()
   !<
-  logical function pcp_obs_supported(this)
+  logical function evp_obs_supported(this)
     implicit none
     ! dummy
-    class(SwfPcpType) :: this
-    pcp_obs_supported = .true.
-  end function pcp_obs_supported
+    class(SwfEvpType) :: this
+    evp_obs_supported = .true.
+  end function evp_obs_supported
 
   !> @brief Implements bnd_df_obs
   !!
-  !! Store observation type supported by PCP package. Overrides
+  !! Store observation type supported by EVP package. Overrides
   !! BndType%bnd_df_obs
   !<
-  subroutine pcp_df_obs(this)
+  subroutine evp_df_obs(this)
     implicit none
     ! dummy
-    class(SwfPcpType) :: this
+    class(SwfEvpType) :: this
     ! local
     integer(I4B) :: indx
 
-    call this%obs%StoreObsType('pcp', .true., indx)
+    call this%obs%StoreObsType('evp', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
-  end subroutine pcp_df_obs
+  end subroutine evp_df_obs
 
   !> @brief Return requested boundary value
   !<
-  function pcp_bound_value(this, col, row) result(bndval)
+  function evp_bound_value(this, col, row) result(bndval)
     ! modules
     use ConstantsModule, only: DZERO
     ! dummy
-    class(SwfPcpType), intent(inout) :: this !< BndExtType object
+    class(SwfEvpType), intent(inout) :: this !< BndExtType object
     integer(I4B), intent(in) :: col
     integer(I4B), intent(in) :: row
     ! result
@@ -506,21 +567,21 @@ contains
     select case (col)
     case (1)
       if (this%iauxmultcol > 0) then
-        bndval = this%precipitation(row) * this%auxvar(this%iauxmultcol, row)
+        bndval = this%evaporation(row) * this%auxvar(this%iauxmultcol, row)
       else
-        bndval = this%precipitation(row)
+        bndval = this%evaporation(row)
       end if
     case default
-      errmsg = 'Programming error. PCP bound value requested column '&
+      errmsg = 'Programming error. EVP bound value requested column '&
                &'outside range of ncolbnd (1).'
       call store_error(errmsg)
       call store_error_filename(this%input_fname)
     end select
-  end function pcp_bound_value
+  end function evp_bound_value
 
   function reach_length_pointer(this) result(ptr)
     ! dummy
-    class(SwfPcpType) :: this !< this instance
+    class(SwfEvpType) :: this !< this instance
     ! return
     real(DP), dimension(:), pointer :: ptr
     ! local
@@ -535,5 +596,5 @@ contains
 
   end function reach_length_pointer
 
-end module SwfPcpModule
+end module SwfEvpModule
 
