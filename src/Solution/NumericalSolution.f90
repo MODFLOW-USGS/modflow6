@@ -130,13 +130,13 @@ module NumericalSolutionModule
     real(DP), pointer :: ptcexp => null() !< PTC exponent
     !
     ! -- timer handles
-    integer(I4B) :: tmr_prep_solve = -1 !< timer - prepare solve
-    integer(I4B) :: tmr_solve = -1 !< timer - solve
-    integer(I4B) :: tmr_final_solve = -1 !< timer - finalize solve
-    integer(I4B) :: tmr_formulate = -1 !< timer - formulate
-    integer(I4B) :: tmr_linsolve = -1 !< timer - linear solve
-    integer(I4B) :: tmr_flows = -1 !< timer - calculate flows
-    integer(I4B) :: tmr_budgets = -1 !< timer - calculate budgets
+    integer(I4B) :: tmr_prep_solve !< timer - prepare solve
+    integer(I4B) :: tmr_solve !< timer - solve
+    integer(I4B) :: tmr_final_solve !< timer - finalize solve
+    integer(I4B) :: tmr_formulate !< timer - formulate
+    integer(I4B) :: tmr_linsolve !< timer - linear solve
+    integer(I4B) :: tmr_flows !< timer - calculate flows
+    integer(I4B) :: tmr_budgets !< timer - calculate budgets
     character(len=24) :: id_postfix !< solution id based postfix for timer titles
     !
     ! -- adaptive time step
@@ -512,6 +512,8 @@ contains
     this%tmr_final_solve = -1
     this%tmr_formulate = -1
     this%tmr_linsolve = -1
+    this%tmr_flows = -1
+    this%tmr_budgets = -1
 
   end subroutine sln_df
 

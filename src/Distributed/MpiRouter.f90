@@ -38,6 +38,7 @@ module MpiRouterModule
     procedure :: initialize => mr_initialize
     procedure :: route_all => mr_route_all
     procedure :: route_sln => mr_route_sln
+    procedure :: finalize => mr_finalize
     procedure :: destroy => mr_destroy
     ! private
     procedure, private :: activate
@@ -714,6 +715,13 @@ contains
     end if
 
   end function is_cached
+
+  subroutine mr_finalize(this)
+    class(MpiRouterType) :: this
+
+    call this%msg_cache%clear()
+
+  end subroutine mr_finalize
 
   subroutine mr_destroy(this)
     class(MpiRouterType) :: this

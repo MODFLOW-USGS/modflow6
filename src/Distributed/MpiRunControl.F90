@@ -144,6 +144,9 @@ contains
     tmr_final_par = -1
     call g_prof%start("Finalize MPI and PETSc", tmr_final_par)
 
+    ! release MPI related memory in router before MPI_Finalize
+    call this%virtual_data_mgr%router%finalize()
+
     ! finish mpi
 #if defined(__WITH_PETSC__)
     ! NB: PetscFinalize calls MPI_Finalize only when MPI_Init
