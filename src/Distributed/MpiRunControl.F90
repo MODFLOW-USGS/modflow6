@@ -52,16 +52,10 @@ contains
     character(len=*), parameter :: petsc_db_file = '.petscrc'
     logical(LGP) :: petsc_db_exists, wait_dbg, is_parallel_mode
     type(MpiWorldType), pointer :: mpi_world
-    procedure(timer_func_iface), pointer :: tmr_func => null()
 
-    ! add timed section for parallel stuff and start timers
-    tmr_func => mpi_walltime
-    call set_timer_func(tmr_func)
-    call g_prof%initialize()
-    call g_prof%start("Run", g_prof%tmr_run)
-    call g_prof%start("Initialize", g_prof%tmr_init)
+    ! add timed section for parallel initialization
     tmr_init_par = -1
-    call g_prof%start("Initialize parallel", tmr_init_par)
+    call g_prof%start("Initialize MPI and PETSc", tmr_init_par)
 
     ! set mpi abort function
     pstop_alternative => mpi_stop
@@ -148,7 +142,7 @@ contains
 
     ! timer
     tmr_final_par = -1
-    call g_prof%start("Finalize parallel", tmr_final_par)
+    call g_prof%start("Finalize MPI and PETSc", tmr_final_par)
 
     ! finish mpi
 #if defined(__WITH_PETSC__)
@@ -293,15 +287,5 @@ contains
     deallocate (remote_exgs_per_process)
 
   end subroutine mpi_ctrl_after_con_cr
-
-  subroutine mpi_walltime(walltime)
-    real(DP), intent(inout) :: walltime
-    ! local
-    integer :: ierr
-
-    walltime = MPI_Wtime()
-    call CHECK_MPI(ierr)
-
-  end subroutine mpi_walltime
 
 end module MpiRunControlModule

@@ -63,26 +63,8 @@ module ProfilerModule
   end type ProfilerType
 
   type(ProfilerType), public :: g_prof !< the global timer object (to reduce trivial lines of code)
-  public :: set_timer_func, timer_func_iface
-  procedure(timer_func_iface), private, pointer :: g_timer_func => serial_timer ! typically set to use MPI_Wtime for parallel, using the method below
-
-  abstract interface
-    subroutine timer_func_iface(walltime)
-      import DP
-      real(DP), intent(inout) :: walltime
-    end subroutine
-  end interface
 
 contains
-
-  !> @brief Set the timer function to be used, e.g. based on MPI_Wtime
-  !<
-  subroutine set_timer_func(timer_func)
-    procedure(timer_func_iface), pointer :: timer_func
-
-    g_timer_func => timer_func
-
-  end subroutine set_timer_func
 
   !< @brief Initialize the CPU timer object
   !<
@@ -402,11 +384,6 @@ contains
     initialized = associated(this%all_sections)
 
   end function is_initialized
-
-  subroutine serial_timer(walltime)
-    real(DP), intent(inout) :: walltime
-    call cpu_time(walltime)
-  end subroutine serial_timer
 
   !> @brief Calculate the largest title length
   !<

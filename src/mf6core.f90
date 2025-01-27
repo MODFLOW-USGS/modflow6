@@ -73,6 +73,11 @@ contains
     use SimulationCreateModule, only: simulation_cr
     use SourceLoadModule, only: export_cr
 
+    ! init timer and start
+    call g_prof%initialize()
+    call g_prof%start("Run", g_prof%tmr_run)
+    call g_prof%start("Initialize", g_prof%tmr_init)
+
     ! -- get the run controller for sequential or parallel builds
     run_ctrl => create_run_control()
     call run_ctrl%start()
@@ -229,11 +234,11 @@ contains
     call simulation_da()
     call lists_da()
 
-    ! stop timers
+    ! stop timer
     call g_prof%stop(tmr_dealloc)
-    call g_prof%stop(g_prof%tmr_finalize)
 
     ! finish gently (No calls after this)
+    ! timer is stopped inside because this call does not return
     call run_ctrl%finish()
 
   end subroutine Mf6Finalize
