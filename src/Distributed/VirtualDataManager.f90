@@ -454,6 +454,7 @@ contains
     end do
     deallocate (this%virtual_solutions)
 
+    call this%router%destroy()
     deallocate (this%router)
 
   end subroutine destroy
