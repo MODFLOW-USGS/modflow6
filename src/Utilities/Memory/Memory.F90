@@ -128,10 +128,14 @@ contains
       nullify (this%dblsclr)
     end if
 
-    ! Handle the dealloction of the 1d character string array differently due to a bug in gfortran 11.3 and 12.1
+    ! Handle the dealloction of the 1d character string array differently due to a bug in gfortran 11.3, 12.1, 13.1 and 13.2.
+    ! Due to a bug in the gfortran compiler we can't use a deferred length character variable
+    ! https://gcc.gnu.org/bugzilla/show_bug.cgi?id=106317
+    !
     ! We use a c_ptr to cast the pointer to a string array with a length of 1. The actual length of the array is
     ! computed by the actual length of the string multiplied by the array size.
     ! So we go from the actual character(len=element_size), dimension(isize) to a character(len=1), dimension(isize*element_size).
+
     if (associated(this%astr1d)) then
       select type (item => this%astr1d)
       type is (character(*))
@@ -142,7 +146,7 @@ contains
 
       call c_f_pointer(cptr, astr1d, [this%isize * this%element_size])
 
-#if __GFORTRAN__  &&__GNUC__ < 13
+#if __GFORTRAN__  && ((__GNUC__ < 13) || (__GNUC__ == 13 && __GNUC_MINOR__ < 3))
       if (this%master) deallocate (astr1d)
 #else
       if (this%master) deallocate (this%astr1d)
