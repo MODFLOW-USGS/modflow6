@@ -2,7 +2,7 @@ name: modflow6
 
 channels:
   - conda-forge
-  - defaults
+  - nodefaults
 
 dependencies:
   - python>=3.9
