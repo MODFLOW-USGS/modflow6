@@ -1,5 +1,5 @@
 module GwfNpfModule
-  use KindModule, only: DP, I4B, LGP
+  use KindModule, only: DP, I4B
   use SimVariablesModule, only: errmsg
   use ConstantsModule, only: DZERO, DEM9, DEM8, DEM7, DEM6, DEM2, &
                              DHALF, DP9, DONE, DTWO, &
@@ -14,6 +14,7 @@ module GwfNpfModule
   use GwfIcModule, only: GwfIcType
   use GwfVscModule, only: GwfVscType
   use Xt3dModule, only: Xt3dType
+  use SpdisWorkArrayModule, only: SpdisWorkArrayType
   use InputOutputModule, only: GetUnit, openfile
   use TvkModule, only: TvkType, tvk_cr
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, &
@@ -30,25 +31,6 @@ module GwfNpfModule
   private
   public :: GwfNpfType
   public :: npf_cr
-
-  type :: SpdisWorkArrays
-    real(DP), allocatable, dimension(:) :: vi
-    real(DP), allocatable, dimension(:) :: di
-    real(DP), allocatable, dimension(:) :: viz
-    real(DP), allocatable, dimension(:) :: diz
-    real(DP), allocatable, dimension(:) :: nix
-    real(DP), allocatable, dimension(:) :: niy
-    real(DP), allocatable, dimension(:) :: wix
-    real(DP), allocatable, dimension(:) :: wiy
-    real(DP), allocatable, dimension(:) :: wiz
-    real(DP), allocatable, dimension(:) :: bix
-    real(DP), allocatable, dimension(:) :: biy
-  contains
-    procedure :: create
-    procedure :: is_created
-    procedure :: reset
-    procedure :: destroy
-  end type SpdisWorkArrays
 
   type, extends(NumericalPackageType) :: GwfNpfType
 
@@ -113,7 +95,7 @@ module GwfNpfModule
     real(DP), dimension(:, :), pointer, contiguous :: propsedge => null() !< edge properties (Q, area, nx, ny, distance)
     integer(I4B), dimension(:), pointer, contiguous :: iedge_ptr => null() !< csr pointer into edge index array
     integer(I4B), dimension(:), pointer, contiguous :: edge_idxs => null() !< sorted edge indexes for faster lookup
-    type(SpdisWorkArrays), pointer :: spdis_wa => null() !< works arrays for spdis calculation
+    type(SpdisWorkArrayType), pointer :: spdis_wa => null() !< works arrays for spdis calculation
     !
     integer(I4B), pointer :: intvk => null() ! TVK (time-varying K) unit number (0 if unused)
     integer(I4B), pointer :: invsc => null() ! VSC (viscosity) unit number (0 if unused); viscosity leads to time-varying K's
@@ -2414,7 +2396,7 @@ contains
     real(DP) :: axy
     real(DP) :: ayx
     logical :: nozee = .true.
-    type(SpdisWorkArrays), pointer :: swa => null() !< pointer to spdis work arrays structure
+    type(SpdisWorkArrayType), pointer :: swa => null() !< pointer to spdis work arrays structure
     !
     ! -- Ensure dis has necessary information
     if (this%icalcspdis /= 0 .and. this%dis%con%ianglex == 0) then
@@ -2819,60 +2801,5 @@ contains
                             this%dis%bot(n), &
                             this%dis%bot(m))
   end function calcSatThickness
-
-  subroutine create(this, nr_conns)
-    class(SpdisWorkArrays) :: this
-    integer(I4B) :: nr_conns
-
-    allocate (this%vi(nr_conns))
-    allocate (this%di(nr_conns))
-    allocate (this%viz(nr_conns))
-    allocate (this%diz(nr_conns))
-    allocate (this%nix(nr_conns))
-    allocate (this%niy(nr_conns))
-    allocate (this%wix(nr_conns))
-    allocate (this%wiy(nr_conns))
-    allocate (this%wiz(nr_conns))
-    allocate (this%bix(nr_conns))
-    allocate (this%biy(nr_conns))
-
-  end subroutine create
-
-  function is_created(this) result(created)
-    class(SpdisWorkArrays) :: this
-    logical(LGP) :: created
-
-    created = allocated(this%vi)
-
-  end function is_created
-
-  subroutine reset(this)
-    class(SpdisWorkArrays) :: this
-
-    this%vi(:) = DZERO
-    this%di(:) = DZERO
-    this%viz(:) = DZERO
-    this%diz(:) = DZERO
-    this%nix(:) = DZERO
-    this%niy(:) = DZERO
-
-  end subroutine reset
-
-  subroutine destroy(this)
-    class(SpdisWorkArrays) :: this
-
-    deallocate (this%vi)
-    deallocate (this%di)
-    deallocate (this%viz)
-    deallocate (this%diz)
-    deallocate (this%nix)
-    deallocate (this%niy)
-    deallocate (this%wix)
-    deallocate (this%wiy)
-    deallocate (this%wiz)
-    deallocate (this%bix)
-    deallocate (this%biy)
-
-  end subroutine destroy
 
 end module GwfNpfModule
