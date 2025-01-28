@@ -98,12 +98,13 @@ contains
     use MemoryManagerModule, only: mem_setptr
     use SimVariablesModule, only: idm_context
     use MemoryManagerModule, only: mem_set_print_option
+    use ProfilerModule, only: g_prof
     use SimVariablesModule, only: isimcontinue, isimcheck
     ! -- dummy
     ! -- locals
     character(len=LENMEMPATH) :: input_mempath
     integer(I4B), pointer :: simcontinue, nocheck, maxerror
-    character(len=:), pointer :: prmem
+    character(len=:), pointer :: prmem, prprof
     character(len=LINELENGTH) :: errmsg
     !
     ! -- set input memory path
@@ -113,6 +114,7 @@ contains
     call mem_setptr(simcontinue, 'CONTINUE', input_mempath)
     call mem_setptr(nocheck, 'NOCHECK', input_mempath)
     call mem_setptr(prmem, 'PRMEM', input_mempath)
+    call mem_setptr(prprof, 'PRPROF', input_mempath)
     call mem_setptr(maxerror, 'MAXERRORS', input_mempath)
     !
     ! -- update sim options
@@ -127,6 +129,10 @@ contains
         call store_error(errmsg, .true.)
       end if
     end if
+
+    ! set profiler print option
+    call g_prof%set_print_option(prprof)
+
     !
     ! -- log values to list file
     if (iout > 0) then
