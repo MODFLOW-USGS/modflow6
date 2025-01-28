@@ -31,6 +31,24 @@ module GwfNpfModule
   public :: GwfNpfType
   public :: npf_cr
 
+  type :: SpdisWorkArrays
+    real(DP), allocatable, dimension(:) :: vi
+    real(DP), allocatable, dimension(:) :: di
+    real(DP), allocatable, dimension(:) :: viz
+    real(DP), allocatable, dimension(:) :: diz
+    real(DP), allocatable, dimension(:) :: nix
+    real(DP), allocatable, dimension(:) :: niy
+    real(DP), allocatable, dimension(:) :: wix
+    real(DP), allocatable, dimension(:) :: wiy
+    real(DP), allocatable, dimension(:) :: wiz
+    real(DP), allocatable, dimension(:) :: bix
+    real(DP), allocatable, dimension(:) :: biy
+  contains
+    procedure :: create
+    procedure :: reset
+    procedure :: destroy
+  end type SpdisWorkArrays
+
   type, extends(NumericalPackageType) :: GwfNpfType
 
     type(GwfIcType), pointer :: ic => null() !< initial conditions object
@@ -92,6 +110,9 @@ module GwfNpfModule
     integer(I4B), dimension(:), pointer, contiguous :: nodedge => null() !< array of node numbers that have edges
     integer(I4B), dimension(:), pointer, contiguous :: ihcedge => null() !< edge type (horizontal or vertical)
     real(DP), dimension(:, :), pointer, contiguous :: propsedge => null() !< edge properties (Q, area, nx, ny, distance)
+    integer(I4B), dimension(:), pointer, contiguous :: iedge_ptr => null() !< csr pointer into edge index array
+    integer(I4B), dimension(:), pointer, contiguous :: edge_idxs => null() !< sorted edge indexes for faster lookup
+    type(SpdisWorkArrays), pointer :: spdis_wa => null() !< works arrays for spdis calculation
     !
     integer(I4B), pointer :: intvk => null() ! TVK (time-varying K) unit number (0 if unused)
     integer(I4B), pointer :: invsc => null() ! VSC (viscosity) unit number (0 if unused); viscosity leads to time-varying K's
@@ -141,7 +162,8 @@ module GwfNpfModule
     procedure, public :: increase_edge_count
     procedure, public :: set_edge_properties
     procedure, public :: calcSatThickness
-
+    procedure, private :: calc_max_conns
+    procedure, private :: prepare_edge_lookup
   end type
 
 contains
@@ -183,6 +205,10 @@ contains
       ! -- Print a message identifying the node property flow package.
       write (iout, fmtheader) input_mempath
     end if
+
+    ! allocate spdis structure
+    allocate (npfobj%spdis_wa)
+
   end subroutine npf_cr
 
   !> @brief Define the NPF package instance
@@ -296,9 +322,17 @@ contains
       call mem_reallocate(this%ihcedge, this%nedges, 'IHCEDGE', this%memoryPath)
       call mem_reallocate(this%propsedge, 5, this%nedges, 'PROPSEDGE', &
                           this%memoryPath)
+      call mem_reallocate(this%iedge_ptr, this%dis%nodes + 1, 'NREDGESNODE', this%memoryPath)
+      call mem_reallocate(this%edge_idxs, this%nedges, 'EDGEIDXS', this%memoryPath)
+               
+      do n = 1, this%nedges
+        this%edge_idxs(n) = 0
+      end do
       do n = 1, this%dis%nodes
+        this%iedge_ptr(n) = 0
         this%spdis(:, n) = DZERO
       end do
+      
     end if
     !
     ! -- Store pointer to VSC if active
@@ -930,6 +964,10 @@ contains
     use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwfNpftype) :: this
+
+    ! free spdis work structure
+    deallocate (this%spdis_wa)
+
     !
     ! -- Deallocate input memory
     call memorystore_remove(this%name_model, 'NPF', idm_context)
@@ -1002,6 +1040,8 @@ contains
     call mem_deallocate(this%nodedge)
     call mem_deallocate(this%ihcedge)
     call mem_deallocate(this%propsedge)
+    call mem_deallocate(this%iedge_ptr)
+    call mem_deallocate(this%edge_idxs)
     call mem_deallocate(this%spdis, 'SPDIS', this%memoryPath)
     call mem_deallocate(this%nodekchange)
     !
@@ -1163,6 +1203,8 @@ contains
     call mem_allocate(this%nodedge, 0, 'NODEDGE', this%memoryPath)
     call mem_allocate(this%ihcedge, 0, 'IHCEDGE', this%memoryPath)
     call mem_allocate(this%propsedge, 0, 0, 'PROPSEDGE', this%memoryPath)
+    call mem_allocate(this%iedge_ptr, 0, 'NREDGESNODE', this%memoryPath)
+    call mem_allocate(this%edge_idxs, 0, 'EDGEIDXS', this%memoryPath)
     !
     ! -- Optional arrays only needed when vsc package is active
     call mem_allocate(this%k11input, 0, 'K11INPUT', this%memoryPath)
@@ -2340,6 +2382,7 @@ contains
     integer(I4B) :: n
     integer(I4B) :: m
     integer(I4B) :: ipos
+    integer(I4B) :: iedge
     integer(I4B) :: isympos
     integer(I4B) :: ihc
     integer(I4B) :: ic
@@ -2368,18 +2411,8 @@ contains
     real(DP) :: dz
     real(DP) :: axy
     real(DP) :: ayx
-    real(DP), allocatable, dimension(:) :: vi
-    real(DP), allocatable, dimension(:) :: di
-    real(DP), allocatable, dimension(:) :: viz
-    real(DP), allocatable, dimension(:) :: diz
-    real(DP), allocatable, dimension(:) :: nix
-    real(DP), allocatable, dimension(:) :: niy
-    real(DP), allocatable, dimension(:) :: wix
-    real(DP), allocatable, dimension(:) :: wiy
-    real(DP), allocatable, dimension(:) :: wiz
-    real(DP), allocatable, dimension(:) :: bix
-    real(DP), allocatable, dimension(:) :: biy
     logical :: nozee = .true.
+    type(SpdisWorkArrays), pointer :: swa => null() !< pointer to spdis work arrays structure
     !
     ! -- Ensure dis has necessary information
     if (this%icalcspdis /= 0 .and. this%dis%con%ianglex == 0) then
@@ -2387,37 +2420,15 @@ contains
                        'discretization file.  ANGLDEGX required for '// &
                        'calculation of specific discharge.', terminate=.TRUE.)
     end if
-    !
-    ! -- Find max number of connections and allocate weight arrays
-    nc = 0
-    do n = 1, this%dis%nodes
-      !
-      ! -- Count internal model connections
-      ic = this%dis%con%ia(n + 1) - this%dis%con%ia(n) - 1
-      !
-      ! -- Count edge connections
-      do m = 1, this%nedges
-        if (this%nodedge(m) == n) then
-          ic = ic + 1
-        end if
-      end do
-      !
-      ! -- Set max number of connections for any cell
-      if (ic > nc) nc = ic
-    end do
-    !
-    ! -- Allocate storage arrays needed for cell-centered spdis calculation
-    allocate (vi(nc))
-    allocate (di(nc))
-    allocate (viz(nc))
-    allocate (diz(nc))
-    allocate (nix(nc))
-    allocate (niy(nc))
-    allocate (wix(nc))
-    allocate (wiy(nc))
-    allocate (wiz(nc))
-    allocate (bix(nc))
-    allocate (biy(nc))
+
+    ! prepare work arrays
+    swa => this%spdis_wa
+    nc = this%calc_max_conns()
+    call swa%create(nc)
+
+    ! prepare lookup table
+    call this%prepare_edge_lookup()
+
     !
     ! -- Go through each cell and calculate specific discharge
     do n = 1, this%dis%nodes
@@ -2426,12 +2437,10 @@ contains
       !    the specific discharge at a face (vi)
       ic = 0
       iz = 0
-      vi(:) = DZERO
-      di(:) = DZERO
-      viz(:) = DZERO
-      diz(:) = DZERO
-      nix(:) = DZERO
-      niy(:) = DZERO
+
+      ! reset work arrays
+      call swa%reset()
+
       do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
         m = this%dis%con%ja(ipos)
         isympos = this%dis%con%jas(ipos)
@@ -2451,10 +2460,10 @@ contains
             cl2 = this%dis%con%cl1(isympos)
           end if
           ooclsum = DONE / (cl1 + cl2)
-          diz(iz) = dltot * cl1 * ooclsum
+          swa%diz(iz) = dltot * cl1 * ooclsum
           qz = flowja(ipos)
           if (n > m) qz = -qz
-          viz(iz) = qz / area
+          swa%viz(iz) = qz / area
         else
           !
           ! -- horizontal connection
@@ -2476,41 +2485,40 @@ contains
             cl2 = this%dis%con%cl1(isympos)
           end if
           ooclsum = DONE / (cl1 + cl2)
-          nix(ic) = -xn
-          niy(ic) = -yn
-          di(ic) = dltot * cl1 * ooclsum
+          swa%nix(ic) = -xn
+          swa%niy(ic) = -yn
+          swa%di(ic) = dltot * cl1 * ooclsum
           if (area > DZERO) then
-            vi(ic) = flowja(ipos) / area
+            swa%vi(ic) = flowja(ipos) / area
           else
-            vi(ic) = DZERO
+            swa%vi(ic) = DZERO
           end if
         end if
       end do
-      !
-      ! -- Look through edge flows that may have been provided by an exchange
-      !    and incorporate them into the averaging arrays
-      do m = 1, this%nedges
-        if (this%nodedge(m) == n) then
-          !
-          ! -- propsedge: (Q, area, nx, ny, distance)
-          ihc = this%ihcedge(m)
-          area = this%propsedge(2, m)
-          if (ihc == C3D_VERTICAL) then
-            iz = iz + 1
-            viz(iz) = this%propsedge(1, m) / area
-            diz(iz) = this%propsedge(5, m)
+
+      ! add contribution from edge flows (i.e. from exchanges)
+      do ipos = this%iedge_ptr(n), this%iedge_ptr(n) - 1
+        iedge = this%edge_idxs(ipos)
+
+        ! propsedge: (Q, area, nx, ny, distance)
+        ihc = this%ihcedge(iedge)
+        area = this%propsedge(2, iedge)
+        if (ihc == C3D_VERTICAL) then
+          iz = iz + 1
+          swa%viz(iz) = this%propsedge(1, iedge) / area
+          swa%diz(iz) = this%propsedge(5, iedge)
+        else
+          ic = ic + 1
+          swa%nix(ic) = -this%propsedge(3, iedge)
+          swa%niy(ic) = -this%propsedge(4, iedge)
+          swa%di(ic) = this%propsedge(5, iedge)
+          if (area > DZERO) then
+            swa%vi(ic) = this%propsedge(1, iedge) / area
           else
-            ic = ic + 1
-            nix(ic) = -this%propsedge(3, m)
-            niy(ic) = -this%propsedge(4, m)
-            di(ic) = this%propsedge(5, m)
-            if (area > DZERO) then
-              vi(ic) = this%propsedge(1, m) / area
-            else
-              vi(ic) = DZERO
-            end if
+            swa%vi(ic) = DZERO
           end if
         end if
+
       end do
       !
       ! -- Assign number of vertical and horizontal connections
@@ -2519,27 +2527,27 @@ contains
       !
       ! -- calculate z weight (wiz) and z velocity
       if (ncz == 1) then
-        wiz(1) = DONE
+        swa%wiz(1) = DONE
       else
         dsumz = DZERO
         do iz = 1, ncz
-          dsumz = dsumz + diz(iz)
+          dsumz = dsumz + swa%diz(iz)
         end do
         denom = (ncz - DONE)
         if (denom < DZERO) denom = DZERO
         dsumz = dsumz + DEM10 * dsumz
         do iz = 1, ncz
-          if (dsumz > DZERO) wiz(iz) = DONE - diz(iz) / dsumz
+          if (dsumz > DZERO) swa%wiz(iz) = DONE - swa%diz(iz) / dsumz
           if (denom > 0) then
-            wiz(iz) = wiz(iz) / denom
+            swa%wiz(iz) = swa%wiz(iz) / denom
           else
-            wiz(iz) = DZERO
+            swa%wiz(iz) = DZERO
           end if
         end do
       end if
       vz = DZERO
       do iz = 1, ncz
-        vz = vz + wiz(iz) * viz(iz)
+        vz = vz + swa%wiz(iz) * swa%viz(iz)
       end do
       !
       ! -- distance-based weighting
@@ -2548,10 +2556,10 @@ contains
       dsumy = DZERO
       dsumz = DZERO
       do ic = 1, nc
-        wix(ic) = di(ic) * abs(nix(ic))
-        wiy(ic) = di(ic) * abs(niy(ic))
-        dsumx = dsumx + wix(ic)
-        dsumy = dsumy + wiy(ic)
+        swa%wix(ic) = swa%di(ic) * abs(swa%nix(ic))
+        swa%wiy(ic) = swa%di(ic) * abs(swa%niy(ic))
+        dsumx = dsumx + swa%wix(ic)
+        dsumy = dsumy + swa%wiy(ic)
       end do
       !
       ! -- Finish computing omega weights.  Add a tiny bit
@@ -2561,28 +2569,28 @@ contains
       dsumx = dsumx + DEM10 * dsumx
       dsumy = dsumy + DEM10 * dsumy
       do ic = 1, nc
-        wix(ic) = (dsumx - wix(ic)) * abs(nix(ic))
-        wiy(ic) = (dsumy - wiy(ic)) * abs(niy(ic))
+        swa%wix(ic) = (dsumx - swa%wix(ic)) * abs(swa%nix(ic))
+        swa%wiy(ic) = (dsumy - swa%wiy(ic)) * abs(swa%niy(ic))
       end do
       !
       ! -- compute B weights
       dsumx = DZERO
       dsumy = DZERO
       do ic = 1, nc
-        bix(ic) = wix(ic) * sign(DONE, nix(ic))
-        biy(ic) = wiy(ic) * sign(DONE, niy(ic))
-        dsumx = dsumx + wix(ic) * abs(nix(ic))
-        dsumy = dsumy + wiy(ic) * abs(niy(ic))
+        swa%bix(ic) = swa%wix(ic) * sign(DONE, swa%nix(ic))
+        swa%biy(ic) = swa%wiy(ic) * sign(DONE, swa%niy(ic))
+        dsumx = dsumx + swa%wix(ic) * abs(swa%nix(ic))
+        dsumy = dsumy + swa%wiy(ic) * abs(swa%niy(ic))
       end do
       if (dsumx > DZERO) dsumx = DONE / dsumx
       if (dsumy > DZERO) dsumy = DONE / dsumy
       axy = DZERO
       ayx = DZERO
       do ic = 1, nc
-        bix(ic) = bix(ic) * dsumx
-        biy(ic) = biy(ic) * dsumy
-        axy = axy + bix(ic) * niy(ic)
-        ayx = ayx + biy(ic) * nix(ic)
+        swa%bix(ic) = swa%bix(ic) * dsumx
+        swa%biy(ic) = swa%biy(ic) * dsumy
+        axy = axy + swa%bix(ic) * swa%niy(ic)
+        ayx = ayx + swa%biy(ic) * swa%nix(ic)
       end do
       !
       ! -- Calculate specific discharge.  The divide by zero checking below
@@ -2595,8 +2603,8 @@ contains
       vx = DZERO
       vy = DZERO
       do ic = 1, nc
-        vx = vx + (bix(ic) - axy * biy(ic)) * vi(ic)
-        vy = vy + (biy(ic) - ayx * bix(ic)) * vi(ic)
+        vx = vx + (swa%bix(ic) - axy * swa%biy(ic)) * swa%vi(ic)
+        vy = vy + (swa%biy(ic) - ayx * swa%bix(ic)) * swa%vi(ic)
       end do
       denom = DONE - axy * ayx
       if (denom /= DZERO) then
@@ -2608,18 +2616,10 @@ contains
       this%spdis(2, n) = vy
       this%spdis(3, n) = vz
       !
-    end do
-    !
-    ! -- cleanup
-    deallocate (vi)
-    deallocate (di)
-    deallocate (nix)
-    deallocate (niy)
-    deallocate (wix)
-    deallocate (wiy)
-    deallocate (wiz)
-    deallocate (bix)
-    deallocate (biy)
+    end do 
+
+    call swa%destroy()
+
   end subroutine calc_spdis
 
   !> @brief Save specific discharge in binary format to ibinun
@@ -2692,6 +2692,33 @@ contains
     this%nedges = this%nedges + nedges
   end subroutine increase_edge_count
 
+  !> @brief Calculate the maximum number of connections for any cell
+  !<
+  function calc_max_conns(this) result(max_conns)
+    class(GwfNpfType) :: this
+    integer(I4B) :: max_conns
+    ! local
+    integer(I4B) :: n, m, ic
+    
+    max_conns = 0
+    do n = 1, this%dis%nodes
+      
+      ! Count internal model connections
+      ic = this%dis%con%ia(n + 1) - this%dis%con%ia(n) - 1
+      
+      ! Add edge connections
+      do m = 1, this%nedges
+        if (this%nodedge(m) == n) then
+          ic = ic + 1
+        end if
+      end do
+      
+      ! Set max number of connections for any cell
+      if (ic > max_conns) max_conns = ic
+    end do
+
+  end function calc_max_conns
+
   !> @brief Provide the npf package with edge properties
   !<
   subroutine set_edge_properties(this, nodedge, ihcedge, q, area, nx, ny, &
@@ -2723,6 +2750,43 @@ contains
     if (this%lastedge == this%nedges) this%lastedge = 0
   end subroutine set_edge_properties
 
+  subroutine prepare_edge_lookup(this)
+    class(GwfNpfType) :: this
+    ! local
+    integer(I4B) :: inode, iedge
+    integer(I4B) :: n, start, end
+    integer(I4B) :: prev_cnt, strt_idx, ipos
+    
+    this%iedge_ptr(:) = 0
+    this%edge_idxs(:) = 0
+
+    ! count
+    do iedge = 1, this%nedges
+      n = this%nodedge(iedge)
+      this%iedge_ptr(n) = this%iedge_ptr(n) + 1
+    end do
+    ! determine start indexes
+    prev_cnt = this%iedge_ptr(1)
+    this%iedge_ptr(1) = 1
+    do inode = 2, this%dis%nodes + 1
+      strt_idx = this%iedge_ptr(inode - 1) + prev_cnt
+      prev_cnt = this%iedge_ptr(inode)
+      this%iedge_ptr(inode) = strt_idx
+    end do
+
+    ! loop over edges to fill lookup table
+    do iedge = 1, this%nedges
+      n = this%nodedge(iedge)
+      start = this%iedge_ptr(n)
+      end = this%iedge_ptr(n + 1) - 1
+      do ipos = start, end
+        if (this%edge_idxs(ipos) > 0) cycle
+        this%edge_idxs(ipos) = iedge
+      end do
+    end do
+
+  end subroutine prepare_edge_lookup
+
   !> Calculate saturated thickness between cell n and m
   !<
   function calcSatThickness(this, n, m, ihc) result(satThickness)
@@ -2749,5 +2813,54 @@ contains
                             this%dis%bot(n), &
                             this%dis%bot(m))
   end function calcSatThickness
+
+  subroutine create(this, nr_conns)
+    class(SpdisWorkArrays) :: this
+    integer(I4B) :: nr_conns
+
+    allocate (this%vi(nr_conns))
+    allocate (this%di(nr_conns))
+    allocate (this%viz(nr_conns))
+    allocate (this%diz(nr_conns))
+    allocate (this%nix(nr_conns))
+    allocate (this%niy(nr_conns))
+    allocate (this%wix(nr_conns))
+    allocate (this%wiy(nr_conns))
+    allocate (this%wiz(nr_conns))
+    allocate (this%bix(nr_conns))
+    allocate (this%biy(nr_conns))
+
+  end subroutine create
+
+  subroutine reset(this)
+    class(SpdisWorkArrays) :: this
+      
+    this%vi(:) = DZERO
+    this%di(:) = DZERO
+    this%viz(:) = DZERO
+    this%diz(:) = DZERO
+    this%nix(:) = DZERO
+    this%niy(:) = DZERO
+
+    ! TODO: should we reset weights too?
+
+  end subroutine reset
+
+  subroutine destroy(this)
+    class(SpdisWorkArrays) :: this
+
+    deallocate (this%vi)
+    deallocate (this%di)
+    deallocate (this%viz)
+    deallocate (this%diz)
+    deallocate (this%nix)
+    deallocate (this%niy)
+    deallocate (this%wix)
+    deallocate (this%wiy)
+    deallocate (this%wiz)
+    deallocate (this%bix)
+    deallocate (this%biy)
+
+  end subroutine destroy
 
 end module GwfNpfModule
