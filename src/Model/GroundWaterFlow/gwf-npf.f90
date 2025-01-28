@@ -323,9 +323,11 @@ contains
       call mem_reallocate(this%ihcedge, this%nedges, 'IHCEDGE', this%memoryPath)
       call mem_reallocate(this%propsedge, 5, this%nedges, 'PROPSEDGE', &
                           this%memoryPath)
-      call mem_reallocate(this%iedge_ptr, this%dis%nodes + 1, 'NREDGESNODE', this%memoryPath)
-      call mem_reallocate(this%edge_idxs, this%nedges, 'EDGEIDXS', this%memoryPath)
-               
+      call mem_reallocate(this%iedge_ptr, this%dis%nodes + 1, &
+                          'NREDGESNODE', this%memoryPath)
+      call mem_reallocate(this%edge_idxs, this%nedges, &
+                          'EDGEIDXS', this%memoryPath)
+
       do n = 1, this%nedges
         this%edge_idxs(n) = 0
       end do
@@ -2697,20 +2699,20 @@ contains
     integer(I4B) :: max_conns
     ! local
     integer(I4B) :: n, m, ic
-    
+
     max_conns = 0
     do n = 1, this%dis%nodes
-      
+
       ! Count internal model connections
       ic = this%dis%con%ia(n + 1) - this%dis%con%ia(n) - 1
-      
+
       ! Add edge connections
       do m = 1, this%nedges
         if (this%nodedge(m) == n) then
           ic = ic + 1
         end if
       end do
-      
+
       ! Set max number of connections for any cell
       if (ic > max_conns) max_conns = ic
     end do
@@ -2754,7 +2756,7 @@ contains
     integer(I4B) :: inode, iedge
     integer(I4B) :: n, start, end
     integer(I4B) :: prev_cnt, strt_idx, ipos
-    
+
     this%iedge_ptr(:) = 0
     this%edge_idxs(:) = 0
 
@@ -2841,7 +2843,7 @@ contains
 
   subroutine reset(this)
     class(SpdisWorkArrays) :: this
-      
+
     this%vi(:) = DZERO
     this%di(:) = DZERO
     this%viz(:) = DZERO
