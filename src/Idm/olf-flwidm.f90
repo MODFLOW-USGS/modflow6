@@ -320,7 +320,7 @@ module OlfFlwInputModule
     'Q', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
-    'well rate', & ! longname
+    'flow rate', & ! longname
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
