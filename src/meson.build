@@ -249,6 +249,7 @@ modflow_sources = files(
     'Model' / 'ModelUtilities' / 'ReleaseSchedule.f90',
     'Model' / 'ModelUtilities' / 'SfrCrossSectionManager.f90',
     'Model' / 'ModelUtilities' / 'SfrCrossSectionUtils.f90',
+    'Model' / 'ModelUtilities' / 'SpdisWorkArray.f90',
     'Model' / 'ModelUtilities' / 'SwfCxsUtils.f90',
     'Model' / 'ModelUtilities' / 'TspAdvOptions.f90',
     'Model' / 'ModelUtilities' / 'TspSpc.f90',
