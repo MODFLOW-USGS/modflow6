@@ -86,7 +86,7 @@ module GwfNpfModule
     real(DP), dimension(:), pointer, contiguous :: sat => null() !< saturation (0. to 1.) for each cell
     real(DP), dimension(:), pointer, contiguous :: condsat => null() !< saturated conductance (symmetric array)
     integer(I4B), dimension(:), pointer, contiguous :: ibotnode => null() !< bottom node used if igwfnewtonur /= 0
-    !
+    ! spdis machinery:
     real(DP), dimension(:, :), pointer, contiguous :: spdis => null() !< specific discharge : qx, qy, qz (nodes, 3)
     integer(I4B), pointer :: nedges => null() !< number of cell edges
     integer(I4B), pointer :: lastedge => null() !< last edge number
@@ -95,7 +95,7 @@ module GwfNpfModule
     real(DP), dimension(:, :), pointer, contiguous :: propsedge => null() !< edge properties (Q, area, nx, ny, distance)
     integer(I4B), dimension(:), pointer, contiguous :: iedge_ptr => null() !< csr pointer into edge index array
     integer(I4B), dimension(:), pointer, contiguous :: edge_idxs => null() !< sorted edge indexes for faster lookup
-    type(SpdisWorkArrayType), pointer :: spdis_wa => null() !< works arrays for spdis calculation
+    type(SpdisWorkArrayType), pointer :: spdis_wa => null() !< work arrays for spdis calculation
     !
     integer(I4B), pointer :: intvk => null() ! TVK (time-varying K) unit number (0 if unused)
     integer(I4B), pointer :: invsc => null() ! VSC (viscosity) unit number (0 if unused); viscosity leads to time-varying K's
