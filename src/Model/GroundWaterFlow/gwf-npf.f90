@@ -2429,7 +2429,7 @@ contains
       call this%spdis_wa%create(this%calc_max_conns())
 
       ! prepare lookup table
-      call this%prepare_edge_lookup()
+      if (this%nedges > 0) call this%prepare_edge_lookup()
     end if
     !
     ! -- Go through each cell and calculate specific discharge
@@ -2499,29 +2499,30 @@ contains
       end do
 
       ! add contribution from edge flows (i.e. from exchanges)
-      do ipos = this%iedge_ptr(n), this%iedge_ptr(n) - 1
-        iedge = this%edge_idxs(ipos)
+      if (this%nedges > 0) then
+        do ipos = this%iedge_ptr(n), this%iedge_ptr(n + 1) - 1
+          iedge = this%edge_idxs(ipos)
 
-        ! propsedge: (Q, area, nx, ny, distance)
-        ihc = this%ihcedge(iedge)
-        area = this%propsedge(2, iedge)
-        if (ihc == C3D_VERTICAL) then
-          iz = iz + 1
-          swa%viz(iz) = this%propsedge(1, iedge) / area
-          swa%diz(iz) = this%propsedge(5, iedge)
-        else
-          ic = ic + 1
-          swa%nix(ic) = -this%propsedge(3, iedge)
-          swa%niy(ic) = -this%propsedge(4, iedge)
-          swa%di(ic) = this%propsedge(5, iedge)
-          if (area > DZERO) then
-            swa%vi(ic) = this%propsedge(1, iedge) / area
+          ! propsedge: (Q, area, nx, ny, distance)
+          ihc = this%ihcedge(iedge)
+          area = this%propsedge(2, iedge)
+          if (ihc == C3D_VERTICAL) then
+            iz = iz + 1
+            swa%viz(iz) = this%propsedge(1, iedge) / area
+            swa%diz(iz) = this%propsedge(5, iedge)
           else
-            swa%vi(ic) = DZERO
+            ic = ic + 1
+            swa%nix(ic) = -this%propsedge(3, iedge)
+            swa%niy(ic) = -this%propsedge(4, iedge)
+            swa%di(ic) = this%propsedge(5, iedge)
+            if (area > DZERO) then
+              swa%vi(ic) = this%propsedge(1, iedge) / area
+            else
+              swa%vi(ic) = DZERO
+            end if
           end if
-        end if
-
-      end do
+        end do
+      end if
       !
       ! -- Assign number of vertical and horizontal connections
       ncz = iz
@@ -2753,12 +2754,16 @@ contains
   subroutine prepare_edge_lookup(this)
     class(GwfNpfType) :: this
     ! local
-    integer(I4B) :: inode, iedge
+    integer(I4B) :: i, inode, iedge
     integer(I4B) :: n, start, end
     integer(I4B) :: prev_cnt, strt_idx, ipos
 
-    this%iedge_ptr(:) = 0
-    this%edge_idxs(:) = 0
+    do i = 1, size(this%iedge_ptr)
+      this%iedge_ptr(i) = 0
+    end do
+    do i = 1, size(this%edge_idxs)
+      this%edge_idxs(i) = 0
+    end do
 
     ! count
     do iedge = 1, this%nedges
@@ -2850,8 +2855,6 @@ contains
     this%diz(:) = DZERO
     this%nix(:) = DZERO
     this%niy(:) = DZERO
-
-    ! TODO: should we reset weights too?
 
   end subroutine reset
 
