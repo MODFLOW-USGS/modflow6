@@ -1,5 +1,5 @@
 module GwfNpfModule
-  use KindModule, only: DP, I4B
+  use KindModule, only: DP, I4B, LGP
   use SimVariablesModule, only: errmsg
   use ConstantsModule, only: DZERO, DEM9, DEM8, DEM7, DEM6, DEM2, &
                              DHALF, DP9, DONE, DTWO, &
@@ -45,6 +45,7 @@ module GwfNpfModule
     real(DP), allocatable, dimension(:) :: biy
   contains
     procedure :: create
+    procedure :: is_created
     procedure :: reset
     procedure :: destroy
   end type SpdisWorkArrays
@@ -332,7 +333,6 @@ contains
         this%iedge_ptr(n) = 0
         this%spdis(:, n) = DZERO
       end do
-      
     end if
     !
     ! -- Store pointer to VSC if active
@@ -966,8 +966,8 @@ contains
     class(GwfNpftype) :: this
 
     ! free spdis work structure
+    if (this%icalcspdis == 1) call this%spdis_wa%destroy()
     deallocate (this%spdis_wa)
-
     !
     ! -- Deallocate input memory
     call memorystore_remove(this%name_model, 'NPF', idm_context)
@@ -2421,14 +2421,14 @@ contains
                        'calculation of specific discharge.', terminate=.TRUE.)
     end if
 
-    ! prepare work arrays
     swa => this%spdis_wa
-    nc = this%calc_max_conns()
-    call swa%create(nc)
+    if (.not. swa%is_created()) then
+      ! prepare work arrays
+      call this%spdis_wa%create(this%calc_max_conns())
 
-    ! prepare lookup table
-    call this%prepare_edge_lookup()
-
+      ! prepare lookup table
+      call this%prepare_edge_lookup()
+    end if
     !
     ! -- Go through each cell and calculate specific discharge
     do n = 1, this%dis%nodes
@@ -2616,9 +2616,7 @@ contains
       this%spdis(2, n) = vy
       this%spdis(3, n) = vz
       !
-    end do 
-
-    call swa%destroy()
+    end do
 
   end subroutine calc_spdis
 
@@ -2765,6 +2763,7 @@ contains
       n = this%nodedge(iedge)
       this%iedge_ptr(n) = this%iedge_ptr(n) + 1
     end do
+
     ! determine start indexes
     prev_cnt = this%iedge_ptr(1)
     this%iedge_ptr(1) = 1
@@ -2831,6 +2830,14 @@ contains
     allocate (this%biy(nr_conns))
 
   end subroutine create
+
+  function is_created(this) result(created)
+    class(SpdisWorkArrays) :: this
+    logical(LGP) :: created
+
+    created = allocated(this%vi)
+
+  end function is_created
 
   subroutine reset(this)
     class(SpdisWorkArrays) :: this
