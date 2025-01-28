@@ -15,6 +15,7 @@ module SimNamInputModule
     logical :: continue = .false.
     logical :: nocheck = .false.
     logical :: prmem = .false.
+    logical :: prprof = .false.
     logical :: maxerrors = .false.
     logical :: print_input = .false.
     logical :: hpc_filerecord = .false.
@@ -90,6 +91,24 @@ module SimNamInputModule
     'STRING', & ! type
     '', & ! shape
     'memory print option', & ! longname
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    simnam_prprof = InputParamDefinitionType &
+    ( &
+    'SIM', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'PROFILE_OPTION', & ! tag name
+    'PRPROF', & ! fortran variable
+    'STRING', & ! type
+    '', & ! shape
+    'profiling option', & ! longname
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -427,6 +446,7 @@ module SimNamInputModule
     simnam_continue, &
     simnam_nocheck, &
     simnam_prmem, &
+    simnam_prprof, &
     simnam_maxerrors, &
     simnam_print_input, &
     simnam_hpc_filerecord, &

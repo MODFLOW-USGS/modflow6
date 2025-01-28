@@ -1,9 +1,10 @@
 module MpiRouterModule
   use RouterBaseModule
   use KindModule, only: I4B, LGP
+  use ProfilerModule, only: g_prof
   use STLVecIntModule
   use SimVariablesModule, only: proc_id, nr_procs
-  use SimStagesModule, only: STG_TO_STR
+  use SimStagesModule, only: STG_TO_STR, NR_SIM_STAGES
   use VirtualDataListsModule, only: virtual_model_list, &
                                     virtual_exchange_list
   use VirtualBaseModule, only: NR_VDC_ELEMENT_MAPS
@@ -32,10 +33,12 @@ module MpiRouterModule
     type(MpiWorldType), pointer :: mpi_world => null()
     integer(I4B) :: imon !< the output file unit for the mpi monitor
     logical(LGP) :: enable_monitor !< when true, log diagnostics
+    integer(I4B), dimension(:, :), allocatable :: tmr_mpi_wait !< array with timer handles for MPI_Wait calls
   contains
     procedure :: initialize => mr_initialize
     procedure :: route_all => mr_route_all
     procedure :: route_sln => mr_route_sln
+    procedure :: finalize => mr_finalize
     procedure :: destroy => mr_destroy
     ! private
     procedure, private :: activate
@@ -72,6 +75,10 @@ contains
     integer(I4B) :: nr_models, nr_exchanges
     class(VirtualDataContainerType), pointer :: vdc
     character(len=LINELENGTH) :: monitor_file
+
+    ! allocate timer handles: global + nr. solutions
+    allocate (this%tmr_mpi_wait(NR_SIM_STAGES, this%nr_virt_solutions + 1))
+    this%tmr_mpi_wait = -1
 
     ! routing over all when starting
     this%halo_activated = .false.
@@ -322,7 +329,10 @@ contains
     end do
 
     ! wait for exchange of all messages
+    call g_prof%start("MPI_WaitAll ("//trim(STG_TO_STR(stage))//")", &
+                      this%tmr_mpi_wait(stage, unit + 1))
     call MPI_WaitAll(this%senders%size, rcv_req, rcv_stat, ierr)
+    call g_prof%stop(this%tmr_mpi_wait(stage, unit + 1))
     call CHECK_MPI(ierr)
 
     deallocate (rcv_req, snd_req, rcv_stat)
@@ -438,7 +448,10 @@ contains
     end do
 
     ! wait for exchange of all headers
+    call g_prof%start("MPI_WaitAll ("//trim(STG_TO_STR(stage))//")", &
+                      this%tmr_mpi_wait(stage, unit + 1))
     call MPI_WaitAll(this%receivers%size, rcv_req, rcv_stat, ierr)
+    call g_prof%stop(this%tmr_mpi_wait(stage, unit + 1))
     call CHECK_MPI(ierr)
 
     ! reinit handles
@@ -508,7 +521,10 @@ contains
     end do
 
     ! wait on receiving maps
+    call g_prof%start("MPI_WaitAll ("//trim(STG_TO_STR(stage))//")", &
+                      this%tmr_mpi_wait(stage, unit + 1))
     call MPI_WaitAll(this%receivers%size, rcv_req, rcv_stat, ierr)
+    call g_prof%stop(this%tmr_mpi_wait(stage, unit + 1))
     call CHECK_MPI(ierr)
 
     ! print maps
@@ -700,6 +716,13 @@ contains
 
   end function is_cached
 
+  subroutine mr_finalize(this)
+    class(MpiRouterType) :: this
+
+    call this%msg_cache%clear()
+
+  end subroutine mr_finalize
+
   subroutine mr_destroy(this)
     class(MpiRouterType) :: this
 
@@ -711,6 +734,8 @@ contains
     deallocate (this%model_proc_ids)
     deallocate (this%all_models)
     deallocate (this%all_exchanges)
+
+    deallocate (this%tmr_mpi_wait)
 
   end subroutine mr_destroy
 

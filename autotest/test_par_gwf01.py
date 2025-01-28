@@ -71,6 +71,7 @@ def get_model(idx, dir):
         version="mf6",
         exe_name="mf6",
         sim_ws=dir,
+        profile_option="detail",
     )
 
     tdis = flopy.mf6.ModflowTdis(sim, time_units="DAYS", nper=nper, perioddata=tdis_rc)
