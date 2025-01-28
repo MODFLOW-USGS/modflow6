@@ -2768,8 +2768,9 @@ contains
       start = this%iedge_ptr(n)
       end = this%iedge_ptr(n + 1) - 1
       do ipos = start, end
-        if (this%edge_idxs(ipos) > 0) cycle
+        if (this%edge_idxs(ipos) > 0) cycle ! go to next
         this%edge_idxs(ipos) = iedge
+        exit
       end do
     end do
 
