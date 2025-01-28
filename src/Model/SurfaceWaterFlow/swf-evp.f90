@@ -7,7 +7,7 @@ module SwfEvpModule
 
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: DZERO, LENFTYPE, LENPACKAGENAME, MAXCHARLEN, &
-                             LINELENGTH, DONE
+                             LINELENGTH, DONE, DHALF, DEM6, DPREC
   use MemoryHelperModule, only: create_mem_path
   use BndModule, only: BndType
   use BndExtModule, only: BndExtType
@@ -18,6 +18,7 @@ module SwfEvpModule
   use BlockParserModule, only: BlockParserType
   use CharacterStringModule, only: CharacterStringType
   use SmoothingModule, only: sQSaturation
+  use MathUtilModule, only: get_perturbation
   use MatrixBaseModule
   use GeomUtilModule, only: get_node
   use BaseDisModule, only: DisBaseType
@@ -309,7 +310,11 @@ contains
     ! local
     integer(I4B) :: i
     integer(I4B) :: node
-    real(DP) :: qevp
+    integer(I4B) :: inwt
+    real(DP) :: q
+    real(DP) :: qeps
+    real(DP) :: eps
+    real(DP) :: derv
     real(DP) :: evap
     real(DP) :: rlen
     real(DP), dimension(:), pointer :: reach_length
@@ -334,6 +339,13 @@ contains
         cycle
       end if
 
+      ! cycle if dry or constant head
+      if (this%ibound(node) <= 0) then
+        this%hcof(i) = DZERO
+        this%rhs(i) = DZERO
+        cycle
+      end if
+
       ! Initialize hcof
       this%hcof(i) = DZERO
 
@@ -348,29 +360,46 @@ contains
         rlen = reach_length(node)
       end if
 
-      ! calculate volumetric evaporation flow in L^3/T
-      qevp = this%get_qevp(node, rlen, this%xnew(node), evap)
+      ! Calculate volumetric evaporation flow in L^3/Td and add to rhs
+      q = -this%get_qevp(node, rlen, this%xnew(node), this%xold(node), evap)
+      this%rhs(i) = -q
 
-      ! rhs contribution (positive value means extraction)
-      this%rhs(i) = qevp
+      ! Code for adding newton terms
+      inwt = 1
+      if (inwt == 1) then
 
-      ! zero out contribution if cell is inactive or constant head
-      if (this%ibound(node) <= 0) then
-        this%rhs(i) = DZERO
-        cycle
+        ! calculate perturbed q
+        eps = get_perturbation(this%xnew(node))
+        qeps = -this%get_qevp(node, rlen, this%xnew(node) + eps, &
+                              this%xold(node), evap)
+
+        ! calculate derivative
+        derv = (qeps - q) / eps
+
+        ! add derivative to hcof and update rhs with derivate contribution
+        this%hcof(i) = derv
+        this%rhs(i) = this%rhs(i) + derv * this%xnew(node)
       end if
 
     end do
   end subroutine evp_cf
 
   !> @brief Calculate qevp
+  !!
+  !! Calculate qevp for both channel and overland flow grids.
+  !! Approximate the average water surface width of the channel
+  !! as wavg = delta A over delta h, and then multiply wavg
+  !! by reach length to come up with surface water area for the
+  !! channel.  Reduce evaporation when depths are small and shut
+  !! it off when there is no water in the cell.
   !<
-  function get_qevp(this, node, rlen, stage, evaporation) result(qevp)
+  function get_qevp(this, node, rlen, snew, sold, evaporation) result(qevp)
     ! dummy
     class(SwfEvpType) :: this !< this instance
     integer(I4B), intent(in) :: node !< reduced node number
     real(DP), intent(in) :: rlen !< length of reach
-    real(DP), intent(in) :: stage !< stage in reach
+    real(DP), intent(in) :: snew !< current stage in reach
+    real(DP), intent(in) :: sold !< previous stage in reach
     real(DP), intent(in) :: evaporation !< evaporation rate in length per time
     ! return
     real(DP) :: qevp
@@ -379,14 +408,16 @@ contains
     real(DP) :: depth
     real(DP) :: bt
     real(DP) :: area
-    real(DP) :: top_width
+    real(DP) :: anew
+    real(DP) :: aold
+    real(DP) :: denom
+    real(DP) :: wavg
     real(DP) :: width_channel
     real(DP) :: dummy
     real(DP) :: qmult
 
     ! calculate depth of water
     bt = this%dis%bot(node)
-    depth = stage - bt
 
     ! Determine the water surface area
     if (this%dis%is_2d()) then
@@ -396,18 +427,30 @@ contains
       ! channel case
       idcxs = this%dfw%idcxs(node)
       call this%dis%get_flow_width(node, node, 0, width_channel, dummy)
-      top_width = this%cxs%get_wetted_top_width(idcxs, width_channel, depth)
-      area = rlen * top_width
+
+      depth = snew - bt
+      anew = this%cxs%get_area(idcxs, width_channel, depth)
+      depth = sold - bt
+      aold = this%cxs%get_area(idcxs, width_channel, depth)
+      wavg = this%cxs%get_wetted_top_width(idcxs, width_channel, depth)
+      denom = snew - sold
+      if (abs(denom) > DPREC) then
+        wavg = (anew - aold) / (snew - sold)
+      end if
+      area = rlen * wavg
+
     end if
 
     ! Reduce the evap rate as cell goes dry
-    qmult = this%get_evap_reduce_mult(stage, bt)
+    qmult = this%get_evap_reduce_mult(snew, bt)
 
     ! calculate volumetric evaporation flow in L^3/T
     qevp = evaporation * area * qmult
 
   end function get_qevp
 
+  !> @brief Calculate multiplier to reduce evap as depth goes to zero
+  !<
   function get_evap_reduce_mult(this, stage, bottom) result(qmult)
     ! dummy
     class(SwfEvpType) :: this
@@ -423,7 +466,7 @@ contains
     iflowred = 1
     qmult = DONE
     if (iflowred == 1) then
-      evap_depth = 0.1D0
+      evap_depth = DEM6
       tp = bottom + evap_depth
       qmult = sQSaturation(tp, bottom, stage)
     end if
