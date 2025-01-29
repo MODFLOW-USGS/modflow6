@@ -250,7 +250,7 @@ contains
     real(DP), intent(inout), dimension(nodes) :: rhs !< right-hand side vector for model
     integer(I4B), intent(in) :: kiter !< solution outer iteration number
     ! -- local
-    integer(I4B) :: n, idiag
+    integer(I4B) :: n
     real(DP) :: hhcof, rrhs
     real(DP) :: swtpdt
     real(DP) :: vcell
@@ -266,17 +266,9 @@ contains
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
       swtpdt = this%fmi%gwfsat(n)
       !
-      ! -- add decay rate terms to accumulators
-      idiag = this%dis%con%ia(n)
-      if (this%idcy == 1) then
-        !
-        ! -- first order decay rate is a function of temperature, so add       ! note: May want to remove first-order decay for temperature and support only zero-order
-        !    to left hand side
-        hhcof = -this%decay_water(n) * vcell * swtpdt * this%porosity(n) &
-                * this%eqnsclfac
-        call matrix_sln%add_value_pos(idxglo(idiag), hhcof)
-      elseif (this%idcy == 2 .and. (this%idcysrc == 1 .or. &
-                                    this%idcysrc == 3)) then
+      ! -- add zero-order decay rate terms to accumulators
+      if (this%idcy == 2 .and. (this%idcysrc == 1 .or. &
+                                this%idcysrc == 3)) then
         !
         decay_rate = this%decay_water(n)
         ! -- This term does get divided by eqnsclfac for fc purposes because it
@@ -306,7 +298,7 @@ contains
     real(DP), intent(in), dimension(nodes) :: cnew !< temperature at end of this time step
     integer(I4B), intent(in) :: kiter !< solution outer iteration number
     ! -- local
-    integer(I4B) :: n, idiag
+    integer(I4B) :: n
     real(DP) :: hhcof, rrhs
     real(DP) :: vcell
     real(DP) :: decay_rate
@@ -322,14 +314,9 @@ contains
       rrhs = DZERO
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
       !
-      ! -- add decay rate terms for the solid phase to the accumulators
-      idiag = this%dis%con%ia(n)
-      !
-      ! -- add sorbed mass decay rate terms to accumulators
-      if (this%idcy == 1) then
-        ! -- first order decay rate not supported in GWE
-      elseif (this%idcy == 2 .and. (this%idcysrc == 2 .or. &
-                                    this%idcysrc == 3)) then
+      ! -- account for zero-order decay rate terms in rhs
+      if (this%idcy == 2 .and. (this%idcysrc == 2 .or. &
+                                this%idcysrc == 3)) then
         !
         ! -- negative temps are currently not checked for or prevented since a
         !    user can define a temperature scale of their own choosing.  if
@@ -349,7 +336,6 @@ contains
   !!  Method to calculate flows for the package.
   !<
   subroutine est_cq(this, nodes, cnew, cold, flowja)
-    ! -- modules
     ! -- dummy
     class(GweEstType) :: this !< GweEstType object
     integer(I4B), intent(in) :: nodes !< number of nodes
@@ -459,11 +445,9 @@ contains
       rate = DZERO
       hhcof = DZERO
       rrhs = DZERO
-      if (this%idcy == 1) then ! Important note: do we need/want first-order decay for temperature???
-        hhcof = -this%decay_water(n) * vcell * swtpdt * this%porosity(n) &
-                * this%eqnsclfac
-      elseif (this%idcy == 2 .and. (this%idcysrc == 1 .or. &
-                                    this%idcysrc == 3)) then ! zero order decay aqueous phase
+      ! -- zero order decay aqueous phase
+      if (this%idcy == 2 .and. &
+          (this%idcysrc == 1 .or. this%idcysrc == 3)) then
         decay_rate = this%decay_water(n)
         ! -- this term does NOT get multiplied by eqnsclfac for cq purposes
         !    because it should already be a rate of energy
@@ -495,8 +479,6 @@ contains
     real(DP) :: hhcof, rrhs
     real(DP) :: vcell
     real(DP) :: decay_rate
-    !
-    ! -- initialize
     !
     ! -- Calculate decay change
     do n = 1, nodes
