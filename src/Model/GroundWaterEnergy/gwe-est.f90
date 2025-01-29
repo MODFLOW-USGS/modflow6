@@ -282,9 +282,7 @@ contains
         !
         ! -- Call function to get zero-order decay rate, which may be changed
         !    from the user-specified rate to prevent negative temperatures     ! Important note: still need to think through negative temps
-        decay_rate = get_zero_order_decay(this%decay_water(n), &
-                                          this%decaylastw(n), kiter, cold(n), &
-                                          cnew(n), delt)
+        decay_rate = this%decay_water(n)
         ! -- This term does get divided by eqnsclfac for fc purposes because it
         !    should start out being a rate of energy
         this%decaylastw(n) = decay_rate
@@ -339,12 +337,12 @@ contains
       elseif (this%idcy == 2 .and. (this%idcysrc == 2 .or. &
                                     this%idcysrc == 3)) then
         !
-        ! -- Call function to get zero-order decay rate for the solid phase,
-        !    which may be changed from the user-specified rate to prevent
-        !    negative concentrations
-        decay_rate = get_zero_order_decay(this%decay_solid(n), &
-                                          this%decaylasts(n), &
-                                          kiter, cold(n), cnew(n), delt)
+        ! -- negative temps are currently not checked for or prevented since a
+        !    user can define a temperature scale of their own choosing.  if
+        !    negative temps result from the specified zero-order decay value,
+        !    it is up to the user to decide if the calculated temperatures are
+        !    acceptable
+        decay_rate = this%decay_solid(n)
         this%decaylasts(n) = decay_rate
         rrhs = decay_rate * vcell * (1 - this%porosity(n)) * this%rhos(n)
         rhs(n) = rhs(n) + rrhs
@@ -474,10 +472,10 @@ contains
                 * this%eqnsclfac
       elseif (this%idcy == 2 .and. (this%idcysrc == 1 .or. &
                                     this%idcysrc == 3)) then ! zero order decay aqueous phase
-        decay_rate = get_zero_order_decay(this%decay_water(n), &
-                                          this%decaylastw(n), 0, cold(n), &
-                                          cnew(n), delt)
-        rrhs = decay_rate * vcell * swtpdt * this%porosity(n) ! Important note: this term does NOT get multiplied by eqnsclfac for cq purposes because it should already be a rate of energy
+        decay_rate = this%decay_water(n)
+        ! -- this term does NOT get multiplied by eqnsclfac for cq purposes
+        !    because it should already be a rate of energy
+        rrhs = decay_rate * vcell * swtpdt * this%porosity(n)
       end if
       rate = hhcof * cnew(n) - rrhs
       this%ratedcyw(n) = rate
@@ -524,15 +522,13 @@ contains
       rate = DZERO
       hhcof = DZERO
       rrhs = DZERO
-      if (this%idcy == 1) then ! Important note: do we need/want first-order decay for temperature???
-        hhcof = -this%decay_solid(n) * vcell * (1 - this%porosity(n)) &
-                * this%eqnsclfac
-      elseif (this%idcy == 2 .and. (this%idcysrc == 2 .or. &
-                                    this%idcysrc == 3)) then ! zero order decay in the solid phase
-        decay_rate = get_zero_order_decay(this%decay_solid(n), &
-                                          this%decaylasts(n), 0, cold(n), &
-                                          cnew(n), delt)
-        rrhs = decay_rate * vcell * (1 - this%porosity(n)) * this%rhos(n) ! Important note: this term does NOT get multiplied by eqnsclfac for cq purposes because it should already be a rate of energy
+      ! -- first-order decay (idcy=1) is not supported for temperature modeling
+      if (this%idcy == 2 .and. &
+          (this%idcysrc == 2 .or. this%idcysrc == 3)) then ! zero order decay in the solid phase
+        decay_rate = this%decay_solid(n)
+        ! -- this term does NOT get multiplied by eqnsclfac for cq purposes
+        !    because it should already be a rate of energy
+        rrhs = decay_rate * vcell * (1 - this%porosity(n)) * this%rhos(n)
       end if
       rate = hhcof * cnew(n) - rrhs
       this%ratedcys(n) = rate
@@ -985,50 +981,5 @@ contains
       call this%parser%StoreErrorUnit()
     end if
   end subroutine read_data
-
-  !> @ brief Calculate zero-order decay rate and constrain if necessary
-  !!
-  !!  Function to calculate the zero-order decay rate from the user specified
-  !!  decay rate.  If the decay rate is positive, then the decay rate must
-  !!  be constrained so that more energy is not removed than is available.
-  !!  Without this constraint, negative temperatures could result from
-  !!  zero-order decay (no freezing).
-  !<
-  function get_zero_order_decay(decay_rate_usr, decay_rate_last, kiter, &
-                                cold, cnew, delt) result(decay_rate)
-    ! -- dummy
-    real(DP), intent(in) :: decay_rate_usr !< user-entered decay rate
-    real(DP), intent(in) :: decay_rate_last !< decay rate used for last iteration
-    integer(I4B), intent(in) :: kiter !< Picard iteration counter
-    real(DP), intent(in) :: cold !< temperature at end of last time step
-    real(DP), intent(in) :: cnew !< temperature at end of this time step
-    real(DP), intent(in) :: delt !< length of time step
-    ! -- return
-    real(DP) :: decay_rate !< returned value for decay rate
-    !
-    ! -- Return user rate if production, otherwise constrain, if necessary
-    if (decay_rate_usr < DZERO) then
-      !
-      ! -- Production, no need to limit rate
-      decay_rate = decay_rate_usr
-    else
-      !
-      ! -- Need to ensure decay does not result in negative
-      !    temperature, so reduce the rate if it would result in
-      !    removing more energy than is in the cell.          ! kluge note: think through
-      if (kiter == 1) then
-        decay_rate = min(decay_rate_usr, cold / delt) ! kluge note: actually want to use rhow*cpw*cold and rhow*cpw*cnew for rates here and below
-      else
-        decay_rate = decay_rate_last
-        if (cnew < DZERO) then
-          decay_rate = decay_rate_last + cnew / delt
-        else if (cnew > cold) then
-          decay_rate = decay_rate_last + cnew / delt
-        end if
-        decay_rate = min(decay_rate_usr, decay_rate)
-      end if
-      decay_rate = max(decay_rate, DZERO)
-    end if
-  end function get_zero_order_decay
 
 end module GweEstModule
