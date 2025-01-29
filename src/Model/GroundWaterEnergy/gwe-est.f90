@@ -472,8 +472,8 @@ contains
       if (this%idcy == 1) then ! Important note: do we need/want first-order decay for temperature???
         hhcof = -this%decay_water(n) * vcell * swtpdt * this%porosity(n) &
                 * this%eqnsclfac
-      elseif (this%idcy == 2 .and. this%idcysrc == 1 .or. &
-              this%idcysrc == 3) then ! zero order decay aqueous phase
+      elseif (this%idcy == 2 .and. (this%idcysrc == 1 .or. &
+                                    this%idcysrc == 3)) then ! zero order decay aqueous phase
         decay_rate = get_zero_order_decay(this%decay_water(n), &
                                           this%decaylastw(n), 0, cold(n), &
                                           cnew(n), delt)
@@ -527,8 +527,8 @@ contains
       if (this%idcy == 1) then ! Important note: do we need/want first-order decay for temperature???
         hhcof = -this%decay_solid(n) * vcell * (1 - this%porosity(n)) &
                 * this%eqnsclfac
-      elseif (this%idcy == 2 .and. this%idcysrc == 2 .or. &
-              this%idcysrc == 3) then ! zero order decay in the solid phase
+      elseif (this%idcy == 2 .and. (this%idcysrc == 2 .or. &
+                                    this%idcysrc == 3)) then ! zero order decay in the solid phase
         decay_rate = get_zero_order_decay(this%decay_solid(n), &
                                           this%decaylasts(n), 0, cold(n), &
                                           cnew(n), delt)
