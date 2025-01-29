@@ -2438,7 +2438,6 @@ contains
   subroutine mem_da()
     ! -- modules
     use VersionModule, only: IDEVELOPMODE
-    use InputOutputModule, only: UPCASE
     ! -- local
     class(MemoryType), pointer :: mt
     type(MemoryContainerIteratorType), allocatable :: itr
@@ -2448,6 +2447,7 @@ contains
       call itr%next()
       mt => itr%value()
       call mt%mt_deallocate()
+      if (IDEVELOPMODE == 1) call mem_da_check(mt)
       deallocate (mt)
     end do
 
@@ -2456,6 +2456,39 @@ contains
       call store_error('Could not clear memory list.', terminate=.TRUE.)
     end if
   end subroutine mem_da
+
+  subroutine mem_da_check(mt)
+    ! -- modules
+    use InputOutputModule, only: UPCASE
+    ! -- dummy
+    class(MemoryType), pointer :: mt
+    ! -- local
+    character(len=LINELENGTH) :: error_msg
+    character(len=LENVARNAME) :: ucname
+    !
+    ! -- check if memory has been deallocated
+    if (mt%mt_associated() .and. mt%element_size == -1) then
+      error_msg = trim(adjustl(mt%path))//' '// &
+                  trim(adjustl(mt%name))//' has invalid element size'
+      call store_error(trim(error_msg))
+    end if
+    !
+    ! -- check if memory has been deallocated
+    if (mt%mt_associated() .and. mt%isize > 0) then
+      error_msg = trim(adjustl(mt%path))//' '// &
+                  trim(adjustl(mt%name))//' not deallocated'
+      call store_error(trim(error_msg))
+    end if
+    !
+    ! -- check case of varname
+    ucname = mt%name
+    call UPCASE(ucname)
+    if (mt%name /= ucname) then
+      error_msg = trim(adjustl(mt%path))//' '// &
+                  trim(adjustl(mt%name))//' not upper case'
+      call store_error(trim(error_msg))
+    end if
+  end subroutine mem_da_check
 
   !> @brief Create a array with unique first components from all memory paths.
   !! Only the first component of the memory path is evaluated.
