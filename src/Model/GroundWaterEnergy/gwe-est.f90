@@ -239,8 +239,6 @@ contains
   !<
   subroutine est_fc_dcy(this, nodes, cold, cnew, nja, matrix_sln, &
                         idxglo, rhs, kiter)
-    ! -- modules
-    use TdisModule, only: delt
     ! -- dummy
     class(GweEstType) :: this !< GweEstType object
     integer, intent(in) :: nodes !< number of nodes
@@ -297,8 +295,6 @@ contains
   !<
   subroutine est_fc_dcy_solid(this, nodes, cold, nja, matrix_sln, idxglo, &
                               rhs, cnew, kiter)
-    ! -- modules
-    use TdisModule, only: delt
     ! -- dummy
     class(GweEstType) :: this !< GwtMstType object
     integer, intent(in) :: nodes !< number of nodes
@@ -432,9 +428,7 @@ contains
   !!
   !!  Method to calculate decay terms for the aqueous phase.
   !<
-  subroutine est_cq_dcy(this, nodes, cnew, cold, flowja) ! Important note: this handles only decay in water; need to add zero-order (but not first-order?) decay in solid
-    ! -- modules
-    use TdisModule, only: delt
+  subroutine est_cq_dcy(this, nodes, cnew, cold, flowja)
     ! -- dummy
     class(GweEstType) :: this !< GweEstType object
     integer(I4B), intent(in) :: nodes !< number of nodes
@@ -483,13 +477,11 @@ contains
     end do
   end subroutine est_cq_dcy
 
-  !> @ brief Calculate decay terms for aqueous phase
+  !> @ brief Calculate decay terms for solid phase
   !!
-  !!  Method to calculate decay terms for the aqueous phase.
+  !!  Method to calculate decay terms for the solid phase.
   !<
-  subroutine est_cq_dcy_solid(this, nodes, cnew, cold, flowja) ! Important note: this handles only decay in solid
-    ! -- modules
-    use TdisModule, only: delt
+  subroutine est_cq_dcy_solid(this, nodes, cnew, cold, flowja)
     ! -- dummy
     class(GweEstType) :: this !< GweEstType object
     integer(I4B), intent(in) :: nodes !< number of nodes
