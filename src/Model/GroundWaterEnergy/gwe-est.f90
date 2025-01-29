@@ -280,8 +280,6 @@ contains
       elseif (this%idcy == 2 .and. (this%idcysrc == 1 .or. &
                                     this%idcysrc == 3)) then
         !
-        ! -- Call function to get zero-order decay rate, which may be changed
-        !    from the user-specified rate to prevent negative temperatures     ! Important note: still need to think through negative temps
         decay_rate = this%decay_water(n)
         ! -- This term does get divided by eqnsclfac for fc purposes because it
         !    should start out being a rate of energy
@@ -952,16 +950,15 @@ contains
     if (this%idcy > 0) then
       if (.not. lname(2) .and. .not. lname(3)) then
         write (errmsg, '(a)') 'Zero order decay in either the aqueous &
-          &or solid phase is active but zero-order rate coefficients, &
-          &either in the aqueous or solid phase, is not specified.  &
-          &Either DECAY_WATER or DECAY_SOLID must be specified in the &
-          &griddata block.'
+          &or solid phase is active but the corresponding zero-order &
+          &rate coefficient is not specified. Either DECAY_WATER or &
+          &DECAY_SOLID must be specified in the griddata block.'
         call store_error(errmsg)
       end if
     else
       if (lname(2)) then
         write (warnmsg, '(a)') 'Zero order decay in the aqueous phase has &
-          &not been activated but DECAY_WATER has been specified.  Zero &
+          &not been activated but DECAY_WATER has been specified. Zero &
           &order decay in the aqueous phase will have no affect on &
           &simulation results.'
         call store_warning(warnmsg)
