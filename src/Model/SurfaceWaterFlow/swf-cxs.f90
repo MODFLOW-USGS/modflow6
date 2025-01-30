@@ -803,7 +803,7 @@ contains
     if (npts == 0) then
       r = width
     else
-      r = get_saturated_topwidth(npts, this%xfraction(i0:i1))
+      r = get_saturated_topwidth(npts, this%xfraction(i0:i1), width)
     end if
   end function get_maximum_top_width
 

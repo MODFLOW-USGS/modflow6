@@ -432,12 +432,20 @@ contains
   !!
   !! @return      w               saturated top width
   !<
-  function get_saturated_topwidth(npts, stations) result(w)
+  function get_saturated_topwidth(npts, xfraction, width) result(w)
     ! -- dummy variables
     integer(I4B), intent(in) :: npts !< number of station-height data for a reach
-    real(DP), dimension(npts), intent(in) :: stations !< cross-section station distances (x-distance)
+    real(DP), dimension(npts), intent(in) :: xfraction !< cross-section station fractional distances (x-distance)
+    real(DP), intent(in) :: width
     ! -- local variables
+    integer(I4B) :: n
     real(DP) :: w
+    real(DP), dimension(npts) :: stations
+    !
+    ! -- calculate station from xfractions and width
+    do n = 1, npts
+      stations(n) = xfraction(n) * width
+    end do
     !
     ! -- calculate the saturated top width
     if (npts > 1) then

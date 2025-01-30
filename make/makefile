@@ -131,6 +131,7 @@ $(OBJDIR)/swf-pcpidm.o \
 $(OBJDIR)/swf-namidm.o \
 $(OBJDIR)/swf-icidm.o \
 $(OBJDIR)/swf-flwidm.o \
+$(OBJDIR)/swf-evpidm.o \
 $(OBJDIR)/swf-disv2didm.o \
 $(OBJDIR)/swf-disv1didm.o \
 $(OBJDIR)/swf-dis2didm.o \
@@ -150,6 +151,7 @@ $(OBJDIR)/olf-pcpidm.o \
 $(OBJDIR)/olf-namidm.o \
 $(OBJDIR)/olf-icidm.o \
 $(OBJDIR)/olf-flwidm.o \
+$(OBJDIR)/olf-evpidm.o \
 $(OBJDIR)/olf-disv2didm.o \
 $(OBJDIR)/olf-dis2didm.o \
 $(OBJDIR)/olf-dfwidm.o \
@@ -199,6 +201,7 @@ $(OBJDIR)/chf-pcpidm.o \
 $(OBJDIR)/chf-namidm.o \
 $(OBJDIR)/chf-icidm.o \
 $(OBJDIR)/chf-flwidm.o \
+$(OBJDIR)/chf-evpidm.o \
 $(OBJDIR)/chf-disv1didm.o \
 $(OBJDIR)/chf-dfwidm.o \
 $(OBJDIR)/chf-cxsidm.o \
@@ -432,6 +435,7 @@ $(OBJDIR)/swf-pcp.o \
 $(OBJDIR)/swf-oc.o \
 $(OBJDIR)/swf-obs.o \
 $(OBJDIR)/swf-flw.o \
+$(OBJDIR)/swf-evp.o \
 $(OBJDIR)/swf-cdb.o \
 $(OBJDIR)/GridConnection.o \
 $(OBJDIR)/DistributedVariable.o \

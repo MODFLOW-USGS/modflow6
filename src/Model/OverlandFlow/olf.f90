@@ -42,7 +42,8 @@ module OlfModule
   integer(I4B), parameter :: OLF_NMULTIPKG = 50
   character(len=LENPACKAGETYPE), dimension(OLF_NMULTIPKG) :: OLF_MULTIPKG
   data OLF_MULTIPKG/'FLW6 ', 'CHD6 ', 'CDB6 ', 'ZDG6 ', 'PCP6 ', & !  5
-                   &45*'     '/ ! 50
+                    'EVP6 ', '     ', '     ', '     ', '     ', & !  10
+                    &40*'     '/ ! 50
 
   ! size of supported model package arrays
   integer(I4B), parameter :: NIUNIT_OLF = OLF_NBASEPKG + OLF_NMULTIPKG
