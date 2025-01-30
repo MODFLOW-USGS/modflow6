@@ -67,7 +67,7 @@ module GweEstModule
     procedure :: est_ar
     procedure :: est_fc
     procedure :: est_fc_sto
-    procedure :: est_fc_dcy
+    procedure :: est_fc_dcy_water
     procedure :: est_fc_dcy_solid
     procedure :: est_cq
     procedure :: est_cq_sto
@@ -178,8 +178,8 @@ contains
     !
     ! -- decay contribution
     if (this%idcy /= 0) then
-      call this%est_fc_dcy(nodes, cold, cnew, nja, matrix_sln, idxglo, &
-                           rhs, kiter)
+      call this%est_fc_dcy_water(nodes, cold, cnew, nja, matrix_sln, idxglo, &
+                                 rhs, kiter)
       call this%est_fc_dcy_solid(nodes, cold, nja, matrix_sln, idxglo, rhs, &
                                  cnew, kiter)
     end if
@@ -237,8 +237,8 @@ contains
   !!
   !!  Method to calculate and fill decay coefficients for the package.
   !<
-  subroutine est_fc_dcy(this, nodes, cold, cnew, nja, matrix_sln, &
-                        idxglo, rhs, kiter)
+  subroutine est_fc_dcy_water(this, nodes, cold, cnew, nja, matrix_sln, &
+                              idxglo, rhs, kiter)
     ! -- dummy
     class(GweEstType) :: this !< GweEstType object
     integer, intent(in) :: nodes !< number of nodes
@@ -279,7 +279,7 @@ contains
       end if
       !
     end do
-  end subroutine est_fc_dcy
+  end subroutine est_fc_dcy_water
 
   !> @ brief Fill solid decay coefficient method for package
   !!
