@@ -59,7 +59,7 @@ def add_gwe(sim, gwename, add_esl=False):
 
         esl_amt = n * gamma_w + (1 - n) * gamma_s * rho_s
         esl_spd = {
-            0: [[(0, 0, 0), abs(esl_amt)]],
+            0: [[(0, 0, 0), -esl_amt]],
         }
         esl = flopy.mf6.ModflowGweesl(
             gwe,
