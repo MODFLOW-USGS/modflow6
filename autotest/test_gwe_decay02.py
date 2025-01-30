@@ -57,8 +57,9 @@ def add_gwe(sim, gwename, add_esl=False):
         zero_order_decay_water = False
         zero_order_decay_solid = False
 
+        esl_amt = n * gamma_w + (1 - n) * gamma_s * rho_s
         esl_spd = {
-            0: [[(0, 0, 0), 400]],
+            0: [[(0, 0, 0), abs(esl_amt)]],
         }
         esl = flopy.mf6.ModflowGweesl(
             gwe,
