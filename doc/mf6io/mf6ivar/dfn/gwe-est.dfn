@@ -22,7 +22,7 @@ type keyword
 reader urword
 optional true
 longname activate zero-order decay in solid phase
-description is a text keyword to indicate that zero-order decay will occur in the solid phase. That is, decay occurs in the solid and is a rate per mass of solid only, not per volume of aquifer (i.e., grid cell).  Use of this keyword requires that DECAY\_SOLID is specified in the GRIDDATA block.
+description is a text keyword to indicate that zero-order decay will occur in the solid phase. That is, decay occurs in the solid and is a rate per mass (not volume) of solid only.  Use of this keyword requires that DECAY\_SOLID is specified in the GRIDDATA block.
 
 block options
 name density_water
@@ -73,7 +73,7 @@ reader readarray
 layered true
 optional true
 longname aqueous phase decay rate coefficient
-description is the rate coefficient for zero-order decay for the aqueous phase of the mobile domain.  A negative value indicates heat (energy) production.  The dimensions of zero-order decay in the aqueous phase are energy per length cubed per time.  Zero-order decay in the aqueous phase will have no effect on simulation results unless ZERO\_ORDER\_DECAY\_WATER is specified in the options block.
+description is the rate coefficient for zero-order decay for the aqueous phase of the mobile domain.  A negative value indicates heat (energy) production.  The dimensions of zero-order decay in the aqueous phase are energy per length cubed (volume of water) per time.  Zero-order decay in the aqueous phase will have no effect on simulation results unless ZERO\_ORDER\_DECAY\_WATER is specified in the options block.
 
 block griddata
 name decay_solid
