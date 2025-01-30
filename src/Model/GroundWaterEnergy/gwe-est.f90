@@ -251,7 +251,7 @@ contains
     integer(I4B), intent(in) :: kiter !< solution outer iteration number
     ! -- local
     integer(I4B) :: n
-    real(DP) :: hhcof, rrhs
+    real(DP) :: rrhs
     real(DP) :: swtpdt
     real(DP) :: vcell
     real(DP) :: decay_rate
@@ -299,7 +299,7 @@ contains
     integer(I4B), intent(in) :: kiter !< solution outer iteration number
     ! -- local
     integer(I4B) :: n
-    real(DP) :: hhcof, rrhs
+    real(DP) :: rrhs
     real(DP) :: vcell
     real(DP) :: decay_rate
     !
@@ -310,7 +310,6 @@ contains
       if (this%ibound(n) <= 0) cycle
       !
       ! -- set variables
-      hhcof = DZERO
       rrhs = DZERO
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
       !
