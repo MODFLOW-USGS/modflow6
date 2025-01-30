@@ -47,12 +47,13 @@ module TrackFileModule
   !!     1: active
   !!     2: terminated at boundary face
   !!     3: terminated in weak sink cell
-  !!     4: terminated in weak source cell**
+  !!     4: terminated in weak source cell
   !!     5: terminated in cell with no exit face
   !!     6: terminated in cell with specified zone number
   !!     7: terminated in inactive cell
   !!     8: permanently unreleased***
   !!     9: terminated in subcell with no exit face*****
+  !!     10: terminated upon simulation's end
   !!
   !! PRT shares the same status enumeration as MODPATH 7. However, some
   !! don't apply to PRT; for instance, MODPATH 7 distinguishes forwards
