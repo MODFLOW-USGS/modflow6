@@ -47,7 +47,7 @@ contains
     real(DP), intent(in) :: tmax
 
     ! Check termination/reporting conditions
-    call this%check(particle, this%cell%defn)
+    call this%check(particle, this%cell%defn, tmax)
     if (.not. particle%advancing) return
 
     ! Pass to bottom face

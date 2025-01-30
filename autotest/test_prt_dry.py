@@ -70,6 +70,8 @@ period_data = []
 for i in range(nper):
     period_data.append((perlen[i], nstp[i], tsmult[i]))
 
+user_time = 100.0
+
 
 def build_gwf_sim(name, gwf_ws, mf6, newton=False):
     sim = flopy.mf6.MFSimulation(
@@ -319,6 +321,8 @@ def build_prt_sim(name, gwf, prt_ws, mf6, drape=False, dry_tracking_method=False
         trackcsv_filerecord=[trackcsvfile],
         saverecord=[("BUDGET", "ALL")],
         pname="oc",
+        ntracktimes=1 if "stay" in name else 0,
+        tracktimes=[(user_time,)] if "stay" in name else None,
     )
 
     rel_prt_folder = os.path.relpath(gwf_ws, start=prt_ws)
@@ -373,6 +377,8 @@ def check_output(idx, test, snapshot):
     # ignore particle 4, it terminates early with optimization=2 when built with ifort
     if "drop" in name:
         actual = actual.drop(actual[actual.irpt == 4].index)
+    if "stay" in name:
+        assert len(actual[actual.t == user_time]) == 5
     assert snapshot == actual.to_records(index=False)
 
     plot_pathlines = False

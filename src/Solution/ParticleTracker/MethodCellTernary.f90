@@ -165,7 +165,7 @@ contains
     select type (cell => this%cell)
     type is (CellPolyType)
       ! Check termination/reporting conditions
-      call this%check(particle, this%cell%defn)
+      call this%check(particle, this%cell%defn, tmax)
       if (.not. particle%advancing) return
 
       ! Number of vertices
