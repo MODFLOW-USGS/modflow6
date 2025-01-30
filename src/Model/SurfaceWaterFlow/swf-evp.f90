@@ -9,6 +9,7 @@ module SwfEvpModule
   use ConstantsModule, only: DZERO, LENFTYPE, LENPACKAGENAME, MAXCHARLEN, &
                              LINELENGTH, DONE, DHALF, DEM6, DPREC
   use MemoryHelperModule, only: create_mem_path
+  use MemoryManagerModule, only: mem_allocate, mem_deallocate
   use BndModule, only: BndType
   use BndExtModule, only: BndExtType
   use SimModule, only: store_error, store_error_filename, count_errors
@@ -37,6 +38,8 @@ module SwfEvpModule
 
   type, extends(BndExtType) :: SwfEvpType
     real(DP), dimension(:), pointer, contiguous :: evaporation => null() !< boundary evaporation array
+    integer(I4B), pointer :: iflowred => null() !< flag that indicates evaporation will be shut off when depth is less than reduction depth
+    real(DP), pointer :: reduction_depth => null() !< depth below which evaporation is reduced
     logical, pointer, private :: read_as_arrays
 
     ! pointers to other objects
@@ -129,9 +132,13 @@ contains
     call this%BndExtType%allocate_scalars()
 
     ! allocate internal members
+    call mem_allocate(this%iflowred, 'IFLOWRED', this%memoryPath)
+    call mem_allocate(this%reduction_depth, 'REDUCTION_DEPTH', this%memoryPath)
     allocate (this%read_as_arrays)
 
     ! Set values
+    this%iflowred = 1
+    this%reduction_depth = DEM6
     this%read_as_arrays = .false.
   end subroutine evp_allocate_scalars
 
@@ -459,15 +466,11 @@ contains
     ! return
     real(DP) :: qmult
     ! local
-    integer(I4B) :: iflowred
-    real(DP) :: evap_depth
     real(DP) :: tp
 
-    iflowred = 1
     qmult = DONE
-    if (iflowred == 1) then
-      evap_depth = DEM6
-      tp = bottom + evap_depth
+    if (this%iflowred == 1) then
+      tp = bottom + this%reduction_depth
       qmult = sQSaturation(tp, bottom, stage)
     end if
 
@@ -499,7 +502,6 @@ contains
   !<
   subroutine evp_da(this)
     ! modules
-    use MemoryManagerModule, only: mem_deallocate
     ! dummy
     class(SwfEvpType) :: this
 
@@ -507,6 +509,8 @@ contains
     call this%BndExtType%bnd_da()
 
     ! scalars
+    call mem_deallocate(this%iflowred)
+    call mem_deallocate(this%reduction_depth)
     deallocate (this%read_as_arrays)
 
     ! arrays
