@@ -5,6 +5,8 @@ module MethodCellPassToBotModule
   use CellDefnModule, only: CellDefnType, create_defn
   use PrtFmiModule, only: PrtFmiType
   use BaseDisModule, only: DisBaseType
+  use DisModule, only: DisType
+  use DisvModule, only: DisvType
   use ParticleModule, only: ParticleType
   use CellModule, only: CellType
   use SubcellModule, only: SubcellType
@@ -45,16 +47,31 @@ contains
     class(MethodCellPassToBotType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
     real(DP), intent(in) :: tmax
+    ! local
+    integer(I4B) :: nlay
 
     ! Check termination/reporting conditions
-    call this%check(particle, this%cell%defn)
+    call this%check(particle, this%cell%defn, tmax)
     if (.not. particle%advancing) return
 
     ! Pass to bottom face
     particle%z = this%cell%defn%bot
     particle%iboundary(2) = this%cell%defn%npolyverts + 2
 
-    ! Save datum
+    ! Terminate if in bottom layer
+    select type (dis => this%fmi%dis)
+    type is (DisType)
+      nlay = dis%nlay
+    type is (DisvType)
+      nlay = dis%nlay
+    end select
+    if (particle%ilay == nlay) then
+      particle%advancing = .false.
+      particle%istatus = 5
+      call this%save(particle, reason=3)
+    end if
+
+    ! Save record
     call this%save(particle, reason=1)
   end subroutine apply_ptb
 

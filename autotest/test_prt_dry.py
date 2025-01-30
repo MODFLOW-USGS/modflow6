@@ -70,6 +70,17 @@ period_data = []
 for i in range(nper):
     period_data.append((perlen[i], nstp[i], tsmult[i]))
 
+user_time = 100.0
+
+# particles are released in layer 0
+offsets = [
+    (-1, 0, 0),
+    (-1, -1, 0),
+    (-1, 1, 0),
+    (-1, 0, -1),
+    (-1, 0, 1),
+]
+
 
 def build_gwf_sim(name, gwf_ws, mf6, newton=False):
     sim = flopy.mf6.MFSimulation(
@@ -267,15 +278,6 @@ def build_prt_sim(name, gwf, prt_ws, mf6, drape=False, dry_tracking_method=False
 
     flopy.mf6.ModflowPrtmip(prt, porosity=porosity, pname="mip")
 
-    # particles are released in layer 0
-    offsets = [
-        (-1, 0, 0),
-        (-1, -1, 0),
-        (-1, 1, 0),
-        (-1, 0, -1),
-        (-1, 0, 1),
-    ]
-
     lay = 1
     row, col = (int(nrow / 4), int(ncol / 4))
     prp_cells = [(lay + k, row + i, col + j) for k, i, j in offsets]
@@ -319,6 +321,8 @@ def build_prt_sim(name, gwf, prt_ws, mf6, drape=False, dry_tracking_method=False
         trackcsv_filerecord=[trackcsvfile],
         saverecord=[("BUDGET", "ALL")],
         pname="oc",
+        ntracktimes=1 if "stay" in name else 0,
+        tracktimes=[(user_time,)] if "stay" in name else None,
     )
 
     rel_prt_folder = os.path.relpath(gwf_ws, start=prt_ws)
@@ -368,11 +372,31 @@ def check_output(idx, test, snapshot):
     strtpts = pls[pls.ireason == 0]
 
     # compare to expected results
-    decimals = 1 if "drop" in name else 2
-    actual = pls.drop(["name", "icell"], axis=1).round(decimals).reset_index(drop=True)
-    # ignore particle 4, it terminates early with optimization=2 when built with ifort
-    if "drop" in name:
+    places = 1 if "drop" in name else 2
+    actual = pls.drop(["name", "icell"], axis=1).round(places).reset_index(drop=True)
+    nparts = len(offsets)  # number of particles
+
+    if "drape" in name:
+        assert len(actual[actual.ireason == 0]) == nparts  # release
+    elif "drop" in name:
+        # ignore particle 4, it terminates early when
+        # mf6 is built with optimization=2 with ifort
         actual = actual.drop(actual[actual.irpt == 4].index)
+        nparts -= 1
+        assert len(actual[actual.ireason == 0]) == nparts  # release
+    elif "stop" in name:
+        assert len(actual[actual.ireason == 0]) == nparts  # release
+    elif "stay" in name:
+        assert len(actual[actual.ireason == 0]) == nparts  # release
+        assert len(actual[actual.t == user_time]) == nparts  # user time
+    else:
+        # immediate termination, permanently unreleased
+        assert len(actual) == nparts
+
+    # in all cases, all particles should have a termination event
+    assert len(actual[actual.ireason == 3]) == nparts
+
+    # snapshot comparison
     assert snapshot == actual.to_records(index=False)
 
     plot_pathlines = False

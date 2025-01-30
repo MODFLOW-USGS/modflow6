@@ -130,7 +130,7 @@ contains
     select type (cell => this%cell)
     type is (CellRectType)
       ! Check termination/reporting conditions
-      call this%check(particle, cell%defn)
+      call this%check(particle, cell%defn, tmax)
       if (.not. particle%advancing) return
 
       ! Transform model coordinates to local cell coordinates

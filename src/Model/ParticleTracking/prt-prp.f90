@@ -436,17 +436,11 @@ contains
     type(ParticleType), pointer :: particle
 
     call this%initialize_particle(particle, ip, trelease)
-
-    ! Increment cumulative particle count
     np = this%nparticles + 1
     this%nparticles = np
-
-    ! Save the particle to the store
-    call this%particles%save_particle(particle, np)
+    call this%particles%put(particle, np)
     deallocate (particle)
-
-    ! Accumulate mass for release point
-    this%rptm(ip) = this%rptm(ip) + DONE
+    this%rptm(ip) = this%rptm(ip) + DONE ! TODO configurable mass
 
   end subroutine release
 
@@ -486,7 +480,6 @@ contains
     end select
     particle%ilay = ilay
     particle%izone = this%rptzone(ic)
-
     particle%istatus = 0
     ! If the cell is inactive, either drape the particle
     ! to the top-most active cell beneath it if drape is
@@ -495,8 +488,9 @@ contains
       ic_old = ic
       if (this%idrape > 0) then
         call this%dis%highest_active(ic, this%ibound)
-        if (ic == ic_old .or. this%ibound(ic) == 0) &
+        if (ic == ic_old .or. this%ibound(ic) == 0) then
           particle%istatus = 8
+        end if
       else
         particle%istatus = 8
       end if

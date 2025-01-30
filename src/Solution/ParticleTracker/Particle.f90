@@ -69,7 +69,6 @@ module ParticleModule
     integer(I4B), public :: iextend !< whether to extend tracking beyond the end of the simulation
   contains
     procedure, public :: get_model_coords
-    procedure, public :: load_particle
     procedure, public :: transform => transform_coords
     procedure, public :: reset_transform
   end type ParticleType
@@ -108,7 +107,8 @@ module ParticleModule
     procedure, public :: deallocate
     procedure, public :: num_stored
     procedure, public :: resize
-    procedure, public :: save_particle
+    procedure, public :: get
+    procedure, public :: put
   end type ParticleStoreType
 
 contains
@@ -224,50 +224,50 @@ contains
   !! This routine is used to initialize a particle for tracking.
   !! The advancing flag and coordinate transformation are reset.
   !<
-  subroutine load_particle(this, store, imdl, iprp, ip)
-    class(ParticleType), intent(inout) :: this !< particle
-    type(ParticleStoreType), intent(in) :: store !< particle storage
+  subroutine get(this, particle, imdl, iprp, ip)
+    class(ParticleStoreType), intent(inout) :: this !< particle store
+    class(ParticleType), intent(inout) :: particle !< particle
     integer(I4B), intent(in) :: imdl !< index of model particle originated in
     integer(I4B), intent(in) :: iprp !< index of particle release package particle originated in
     integer(I4B), intent(in) :: ip !< index into the particle list
 
-    call this%reset_transform()
-    this%imdl = imdl
-    this%iprp = iprp
-    this%irpt = store%irpt(ip)
-    this%ip = ip
-    this%name = store%name(ip)
-    this%istopweaksink = store%istopweaksink(ip)
-    this%istopzone = store%istopzone(ip)
-    this%idrymeth = store%idrymeth(ip)
-    this%icp = 0
-    this%icu = store%icu(ip)
-    this%ilay = store%ilay(ip)
-    this%izone = store%izone(ip)
-    this%izp = store%izp(ip)
-    this%istatus = store%istatus(ip)
-    this%x = store%x(ip)
-    this%y = store%y(ip)
-    this%z = store%z(ip)
-    this%trelease = store%trelease(ip)
-    this%tstop = store%tstop(ip)
-    this%ttrack = store%ttrack(ip)
-    this%advancing = .true.
-    this%idomain(1:levelmax) = &
-      store%idomain(ip, 1:levelmax)
-    this%idomain(1) = imdl
-    this%iboundary(1:levelmax) = &
-      store%iboundary(ip, 1:levelmax)
-    this%ifrctrn = store%ifrctrn(ip)
-    this%iexmeth = store%iexmeth(ip)
-    this%extol = store%extol(ip)
-    this%iextend = store%extend(ip)
-  end subroutine load_particle
+    call particle%reset_transform()
+    particle%imdl = imdl
+    particle%iprp = iprp
+    particle%irpt = this%irpt(ip)
+    particle%ip = ip
+    particle%name = this%name(ip)
+    particle%istopweaksink = this%istopweaksink(ip)
+    particle%istopzone = this%istopzone(ip)
+    particle%idrymeth = this%idrymeth(ip)
+    particle%icp = 0
+    particle%icu = this%icu(ip)
+    particle%ilay = this%ilay(ip)
+    particle%izone = this%izone(ip)
+    particle%izp = this%izp(ip)
+    particle%istatus = this%istatus(ip)
+    particle%x = this%x(ip)
+    particle%y = this%y(ip)
+    particle%z = this%z(ip)
+    particle%trelease = this%trelease(ip)
+    particle%tstop = this%tstop(ip)
+    particle%ttrack = this%ttrack(ip)
+    particle%advancing = .true.
+    particle%idomain(1:levelmax) = &
+      this%idomain(ip, 1:levelmax)
+    particle%idomain(1) = imdl
+    particle%iboundary(1:levelmax) = &
+      this%iboundary(ip, 1:levelmax)
+    particle%ifrctrn = this%ifrctrn(ip)
+    particle%iexmeth = this%iexmeth(ip)
+    particle%extol = this%extol(ip)
+    particle%iextend = this%extend(ip)
+  end subroutine get
 
   !> @brief Save a particle's state to the particle store
-  subroutine save_particle(this, particle, ip)
+  subroutine put(this, particle, ip)
     class(ParticleStoreType), intent(inout) :: this !< particle storage
-    type(ParticleType), intent(in) :: particle !< particle
+    class(ParticleType), intent(in) :: particle !< particle
     integer(I4B), intent(in) :: ip !< particle index
 
     this%imdl(ip) = particle%imdl
@@ -300,7 +300,7 @@ contains
     this%iexmeth(ip) = particle%iexmeth
     this%extol(ip) = particle%extol
     this%extend(ip) = particle%iextend
-  end subroutine save_particle
+  end subroutine put
 
   !> @brief Transform particle coordinates.
   !!
