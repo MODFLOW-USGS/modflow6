@@ -187,8 +187,14 @@ contains
     call clamp_bary(alpi, beti, gami, pad=DSAME * DEP3)
 
     ! Do calculations related to the analytical z solution.
-    ! todo: just once for each cell? store at cell-level?
+    ! (TODO: just once for each cell? store at cell-level?)
+    ! Clamp the relative z coordinate to the unit interval.
     zirel = (zi - zbot) / dz
+    if (zirel > DONE) then
+      zirel = DONE
+    else
+      zirel = DZERO
+    end if
     call calculate_dt(vzbot, vztop, dz, zirel, vzi, &
                       az, dtexitz, izstatus, &
                       itopbotexit)
