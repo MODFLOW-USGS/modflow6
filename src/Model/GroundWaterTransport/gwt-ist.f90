@@ -201,11 +201,11 @@ contains
         &Packages.')
     end if
     if (this%isrb /= this%mst%isrb) then
-      call store_error('Sorption is active for the IST Package but it is not &
-        &compatible with the sorption option selected for the MST Package.  &
-        &If sorption is active for the IST Package, then the same type of &
-        &sorption (LINEAR, FREUNDLICH, or LANGMUIR) must &
-        &be specified in the options block of the MST Package.')
+      call store_error('SORPTION must be activated consistently between the &
+        &MST and IST Packages.  Activate or deactivate SORPTION for both &
+        &Packages.  If activated, the same type of sorption (LINEAR, &
+        &FREUNDLICH, or LANGMUIR) must be specified in the options block of &
+        &both the MST and IST Packages.')
     end if
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
