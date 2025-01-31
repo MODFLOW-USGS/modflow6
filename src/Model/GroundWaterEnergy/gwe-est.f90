@@ -31,6 +31,16 @@ module GweEstModule
   character(len=LENBUDTXT), dimension(NBDITEMS) :: budtxt
   data budtxt/' STORAGE-CELLBLK', '   DECAY-AQUEOUS', '     DECAY-SOLID'/
 
+  !> @brief Enumerator that defines the decay options
+  !<
+  ENUM, BIND(C)
+    ENUMERATOR :: DECAY_OFF = 0 !< Decay (or production) of thermal energy inactive (default)
+    ENUMERATOR :: DECAY_ZERO_ORDER = 2 !< Zeroth-order decay
+    ENUMERATOR :: DECAY_WATER = 1 !< Zeroth-order decay in water only
+    ENUMERATOR :: DECAY_SOLID = 2 !< Zeroth-order decay in solid only
+    ENUMERATOR :: DECAY_BOTH = 3 !< Zeroth-order decay in water and solid
+  END ENUM
+
   !> @ brief Energy storage and transfer
   !!
   !!  Data and methods for handling changes in temperature
@@ -177,7 +187,7 @@ contains
     call this%est_fc_sto(nodes, cold, nja, matrix_sln, idxglo, rhs)
     !
     ! -- decay contribution
-    if (this%idcy /= 0) then
+    if (this%idcy == DECAY_ZERO_ORDER) then
       call this%est_fc_dcy_water(nodes, cold, cnew, nja, matrix_sln, idxglo, &
                                  rhs, kiter)
       call this%est_fc_dcy_solid(nodes, cold, nja, matrix_sln, idxglo, rhs, &
@@ -267,8 +277,8 @@ contains
       swtpdt = this%fmi%gwfsat(n)
       !
       ! -- add zero-order decay rate terms to accumulators
-      if (this%idcy == 2 .and. (this%idcysrc == 1 .or. &
-                                this%idcysrc == 3)) then
+      if (this%idcy == DECAY_ZERO_ORDER .and. (this%idcysrc == DECAY_WATER .or. &
+                                               this%idcysrc == DECAY_BOTH)) then
         !
         decay_rate = this%decay_water(n)
         ! -- This term does get divided by eqnsclfac for fc purposes because it
@@ -314,8 +324,8 @@ contains
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
       !
       ! -- account for zero-order decay rate terms in rhs
-      if (this%idcy == 2 .and. (this%idcysrc == 2 .or. &
-                                this%idcysrc == 3)) then
+      if (this%idcy == DECAY_ZERO_ORDER .and. (this%idcysrc == DECAY_SOLID .or. &
+                                               this%idcysrc == DECAY_BOTH)) then
         !
         ! -- negative temps are currently not checked for or prevented since a
         !    user can define a temperature scale of their own choosing.  if
@@ -347,11 +357,11 @@ contains
     call this%est_cq_sto(nodes, cnew, cold, flowja)
     !
     ! -- decay
-    if (this%idcy /= 0) then
-      if (this%idcysrc == 1 .or. this%idcysrc == 3) then
+    if (this%idcy == DECAY_ZERO_ORDER) then
+      if (this%idcysrc == DECAY_WATER .or. this%idcysrc == DECAY_BOTH) then
         call this%est_cq_dcy(nodes, cnew, cold, flowja)
       end if
-      if (this%idcysrc == 2 .or. this%idcysrc == 3) then
+      if (this%idcysrc == DECAY_SOLID .or. this%idcysrc == DECAY_BOTH) then
         call this%est_cq_dcy_solid(nodes, cnew, cold, flowja)
       end if
     end if
@@ -445,8 +455,8 @@ contains
       hhcof = DZERO
       rrhs = DZERO
       ! -- zero order decay aqueous phase
-      if (this%idcy == 2 .and. &
-          (this%idcysrc == 1 .or. this%idcysrc == 3)) then
+      if (this%idcy == DECAY_ZERO_ORDER .and. &
+          (this%idcysrc == DECAY_WATER .or. this%idcysrc == DECAY_BOTH)) then
         decay_rate = this%decay_water(n)
         ! -- this term does NOT get multiplied by eqnsclfac for cq purposes
         !    because it should already be a rate of energy
@@ -494,8 +504,8 @@ contains
       hhcof = DZERO
       rrhs = DZERO
       ! -- first-order decay (idcy=1) is not supported for temperature modeling
-      if (this%idcy == 2 .and. &
-          (this%idcysrc == 2 .or. this%idcysrc == 3)) then ! zero order decay in the solid phase
+      if (this%idcy == DECAY_ZERO_ORDER .and. &
+          (this%idcysrc == DECAY_SOLID .or. this%idcysrc == DECAY_BOTH)) then ! zero order decay in the solid phase
         decay_rate = this%decay_solid(n)
         ! -- this term does NOT get multiplied by eqnsclfac for cq purposes
         !    because it should already be a rate of energy
@@ -531,14 +541,14 @@ contains
                                isuppress_output, rowlabel=this%packName)
     !
     ! -- dcy
-    if (this%idcy /= 0) then
-      if (this%idcysrc == 1 .or. this%idcysrc == 3) then
+    if (this%idcy == DECAY_ZERO_ORDER) then
+      if (this%idcysrc == DECAY_WATER .or. this%idcysrc == DECAY_BOTH) then
         ! -- aqueous phase
         call rate_accumulator(this%ratedcyw, rin, rout)
         call model_budget%addentry(rin, rout, delt, budtxt(2), &
                                    isuppress_output, rowlabel=this%packName)
       end if
-      if (this%idcysrc == 2 .or. this%idcysrc == 3) then
+      if (this%idcysrc == DECAY_SOLID .or. this%idcysrc == DECAY_BOTH) then
         ! -- solid phase
         call rate_accumulator(this%ratedcys, rin, rout)
         call model_budget%addentry(rin, rout, delt, budtxt(3), &
@@ -583,14 +593,14 @@ contains
                                  nwidthp, editdesc, dinact)
       !
       ! -- dcy
-      if (this%idcy /= 0) then
-        if (this%idcysrc == 1 .or. this%idcysrc == 3) then
+      if (this%idcy == DECAY_ZERO_ORDER) then
+        if (this%idcysrc == DECAY_WATER .or. this%idcysrc == DECAY_BOTH) then
           ! -- aqueous phase
           call this%dis%record_array(this%ratedcyw, this%iout, iprint, &
                                      -ibinun, budtxt(2), cdatafmp, nvaluesp, &
                                      nwidthp, editdesc, dinact)
         end if
-        if (this%idcysrc == 2 .or. this%idcysrc == 3) then
+        if (this%idcysrc == DECAY_SOLID .or. this%idcysrc == DECAY_BOTH) then
           ! -- solid phase
           call this%dis%record_array(this%ratedcys, this%iout, iprint, &
                                      -ibinun, budtxt(3), cdatafmp, nvaluesp, &
@@ -687,7 +697,7 @@ contains
     call mem_allocate(this%rhos, nodes, 'RHOS', this%memoryPath)
     !
     ! -- dcy
-    if (this%idcy == 0) then
+    if (this%idcy == DECAY_OFF) then
       call mem_allocate(this%ratedcyw, 1, 'RATEDCYW', this%memoryPath)
       call mem_allocate(this%ratedcys, 1, 'RATEDCYS', this%memoryPath)
       call mem_allocate(this%decay_water, 1, 'DECAY_WATER', this%memoryPath)
@@ -763,23 +773,24 @@ contains
         case ('SAVE_FLOWS')
           this%ipakcb = -1
           write (this%iout, fmtisvflow)
-        case ('FIRST_ORDER_DECAY')
-          this%idcy = 1
-          write (this%iout, fmtidcy1)
         case ('ZERO_ORDER_DECAY_WATER')
-          this%idcy = 2
+          this%idcy = DECAY_ZERO_ORDER
+          ! -- idcysrc > 0 indicates decay in the solid phase is active
+          !    in which case the idcysrc should now be upgraded to both phases
           if (this%idcysrc > IZERO) then
-            this%idcysrc = 3
+            this%idcysrc = DECAY_BOTH
           else
-            this%idcysrc = 1
+            this%idcysrc = DECAY_WATER
           end if
           write (this%iout, fmtidcy2)
         case ('ZERO_ORDER_DECAY_SOLID')
-          this%idcy = 2
+          this%idcy = DECAY_ZERO_ORDER
+          ! -- idcysrc > 0 indicates decay in active in water in which case
+          !    the idcysrc should now be upgraded to both phases
           if (this%idcysrc > IZERO) then
-            this%idcysrc = 3
+            this%idcysrc = DECAY_BOTH
           else
-            this%idcysrc = 2
+            this%idcysrc = DECAY_SOLID
           end if
           write (this%iout, fmtidcy3)
         case ('HEAT_CAPACITY_WATER')
@@ -867,7 +878,7 @@ contains
                                         aname(1))
           lname(1) = .true.
         case ('DECAY_WATER')
-          if (this%idcy == 0) &
+          if (this%idcy == DECAY_OFF) &
             call mem_reallocate(this%decay_water, this%dis%nodes, 'DECAY_WATER', &
                                 trim(this%memoryPath))
           call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
@@ -875,7 +886,7 @@ contains
                                         aname(2))
           lname(2) = .true.
         case ('DECAY_SOLID')
-          if (this%idcy == 0) &
+          if (this%idcy == DECAY_OFF) &
             call mem_reallocate(this%decay_solid, this%dis%nodes, 'DECAY_SOLID', &
                                 trim(this%memoryPath))
           call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
@@ -920,7 +931,7 @@ contains
     end if
     !
     ! -- Check for required decay/production rate coefficients
-    if (this%idcy > 0) then
+    if (this%idcy == DECAY_ZERO_ORDER) then
       if (.not. lname(2) .and. .not. lname(3)) then
         write (errmsg, '(a)') 'Zero order decay in either the aqueous &
           &or solid phase is active but the corresponding zero-order &
