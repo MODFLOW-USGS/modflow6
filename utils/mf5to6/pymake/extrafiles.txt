@@ -1,4 +1,4 @@
-../../../src/Utilities/Memory/Memory.f90
+../../../src/Utilities/Memory/Memory.F90
 ../../../src/Utilities/Memory/MemoryContainerIterator.f90
 ../../../src/Utilities/Memory/MemoryHelper.f90
 ../../../src/Utilities/Memory/MemoryManager.f90

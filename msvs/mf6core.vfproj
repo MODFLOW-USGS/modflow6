@@ -549,7 +549,7 @@
 			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/></File>
 		<File RelativePath="..\src\Utilities\Matrix\SparseMatrix.f90"/></Filter>
 		<Filter Name="Memory">
-		<File RelativePath="..\src\Utilities\Memory\Memory.f90"/>
+		<File RelativePath="..\src\Utilities\Memory\Memory.F90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemoryContainerIterator.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemoryHelper.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemoryManager.f90"/>

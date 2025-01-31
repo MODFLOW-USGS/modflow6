@@ -484,9 +484,7 @@ contains
     allocate (mt)
     !
     ! -- set memory type
-    ! this does not work with gfortran 11.3 and 12.1
-    ! so we have to disable the pointing to astr1d
-    ! mt%astr1d => astr1d
+    mt%astr1d => astr1d
     mt%element_size = ilen
     mt%isize = isize
     mt%name = name
@@ -1162,6 +1160,7 @@ contains
       deallocate (astrtemp)
       !
       ! -- reset memory manager values
+      mt%astr1d => astr
       mt%element_size = ilen
       mt%isize = isize
       mt%nrealloc = mt%nrealloc + 1
@@ -1596,7 +1595,12 @@ contains
     logical(LGP) :: found
     ! -- code
     call get_from_memorystore(name, mem_path, mt, found)
-    astr1d => mt%astr1d
+    select type (item => mt%astr1d)
+    type is (character(*))
+      astr1d => item
+    class default
+      astr1d => null()
+    end select
   end subroutine setptr_str1d
 
   !> @brief Set pointer to an array of CharacterStringType
@@ -1937,35 +1941,8 @@ contains
     character(len=*), dimension(:), pointer, contiguous, intent(inout) :: astr1d !< array of strings
     character(len=*), optional, intent(in) :: name !< variable name
     character(len=*), optional, intent(in) :: mem_path !< path where variable is stored
-    ! -- local
-    type(MemoryType), pointer :: mt
-    logical(LGP) :: found
-    type(MemoryContainerIteratorType), allocatable :: itr
     ! -- code
-    !
-    found = .false.
-    if (present(name) .and. present(mem_path)) then
-      call get_from_memorystore(name, mem_path, mt, found)
-      nullify (mt%astr1d)
-    else
-      itr = memorystore%iterator()
-      do while (itr%has_next())
-        call itr%next()
-        mt => itr%value()
-        if (associated(mt%astr1d, astr1d)) then
-          found = .true.
-          exit
-        end if
-      end do
-    end if
-
-    if (found) then
-      if (mt%master) then
-        deallocate (astr1d)
-      else
-        nullify (astr1d)
-      end if
-    end if
+    return
 
   end subroutine deallocate_str1d
 
@@ -2461,7 +2438,6 @@ contains
   subroutine mem_da()
     ! -- modules
     use VersionModule, only: IDEVELOPMODE
-    use InputOutputModule, only: UPCASE
     ! -- local
     class(MemoryType), pointer :: mt
     type(MemoryContainerIteratorType), allocatable :: itr
@@ -2471,6 +2447,7 @@ contains
       call itr%next()
       mt => itr%value()
       call mt%mt_deallocate()
+      if (IDEVELOPMODE == 1) call mem_da_check(mt)
       deallocate (mt)
     end do
 
@@ -2479,6 +2456,39 @@ contains
       call store_error('Could not clear memory list.', terminate=.TRUE.)
     end if
   end subroutine mem_da
+
+  subroutine mem_da_check(mt)
+    ! -- modules
+    use InputOutputModule, only: UPCASE
+    ! -- dummy
+    class(MemoryType), pointer :: mt
+    ! -- local
+    character(len=LINELENGTH) :: error_msg
+    character(len=LENVARNAME) :: ucname
+    !
+    ! -- check if memory has been deallocated
+    if (mt%mt_associated() .and. mt%element_size == -1) then
+      error_msg = trim(adjustl(mt%path))//' '// &
+                  trim(adjustl(mt%name))//' has invalid element size'
+      call store_error(trim(error_msg))
+    end if
+    !
+    ! -- check if memory has been deallocated
+    if (mt%mt_associated() .and. mt%isize > 0) then
+      error_msg = trim(adjustl(mt%path))//' '// &
+                  trim(adjustl(mt%name))//' not deallocated'
+      call store_error(trim(error_msg))
+    end if
+    !
+    ! -- check case of varname
+    ucname = mt%name
+    call UPCASE(ucname)
+    if (mt%name /= ucname) then
+      error_msg = trim(adjustl(mt%path))//' '// &
+                  trim(adjustl(mt%name))//' not upper case'
+      call store_error(trim(error_msg))
+    end if
+  end subroutine mem_da_check
 
   !> @brief Create a array with unique first components from all memory paths.
   !! Only the first component of the memory path is evaluated.
