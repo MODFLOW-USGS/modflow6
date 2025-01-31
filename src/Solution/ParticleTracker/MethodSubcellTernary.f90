@@ -242,10 +242,10 @@ contains
     texit = particle%ttrack + dtexit
     t0 = particle%ttrack
 
-    ! Select user tracking times to solve. If this is the first time step
-    ! of the simulation, include all times before it begins; if it is the
-    ! last time step include all times after it ends only if the 'extend'
-    ! option is on, otherwise times in this period and time step only.
+    ! Select user tracking times to solve. If this is the last time step
+    ! in the simulation, times falling after the simulation end time are
+    ! only included if the 'extend' option is on, otherwise only times in
+    ! the time step are included.
     call this%tracktimes%advance()
     if (this%tracktimes%any()) then
       do i = this%tracktimes%selection(1), this%tracktimes%selection(2)
