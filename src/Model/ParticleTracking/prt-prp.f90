@@ -489,10 +489,10 @@ contains
       if (this%idrape > 0) then
         call this%dis%highest_active(ic, this%ibound)
         if (ic == ic_old .or. this%ibound(ic) == 0) then
-          particle%istatus = 8
+          particle%istatus = -8
         end if
       else
-        particle%istatus = 8
+        particle%istatus = -8
       end if
     end if
 
