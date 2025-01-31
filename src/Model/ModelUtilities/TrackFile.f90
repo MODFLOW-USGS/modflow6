@@ -53,7 +53,7 @@ module TrackFileModule
   !!     7: terminated in inactive cell
   !!     8: permanently unreleased
   !!     9: terminated in subcell with no exit face
-  !!     TODO: 10: terminated due to stop time or end of simulation
+  !!     10: terminated due to stop time or end of simulation
   !!
   !! Comparison to MODPATH 7
   !! -----------------------
