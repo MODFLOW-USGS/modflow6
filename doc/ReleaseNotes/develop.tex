@@ -27,6 +27,7 @@
 	\item The PRT Model did not previously report all expected tracking events. In particular, time step end and termination events could go unreported with the DRY\_TRACKING\_METHOD options DROP and STAY (only relevant for Newton formulation models), and termination events were not always reported at the end of the simulation. Reporting has been corrected for the cases identified.
 	\item In the generalized particle tracking method, a local Z coordinate could be calculated to fall slightly outside of the unit interval due to numerical imprecision. This could cause the vertical travel time calculation to fail with a floating point exception. Constrain the local Z coordinate to the unit interval to prevent this.
 	\item A profiling module is added for more enhanced performance diagnostics of the program. It can be activated through the PROFILE\_OPTION in the simulation name file.
+	\item Energy decay in the solid phase was added to the EST Package.  This capability is described in the Supplemental Technical Information document, but no actual support was provided in the source code.  Users can now specify distinct zeroth-order decay rates in either the aqueous or solid phases.
 \end{itemize}
 
 \underline{INTERNAL FLOW PACKAGES}
