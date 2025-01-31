@@ -25,10 +25,10 @@ module TrackFileModule
   !!   - irpt: particle release location ID
   !!   - trelease: particle release time
   !!
-  !! Each record has an "ireason" property, which identifies the cause of
-  !! the record. The user selects 1+ conditions or events for recording.
-  !! Identical records (except "ireason") may be duplicated if multiple
-  !! reporting conditions apply to particles at the same moment in time.
+  !! Each record has an "ireason" property, which identifies the particle
+  !! event. The user selects among particle output events to be reported.
+  !! Records which are identical except for "ireason") may be written if
+  !! multiple reporting conditions apply to the particle at a single time.
   !! Each "ireason" value corresponds to an OC "trackevent" option value:
   !!
   !!     0: particle released
@@ -43,30 +43,26 @@ module TrackFileModule
   !! for several reasons. Status values greater than one imply termination.
   !! Particle status strictly increases over time, starting at zero:
   !!
-  !!     0: pending release*
+  !!     0: pending release (TODO is this necessary? will the user ever see it?)
   !!     1: active
   !!     2: terminated at boundary face
   !!     3: terminated in weak sink cell
-  !!     4: terminated in weak source cell
+  !!     4: (status code unused, see below)
   !!     5: terminated in cell with no exit face
   !!     6: terminated in cell with specified zone number
   !!     7: terminated in inactive cell
-  !!     8: permanently unreleased***
-  !!     9: terminated in subcell with no exit face*****
-  !!     10: terminated upon simulation's end
+  !!     8: permanently unreleased
+  !!     9: terminated in subcell with no exit face
+  !!     TODO: 10: terminated due to stop time or end of simulation
   !!
-  !! PRT shares the same status enumeration as MODPATH 7. However, some
-  !! don't apply to PRT; for instance, MODPATH 7 distinguishes forwards
-  !! and backwards tracking, but status value 4 is not used by PRT.
+  !! Comparison to MODPATH 7
+  !! -----------------------
   !!
-  !! Notes
-  !! -----
-  !!
-  !!   * is this necessary?
-  !!   ** unnecessary since PRT makes no distinction between forwards/backwards tracking
-  !!   *** e.g., released into an inactive cell, a stop zone cell, or a termination zone
-  !!   **** this may coincide with termination, in which case two events are reported
-  !!   ***** PRT-specific status indicating a particle stopped within a cell subcell
+  !! PRT istatus codes 0-3 and 5-8 correspond directly to MODPATH 7 status codes.
+  !! Status code 4 does not apply to PRT because PRT does not distinguish forwards
+  !! from backwards tracking. Status code 9 provides more specific, subcell-
+  !! level information about a particle that terminated due to no exit face.
+  !! Status code 10 distinguishes particles which have terminated due to timeout.
   !<
   type :: TrackFileType
     private

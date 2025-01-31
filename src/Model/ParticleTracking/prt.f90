@@ -928,18 +928,23 @@ contains
           ! Load particle from storage
           call packobj%particles%get(particle, this%id, iprp, np)
 
-          ! If particle is permanently unreleased, record
-          ! unreleased state if first time step and cycle
-          if (particle%istatus == 8) then
-            if (kper == 1 .and. kstp == 1) &
-              call this%method%save(particle, reason=3)
-            cycle
+          ! If particle is permanently unreleased, cycle.
+          ! Save a termination record if we haven't yet.
+          ! TODO: when we have generic dynamic vectors,
+          ! consider terminating permanently unreleased
+          ! in PRP instead of here. For now, status -8
+          ! indicates the permanently unreleased event
+          ! is not yet recorded, status 8 it has been.
+          if (particle%istatus == -8) then
+            particle%istatus = 8
+            call this%method%save(particle, reason=3)
+            call packobj%particles%put(particle, np)
           end if
 
-          ! If particle is inactive or not yet to be released, cycle
+          ! Skip terminated particles
           if (particle%istatus > 1) cycle
 
-          ! If particle released this time step, record its initial state
+          ! If particle was released this time step, record release
           particle%istatus = 1
           if (particle%trelease >= totimc) &
             call this%method%save(particle, reason=0)
@@ -961,10 +966,16 @@ contains
           particle%icp = 0
           particle%izp = 0
 
-          ! Terminate particles still active at end of simulation
-          if (endofsimulation .and. &
-              particle%iextend == 0 .and. &
-              particle%istatus < 2) then
+          ! If the particle timed out, terminate it.
+          ! "Timeout" means
+          !   - the particle reached its stop time, or
+          !   - the simulation is over and no extending.
+          ! We can't detect timeout within the tracking
+          ! method because the method just receives the
+          ! maximum time with no context on what it is.
+          if (particle%istatus < 2 .and. &
+              (particle%ttrack == particle%tstop .or. &
+               (endofsimulation .and. particle%iextend == 0))) then
             particle%istatus = 10
             call this%method%save(particle, reason=3)
           end if
