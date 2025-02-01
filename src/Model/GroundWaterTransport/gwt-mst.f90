@@ -10,8 +10,8 @@
 module GwtMstModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DONE, DZERO, DTWO, DHALF, LENBUDTXT, MAXCHARLEN, &
-                             MNORMAL, LINELENGTH, DHNOFLO
+  use ConstantsModule, only: DONE, DZERO, IZERO, DTWO, DHALF, LENBUDTXT, &
+                             MAXCHARLEN, MNORMAL, LINELENGTH, DHNOFLO
   use SimVariablesModule, only: errmsg, warnmsg
   use SimModule, only: store_error, count_errors, &
                        store_warning
@@ -28,6 +28,18 @@ module GwtMstModule
   character(len=LENBUDTXT), dimension(NBDITEMS) :: budtxt
   data budtxt/' STORAGE-AQUEOUS', '   DECAY-AQUEOUS', &
     '  STORAGE-SORBED', '    DECAY-SORBED'/
+
+  !> @brief Enumerator that defines the decay options
+  !<
+  ENUM, BIND(C)
+    ENUMERATOR :: DECAY_OFF = 0 !< Decay (or production) of mass inactive (default)
+    ENUMERATOR :: DECAY_FIRST_ORDER = 1 !< First-order decay
+    ENUMERATOR :: DECAY_ZERO_ORDER = 2 !< Zeroth-order decay
+    ENUMERATOR :: SORPTION_OFF = 0 !< Sorption is inactive (default)
+    ENUMERATOR :: SORPTION_LINEAR = 1 !< Linear sorption between aqueous and solid phases
+    ENUMERATOR :: SORPTION_FREUND = 2 !< Freundlich sorption between aqueous and solid phases
+    ENUMERATOR :: SORPTION_LANG = 3 !< Langmuir sorption between aqueous and solid phases
+  END ENUM
 
   !> @ brief Mobile storage and transfer
   !!
@@ -183,18 +195,18 @@ contains
     call this%mst_fc_sto(nodes, cold, nja, matrix_sln, idxglo, rhs)
     !
     ! -- decay contribution
-    if (this%idcy /= 0) then
+    if (this%idcy /= DECAY_OFF) then
       call this%mst_fc_dcy(nodes, cold, cnew, nja, matrix_sln, idxglo, &
                            rhs, kiter)
     end if
     !
     ! -- sorption contribution
-    if (this%isrb /= 0) then
+    if (this%isrb /= SORPTION_OFF) then
       call this%mst_fc_srb(nodes, cold, nja, matrix_sln, idxglo, rhs, cnew)
     end if
     !
     ! -- decay sorbed contribution
-    if (this%isrb /= 0 .and. this%idcy /= 0) then
+    if (this%isrb /= SORPTION_OFF .and. this%idcy /= DECAY_OFF) then
       call this%mst_fc_dcy_srb(nodes, cold, nja, matrix_sln, idxglo, rhs, &
                                cnew, kiter)
     end if
@@ -285,13 +297,13 @@ contains
       !
       ! -- add decay rate terms to accumulators
       idiag = this%dis%con%ia(n)
-      if (this%idcy == 1) then
+      if (this%idcy == DECAY_FIRST_ORDER) then
         !
         ! -- first order decay rate is a function of concentration, so add
         !    to left hand side
         hhcof = -this%decay(n) * vcell * swtpdt * this%thetam(n)
         call matrix_sln%add_value_pos(idxglo(idiag), hhcof)
-      elseif (this%idcy == 2) then
+      elseif (this%idcy == DECAY_ZERO_ORDER) then
         !
         ! -- Call function to get zero-order decay rate, which may be changed
         !    from the user-specified rate to prevent negative concentrations
@@ -350,7 +362,9 @@ contains
       idiag = this%dis%con%ia(n)
       const1 = this%distcoef(n)
       const2 = 0.
-      if (this%isrb > 1) const2 = this%sp2(n)
+      if (this%isrb == SORPTION_FREUND .or. this%isrb == SORPTION_LANG) then
+        const2 = this%sp2(n)
+      end if
       volfracm = this%get_volfracm(n)
       rhobm = this%bulk_density(n)
       call mst_srb_term(this%isrb, volfracm, rhobm, vcell, tled, cnew(n), &
@@ -371,7 +385,6 @@ contains
   !<
   subroutine mst_srb_term(isrb, volfracm, rhobm, vcell, tled, cnew, cold, &
                           swnew, swold, const1, const2, rate, hcofval, rhsval)
-    ! -- modules
     ! -- dummy
     integer(I4B), intent(in) :: isrb !< sorption flag 1, 2, 3 are linear, freundlich, and langmuir
     real(DP), intent(in) :: volfracm !< volume fraction of mobile domain (fhat_m)
@@ -397,7 +410,7 @@ contains
     real(DP) :: swavg
     !
     ! -- Calculate based on type of sorption
-    if (isrb == 1) then
+    if (isrb == SORPTION_LINEAR) then
       ! -- linear
       term = -volfracm * rhobm * vcell * tled * const1
       if (present(hcofval)) hcofval = term * swnew
@@ -409,12 +422,12 @@ contains
       cavg = DHALF * (cold + cnew)
       !
       ! -- set values based on isotherm
-      if (isrb == 2) then
+      if (isrb == SORPTION_FREUND) then
         ! -- freundlich
         cbarnew = get_freundlich_conc(cnew, const1, const2)
         cbarold = get_freundlich_conc(cold, const1, const2)
         derv = get_freundlich_derivative(cavg, const1, const2)
-      else if (isrb == 3) then
+      else if (isrb == SORPTION_LANG) then
         ! -- langmuir
         cbarnew = get_langmuir_conc(cnew, const1, const2)
         cbarold = get_langmuir_conc(cold, const1, const2)
@@ -441,6 +454,7 @@ contains
   !> @ brief Fill sorption-decay coefficient method for package
   !!
   !!  Method to calculate and fill sorption-decay coefficients for the package.
+  !!
   !<
   subroutine mst_fc_dcy_srb(this, nodes, cold, nja, matrix_sln, idxglo, &
                             rhs, cnew, kiter)
@@ -488,37 +502,37 @@ contains
       term = this%decay_sorbed(n) * volfracm * rhobm * swnew * vcell
       !
       ! -- add sorbed mass decay rate terms to accumulators
-      if (this%idcy == 1) then
+      if (this%idcy == DECAY_FIRST_ORDER) then
         !
-        if (this%isrb == 1) then
+        if (this%isrb == SORPTION_LINEAR) then
           !
           ! -- first order decay rate is a function of concentration, so add
           !    to left hand side
           hhcof = -term * distcoef
-        else if (this%isrb == 2) then
+        else if (this%isrb == SORPTION_FREUND) then
           !
           ! -- nonlinear Freundlich sorption, so add to RHS
           csrb = get_freundlich_conc(cnew(n), distcoef, this%sp2(n))
           rrhs = term * csrb
-        else if (this%isrb == 3) then
+        else if (this%isrb == SORPTION_LANG) then
           !
           ! -- nonlinear Lanmuir sorption, so add to RHS
           csrb = get_langmuir_conc(cnew(n), distcoef, this%sp2(n))
           rrhs = term * csrb
         end if
-      elseif (this%idcy == 2) then
+      elseif (this%idcy == DECAY_ZERO_ORDER) then
         !
         ! -- Call function to get zero-order decay rate, which may be changed
         !    from the user-specified rate to prevent negative concentrations
         if (distcoef > DZERO) then
 
-          if (this%isrb == 1) then
+          if (this%isrb == SORPTION_LINEAR) then
             csrbold = cold(n) * distcoef
             csrbnew = cnew(n) * distcoef
-          else if (this%isrb == 2) then
+          else if (this%isrb == SORPTION_FREUND) then
             csrbold = get_freundlich_conc(cold(n), distcoef, this%sp2(n))
             csrbnew = get_freundlich_conc(cnew(n), distcoef, this%sp2(n))
-          else if (this%isrb == 3) then
+          else if (this%isrb == SORPTION_LANG) then
             csrbold = get_langmuir_conc(cold(n), distcoef, this%sp2(n))
             csrbnew = get_langmuir_conc(cnew(n), distcoef, this%sp2(n))
           end if
@@ -558,22 +572,22 @@ contains
     call this%mst_cq_sto(nodes, cnew, cold, flowja)
     !
     ! -- decay
-    if (this%idcy /= 0) then
+    if (this%idcy /= DECAY_OFF) then
       call this%mst_cq_dcy(nodes, cnew, cold, flowja)
     end if
     !
     ! -- sorption
-    if (this%isrb /= 0) then
+    if (this%isrb /= SORPTION_OFF) then
       call this%mst_cq_srb(nodes, cnew, cold, flowja)
     end if
     !
     ! -- decay sorbed
-    if (this%isrb /= 0 .and. this%idcy /= 0) then
+    if (this%isrb /= SORPTION_OFF .and. this%idcy /= DECAY_OFF) then
       call this%mst_cq_dcy_srb(nodes, cnew, cold, flowja)
     end if
     !
     ! -- calculate csrb
-    if (this%isrb /= 0) then
+    if (this%isrb /= SORPTION_OFF) then
       call this%mst_calc_csrb(cnew)
     end if
   end subroutine mst_cq
@@ -667,9 +681,9 @@ contains
       rate = DZERO
       hhcof = DZERO
       rrhs = DZERO
-      if (this%idcy == 1) then
+      if (this%idcy == DECAY_FIRST_ORDER) then
         hhcof = -this%decay(n) * vcell * swtpdt * this%thetam(n)
-      elseif (this%idcy == 2) then
+      elseif (this%idcy == DECAY_ZERO_ORDER) then
         decay_rate = get_zero_order_decay(this%decay(n), this%decaylast(n), &
                                           0, cold(n), cnew(n), delt)
         rrhs = decay_rate * vcell * swtpdt * this%thetam(n)
@@ -728,7 +742,9 @@ contains
       rhobm = this%bulk_density(n)
       const1 = this%distcoef(n)
       const2 = 0.
-      if (this%isrb > 1) const2 = this%sp2(n)
+      if (this%isrb == SORPTION_FREUND .or. this%isrb == SORPTION_LANG) then
+        const2 = this%sp2(n)
+      end if
       call mst_srb_term(this%isrb, volfracm, rhobm, vcell, tled, cnew(n), &
                         cold(n), swtpdt, swt, const1, const2, &
                         rate=rate)
@@ -790,36 +806,36 @@ contains
       term = this%decay_sorbed(n) * volfracm * rhobm * swnew * vcell
       !
       ! -- add sorbed mass decay rate terms to accumulators
-      if (this%idcy == 1) then
+      if (this%idcy == DECAY_FIRST_ORDER) then
         !
-        if (this%isrb == 1) then
+        if (this%isrb == SORPTION_LINEAR) then
           !
           ! -- first order decay rate is a function of concentration, so add
           !    to left hand side
           hhcof = -term * distcoef
-        else if (this%isrb == 2) then
+        else if (this%isrb == SORPTION_FREUND) then
           !
           ! -- nonlinear Freundlich sorption, so add to RHS
           csrb = get_freundlich_conc(cnew(n), distcoef, this%sp2(n))
           rrhs = term * csrb
-        else if (this%isrb == 3) then
+        else if (this%isrb == SORPTION_LANG) then
           !
           ! -- nonlinear Lanmuir sorption, so add to RHS
           csrb = get_langmuir_conc(cnew(n), distcoef, this%sp2(n))
           rrhs = term * csrb
         end if
-      elseif (this%idcy == 2) then
+      elseif (this%idcy == DECAY_ZERO_ORDER) then
         !
         ! -- Call function to get zero-order decay rate, which may be changed
         !    from the user-specified rate to prevent negative concentrations
         if (distcoef > DZERO) then
-          if (this%isrb == 1) then
+          if (this%isrb == SORPTION_LINEAR) then
             csrbold = cold(n) * distcoef
             csrbnew = cnew(n) * distcoef
-          else if (this%isrb == 2) then
+          else if (this%isrb == SORPTION_FREUND) then
             csrbold = get_freundlich_conc(cold(n), distcoef, this%sp2(n))
             csrbnew = get_freundlich_conc(cnew(n), distcoef, this%sp2(n))
-          else if (this%isrb == 3) then
+          else if (this%isrb == SORPTION_LANG) then
             csrbold = get_langmuir_conc(cold(n), distcoef, this%sp2(n))
             csrbnew = get_langmuir_conc(cnew(n), distcoef, this%sp2(n))
           end if
@@ -855,11 +871,11 @@ contains
       csrb = DZERO
       if (this%ibound(n) > 0) then
         distcoef = this%distcoef(n)
-        if (this%isrb == 1) then
+        if (this%isrb == SORPTION_LINEAR) then
           csrb = cnew(n) * distcoef
-        else if (this%isrb == 2) then
+        else if (this%isrb == SORPTION_FREUND) then
           csrb = get_freundlich_conc(cnew(n), distcoef, this%sp2(n))
-        else if (this%isrb == 3) then
+        else if (this%isrb == SORPTION_LANG) then
           csrb = get_langmuir_conc(cnew(n), distcoef, this%sp2(n))
         end if
       end if
@@ -888,21 +904,21 @@ contains
                                isuppress_output, rowlabel=this%packName)
     !
     ! -- dcy
-    if (this%idcy /= 0) then
+    if (this%idcy /= DECAY_OFF) then
       call rate_accumulator(this%ratedcy, rin, rout)
       call model_budget%addentry(rin, rout, delt, budtxt(2), &
                                  isuppress_output, rowlabel=this%packName)
     end if
     !
     ! -- srb
-    if (this%isrb /= 0) then
+    if (this%isrb /= SORPTION_OFF) then
       call rate_accumulator(this%ratesrb, rin, rout)
       call model_budget%addentry(rin, rout, delt, budtxt(3), &
                                  isuppress_output, rowlabel=this%packName)
     end if
     !
     ! -- srb dcy
-    if (this%isrb /= 0 .and. this%idcy /= 0) then
+    if (this%isrb /= SORPTION_OFF .and. this%idcy /= DECAY_OFF) then
       call rate_accumulator(this%ratedcys, rin, rout)
       call model_budget%addentry(rin, rout, delt, budtxt(4), &
                                  isuppress_output, rowlabel=this%packName)
@@ -946,19 +962,19 @@ contains
                                  nwidthp, editdesc, dinact)
       !
       ! -- dcy
-      if (this%idcy /= 0) &
+      if (this%idcy /= DECAY_OFF) &
         call this%dis%record_array(this%ratedcy, this%iout, iprint, -ibinun, &
                                    budtxt(2), cdatafmp, nvaluesp, &
                                    nwidthp, editdesc, dinact)
       !
       ! -- srb
-      if (this%isrb /= 0) &
+      if (this%isrb /= SORPTION_OFF) &
         call this%dis%record_array(this%ratesrb, this%iout, iprint, -ibinun, &
                                    budtxt(3), cdatafmp, nvaluesp, &
                                    nwidthp, editdesc, dinact)
       !
       ! -- dcy srb
-      if (this%isrb /= 0 .and. this%idcy /= 0) &
+      if (this%isrb /= SORPTION_OFF .and. this%idcy /= DECAY_OFF) &
         call this%dis%record_array(this%ratedcys, this%iout, iprint, -ibinun, &
                                    budtxt(4), cdatafmp, nvaluesp, &
                                    nwidthp, editdesc, dinact)
@@ -1063,9 +1079,9 @@ contains
     call mem_allocate(this%idcy, 'IDCY', this%memoryPath)
     !
     ! -- Initialize
-    this%isrb = 0
+    this%isrb = IZERO
     this%ioutsorbate = 0
-    this%idcy = 0
+    this%idcy = IZERO
   end subroutine allocate_scalars
 
   !> @ brief Allocate arrays for package
@@ -1091,7 +1107,7 @@ contains
     call mem_allocate(this%ratesto, nodes, 'RATESTO', this%memoryPath)
     !
     ! -- dcy
-    if (this%idcy == 0) then
+    if (this%idcy == DECAY_OFF) then
       call mem_allocate(this%ratedcy, 1, 'RATEDCY', this%memoryPath)
       call mem_allocate(this%decay, 1, 'DECAY', this%memoryPath)
       call mem_allocate(this%decaylast, 1, 'DECAYLAST', this%memoryPath)
@@ -1100,7 +1116,7 @@ contains
       call mem_allocate(this%decay, nodes, 'DECAY', this%memoryPath)
       call mem_allocate(this%decaylast, nodes, 'DECAYLAST', this%memoryPath)
     end if
-    if (this%idcy /= 0 .and. this%isrb /= 0) then
+    if (this%idcy /= DECAY_OFF .and. this%isrb /= SORPTION_OFF) then
       call mem_allocate(this%ratedcys, this%dis%nodes, 'RATEDCYS', &
                         this%memoryPath)
       call mem_allocate(this%decayslast, this%dis%nodes, 'DECAYSLAST', &
@@ -1113,7 +1129,7 @@ contains
                       this%memoryPath)
     !
     ! -- srb
-    if (this%isrb == 0) then
+    if (this%isrb == SORPTION_OFF) then
       call mem_allocate(this%bulk_density, 1, 'BULK_DENSITY', this%memoryPath)
       call mem_allocate(this%sp2, 1, 'SP2', this%memoryPath)
       call mem_allocate(this%distcoef, 1, 'DISTCOEF', this%memoryPath)
@@ -1124,7 +1140,7 @@ contains
       call mem_allocate(this%distcoef, nodes, 'DISTCOEF', this%memoryPath)
       call mem_allocate(this%ratesrb, nodes, 'RATESRB', this%memoryPath)
       call mem_allocate(this%csrb, nodes, 'CSRB', this%memoryPath)
-      if (this%isrb == 1) then
+      if (this%isrb == SORPTION_LINEAR) then
         call mem_allocate(this%sp2, 1, 'SP2', this%memoryPath)
       else
         call mem_allocate(this%sp2, nodes, 'SP2', this%memoryPath)
@@ -1216,13 +1232,13 @@ contains
           call this%parser%GetStringCaps(sorption)
           select case (sorption)
           case ('LINEAR', '')
-            this%isrb = 1
+            this%isrb = SORPTION_LINEAR
             write (this%iout, fmtlinear)
           case ('FREUNDLICH')
-            this%isrb = 2
+            this%isrb = SORPTION_FREUND
             write (this%iout, fmtfreundlich)
           case ('LANGMUIR')
-            this%isrb = 3
+            this%isrb = SORPTION_LANG
             write (this%iout, fmtlangmuir)
           case default
             call store_error('Unknown sorption type was specified ' &
@@ -1232,10 +1248,10 @@ contains
             call this%parser%StoreErrorUnit()
           end select
         case ('FIRST_ORDER_DECAY')
-          this%idcy = 1
+          this%idcy = DECAY_FIRST_ORDER
           write (this%iout, fmtidcy1)
         case ('ZERO_ORDER_DECAY')
-          this%idcy = 2
+          this%idcy = DECAY_ZERO_ORDER
           write (this%iout, fmtidcy2)
         case ('SORBATE')
           call this%parser%GetStringCaps(keyword)
@@ -1309,7 +1325,7 @@ contains
                                         aname(1))
           lname(1) = .true.
         case ('BULK_DENSITY')
-          if (this%isrb == 0) &
+          if (this%isrb == SORPTION_OFF) &
             call mem_reallocate(this%bulk_density, this%dis%nodes, &
                                 'BULK_DENSITY', trim(this%memoryPath))
           call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
@@ -1317,7 +1333,7 @@ contains
                                         this%bulk_density, aname(2))
           lname(2) = .true.
         case ('DISTCOEF')
-          if (this%isrb == 0) &
+          if (this%isrb == SORPTION_OFF) &
             call mem_reallocate(this%distcoef, this%dis%nodes, 'DISTCOEF', &
                                 trim(this%memoryPath))
           call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
@@ -1325,7 +1341,7 @@ contains
                                         aname(3))
           lname(3) = .true.
         case ('DECAY')
-          if (this%idcy == 0) &
+          if (this%idcy == DECAY_OFF) &
             call mem_reallocate(this%decay, this%dis%nodes, 'DECAY', &
                                 trim(this%memoryPath))
           call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
@@ -1340,7 +1356,7 @@ contains
                                         this%decay_sorbed, aname(5))
           lname(5) = .true.
         case ('SP2')
-          if (this%isrb < 2) &
+          if (this%isrb == SORPTION_OFF .or. this%isrb == SORPTION_LINEAR) &
             call mem_reallocate(this%sp2, this%dis%nodes, 'SP2', &
                                 trim(this%memoryPath))
           call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
@@ -1367,7 +1383,8 @@ contains
     end if
     !
     ! -- Check for required sorption variables
-    if (this%isrb > 0) then
+    if (this%isrb == SORPTION_LINEAR .or. this%isrb == SORPTION_FREUND .or. &
+        this%isrb == SORPTION_LANG) then
       if (.not. lname(2)) then
         write (errmsg, '(a)') 'Sorption is active but BULK_DENSITY &
           &not specified.  BULK_DENSITY must be specified in GRIDDATA block.'
@@ -1379,7 +1396,7 @@ contains
           &GRIDDATA block.'
         call store_error(errmsg)
       end if
-      if (this%isrb > 1) then
+      if (this%isrb == SORPTION_FREUND .or. this%isrb == SORPTION_LANG) then
         if (.not. lname(6)) then
           write (errmsg, '(a)') 'Freundlich or langmuir sorption is active &
             &but SP2 not specified.  SP2 must be specified in &
@@ -1412,7 +1429,7 @@ contains
     end if
     !
     ! -- Check for required decay/production rate coefficients
-    if (this%idcy > 0) then
+    if (this%idcy /= DECAY_OFF) then
       if (.not. lname(4)) then
         write (errmsg, '(a)') 'First or zero order decay is &
           &active but the first rate coefficient is not specified.  DECAY &
@@ -1423,7 +1440,8 @@ contains
         !
         ! -- If DECAY_SORBED not specified and sorption is active, then
         !    terminate with an error
-        if (this%isrb > 0) then
+        if (this%isrb == SORPTION_LINEAR .or. this%isrb == SORPTION_FREUND .or. &
+            this%isrb == SORPTION_LANG) then
           write (errmsg, '(a)') 'DECAY_SORBED not provided in GRIDDATA &
             &block but decay and sorption are active.  Specify DECAY_SORBED &
             &in GRIDDATA block.'
