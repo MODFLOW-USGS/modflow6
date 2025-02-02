@@ -13,7 +13,7 @@ module PrtPrpModule
   use BlockParserModule, only: BlockParserType
   use PrtFmiModule, only: PrtFmiType
   use ParticleModule, only: ParticleType, ParticleStoreType, &
-                            create_particle, allocate_particle_store
+                            create_particle, create_particle_store
   use SimModule, only: count_errors, store_error, store_error_unit, &
                        store_warning
   use SimVariablesModule, only: errmsg, warnmsg
@@ -181,8 +181,8 @@ contains
     call mem_deallocate(this%rptm)
     call mem_deallocate(this%rptname, 'RPTNAME', this%memoryPath)
 
-    ! Deallocate particle store, release time and release step selections
-    call this%particles%deallocate(this%memoryPath)
+    ! Deallocate objects
+    call this%particles%destroy(this%memoryPath)
     call this%schedule%deallocate()
     deallocate (this%particles)
     deallocate (this%schedule)
@@ -211,7 +211,7 @@ contains
 
     ! Allocate particle store, starting with the number
     ! of release points (arrays resized if/when needed)
-    call allocate_particle_store( &
+    call create_particle_store( &
       this%particles, &
       this%nreleasepoints, &
       this%memoryPath)
@@ -445,6 +445,7 @@ contains
   end subroutine release
 
   subroutine initialize_particle(this, particle, ip, trelease)
+    use ParticleModule, only: TERM_UNRELEASED
     class(PrtPrpType), intent(inout) :: this !< this instance
     type(ParticleType), pointer, intent(inout) :: particle !< the particle
     integer(I4B), intent(in) :: ip !< particle index
@@ -480,7 +481,7 @@ contains
     end select
     particle%ilay = ilay
     particle%izone = this%rptzone(ic)
-    particle%istatus = 0
+    particle%istatus = 0 ! status 0 until tracking starts
     ! If the cell is inactive, either drape the particle
     ! to the top-most active cell beneath it if drape is
     ! enabled, or else terminate permanently unreleased.
@@ -489,10 +490,13 @@ contains
       if (this%idrape > 0) then
         call this%dis%highest_active(ic, this%ibound)
         if (ic == ic_old .or. this%ibound(ic) == 0) then
-          particle%istatus = -8
+          ! negative unreleased status signals to the
+          ! tracking method that we haven't yet saved
+          ! a termination record, it needs to do so.
+          particle%istatus = -1 * TERM_UNRELEASED
         end if
       else
-        particle%istatus = -8
+        particle%istatus = -1 * TERM_UNRELEASED
       end if
     end if
 
