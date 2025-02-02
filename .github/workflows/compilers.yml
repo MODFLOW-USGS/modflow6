@@ -18,12 +18,14 @@ jobs:
           - {os: ubuntu-22.04, compiler: gcc, version: 11}
           - {os: ubuntu-22.04, compiler: gcc, version: 12}
           - {os: ubuntu-22.04, compiler: gcc, version: 13}
+          - {os: ubuntu-22.04, compiler: gcc, version: 14}
           - {os: macos-13, compiler: gcc, version: 11}
           - {os: macos-13, compiler: gcc, version: 12}
           - {os: macos-13, compiler: gcc, version: 13}
           - {os: macos-14, compiler: gcc, version: 11}
           - {os: macos-14, compiler: gcc, version: 12}
           - {os: macos-14, compiler: gcc, version: 13}
+          - {os: macos-14, compiler: gcc, version: 14}
           - {os: windows-2022, compiler: gcc, version: 11}
           - {os: windows-2022, compiler: gcc, version: 12}
           - {os: windows-2022, compiler: gcc, version: 13}
@@ -105,6 +107,12 @@ jobs:
       - name: Custom pixi install
         working-directory: modflow6
         run: pixi run install
+
+      - name: Set LDFLAGS (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          ldflags="$LDFLAGS -Wl,-ld_classic"
+          echo "LDFLAGS=$ldflags" >> $GITHUB_ENV
 
       - name: Build modflow6
         working-directory: modflow6
