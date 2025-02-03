@@ -5,13 +5,59 @@ module ParticleModule
   use MemoryManagerModule, only: mem_allocate, mem_deallocate, &
                                  mem_reallocate
   implicit none
+  public
 
-  private
-  public :: ParticleType, ParticleStoreType, &
-            create_particle, allocate_particle_store
+  !> Tracking "levels" (1: model, 2: cell, 3: subcell). A
+  !! level identifies the domain through which a tracking
+  !! method is responsible for moving a particle. Methods
+  !! each operate on a particular level, delegating among
+  !! more methods as appropriate for finer-grained levels.
+  integer, parameter :: MAX_LEVEL = 4
 
-  ! tracking levels (1: model, 2: cell, 3: subcell)
-  integer, parameter, public :: levelmax = 4
+  !> @brief Particle status enumeration.
+  !!
+  !! Particles begin in status 1 (active) at release time. Status may only
+  !! increase over time.  Status values greater than one imply termination.
+  !! A particle may terminate for several reasons, all mutually exclusive.
+  !! A particle's final tracking status will always be greater than one.
+  !!
+  !! Status codes 0-3 and 5-8 correspond directly to MODPATH 7 status codes.
+  !! Code 4 does not apply to PRT because PRT does not distinguish forwards
+  !! from backwards tracking. Status code 9 provides more specific, subcell-
+  !! level information about a particle which terminates due to no outflow.
+  !! Code 10 distinguishes particles which have "timed out" upon reaching a
+  !! user-specified stop time or the end of the simulation.
+  !<
+  enum, bind(C)
+    enumerator :: ACTIVE = 1
+    enumerator :: TERM_BOUNDARY = 2 !< terminated at a boundary face
+    enumerator :: TERM_WEAKSINK = 3 !< terminated in a weak sink cell
+    enumerator :: TERM_NO_EXITS = 5 !< terminated in a cell with no exit face
+    enumerator :: TERM_STOPZONE = 6 !< terminated in a cell with a stop zone number
+    enumerator :: TERM_INACTIVE = 7 !< terminated in an inactive cell
+    enumerator :: TERM_UNRELEASED = 8 !< terminated permanently unreleased
+    enumerator :: TERM_NO_EXITS_SUB = 9 !< terminated in a subcell with no exit face
+    enumerator :: TERM_TIMEOUT = 10 !< terminated at stop time or end of simulation
+  end enum
+
+  !> @brief Particle event enumeration.
+  !!
+  !! A number of events may occur to particles, each of which may (or may
+  !! not) be of interest to the user. The user selects among events to be
+  !! reported. A corresponding event code is reported with each record to
+  !! identify the record's cause.
+  !!
+  !! Records may be identical except for their event code, reflecting the
+  !! fact that multiple events of interest may occur at any given moment.
+  !<
+  enum, bind(C)
+    enumerator :: RELEASE = 0 !< particle was released
+    enumerator :: EXIT = 1 !< particle exited a cell
+    enumerator :: TIMESTEP = 2 !< time step ended
+    enumerator :: TERMINATE = 3 !< particle terminated
+    enumerator :: WEAKSINK = 4 !< particle entered a weak sink cell
+    enumerator :: USERTIME = 5 !< user-specified tracking time
+  end enum
 
   !> @brief Particle tracked by the PRT model.
   !!
@@ -104,7 +150,7 @@ module ParticleModule
     real(DP), dimension(:), pointer, public, contiguous :: extol !< tolerance for iterative solution of particle exit location and time in generalized Pollock's method
     integer(LGP), dimension(:), pointer, public, contiguous :: extend !< whether to extend tracking beyond the end of the simulation
   contains
-    procedure, public :: deallocate
+    procedure, public :: destroy
     procedure, public :: num_stored
     procedure, public :: resize
     procedure, public :: get
@@ -117,45 +163,45 @@ contains
   subroutine create_particle(particle)
     type(ParticleType), pointer :: particle !< particle
     allocate (particle)
-    allocate (particle%idomain(levelmax))
-    allocate (particle%iboundary(levelmax))
+    allocate (particle%idomain(MAX_LEVEL))
+    allocate (particle%iboundary(MAX_LEVEL))
   end subroutine create_particle
 
-  !> @brief Create a new particle store
-  subroutine allocate_particle_store(this, np, mempath)
-    type(ParticleStoreType), pointer :: this !< store
+  !> @brief Allocate particle store
+  subroutine create_particle_store(store, np, mempath)
+    type(ParticleStoreType), pointer :: store !< store
     integer(I4B), intent(in) :: np !< number of particles
     character(*), intent(in) :: mempath !< path to memory
 
-    allocate (this)
-    call mem_allocate(this%imdl, np, 'PLIMDL', mempath)
-    call mem_allocate(this%irpt, np, 'PLIRPT', mempath)
-    call mem_allocate(this%iprp, np, 'PLIPRP', mempath)
-    call mem_allocate(this%name, LENBOUNDNAME, np, 'PLNAME', mempath)
-    call mem_allocate(this%icu, np, 'PLICU', mempath)
-    call mem_allocate(this%ilay, np, 'PLILAY', mempath)
-    call mem_allocate(this%izone, np, 'PLIZONE', mempath)
-    call mem_allocate(this%izp, np, 'PLIZP', mempath)
-    call mem_allocate(this%istatus, np, 'PLISTATUS', mempath)
-    call mem_allocate(this%x, np, 'PLX', mempath)
-    call mem_allocate(this%y, np, 'PLY', mempath)
-    call mem_allocate(this%z, np, 'PLZ', mempath)
-    call mem_allocate(this%trelease, np, 'PLTRELEASE', mempath)
-    call mem_allocate(this%tstop, np, 'PLTSTOP', mempath)
-    call mem_allocate(this%ttrack, np, 'PLTTRACK', mempath)
-    call mem_allocate(this%istopweaksink, np, 'PLISTOPWEAKSINK', mempath)
-    call mem_allocate(this%istopzone, np, 'PLISTOPZONE', mempath)
-    call mem_allocate(this%idrymeth, np, 'PLIDRYMETH', mempath)
-    call mem_allocate(this%ifrctrn, np, 'PLIFRCTRN', mempath)
-    call mem_allocate(this%iexmeth, np, 'PLIEXMETH', mempath)
-    call mem_allocate(this%extol, np, 'PLEXTOL', mempath)
-    call mem_allocate(this%extend, np, 'PLIEXTEND', mempath)
-    call mem_allocate(this%idomain, np, levelmax, 'PLIDOMAIN', mempath)
-    call mem_allocate(this%iboundary, np, levelmax, 'PLIBOUNDARY', mempath)
-  end subroutine allocate_particle_store
+    allocate (store)
+    call mem_allocate(store%imdl, np, 'PLIMDL', mempath)
+    call mem_allocate(store%irpt, np, 'PLIRPT', mempath)
+    call mem_allocate(store%iprp, np, 'PLIPRP', mempath)
+    call mem_allocate(store%name, LENBOUNDNAME, np, 'PLNAME', mempath)
+    call mem_allocate(store%icu, np, 'PLICU', mempath)
+    call mem_allocate(store%ilay, np, 'PLILAY', mempath)
+    call mem_allocate(store%izone, np, 'PLIZONE', mempath)
+    call mem_allocate(store%izp, np, 'PLIZP', mempath)
+    call mem_allocate(store%istatus, np, 'PLISTATUS', mempath)
+    call mem_allocate(store%x, np, 'PLX', mempath)
+    call mem_allocate(store%y, np, 'PLY', mempath)
+    call mem_allocate(store%z, np, 'PLZ', mempath)
+    call mem_allocate(store%trelease, np, 'PLTRELEASE', mempath)
+    call mem_allocate(store%tstop, np, 'PLTSTOP', mempath)
+    call mem_allocate(store%ttrack, np, 'PLTTRACK', mempath)
+    call mem_allocate(store%istopweaksink, np, 'PLISTOPWEAKSINK', mempath)
+    call mem_allocate(store%istopzone, np, 'PLISTOPZONE', mempath)
+    call mem_allocate(store%idrymeth, np, 'PLIDRYMETH', mempath)
+    call mem_allocate(store%ifrctrn, np, 'PLIFRCTRN', mempath)
+    call mem_allocate(store%iexmeth, np, 'PLIEXMETH', mempath)
+    call mem_allocate(store%extol, np, 'PLEXTOL', mempath)
+    call mem_allocate(store%extend, np, 'PLIEXTEND', mempath)
+    call mem_allocate(store%idomain, np, MAX_LEVEL, 'PLIDOMAIN', mempath)
+    call mem_allocate(store%iboundary, np, MAX_LEVEL, 'PLIBOUNDARY', mempath)
+  end subroutine create_particle_store
 
-  !> @brief Deallocate particle arrays
-  subroutine deallocate (this, mempath)
+  !> @brief Destroy particle store after use.
+  subroutine destroy(this, mempath)
     class(ParticleStoreType), intent(inout) :: this !< store
     character(*), intent(in) :: mempath !< path to memory
 
@@ -183,9 +229,9 @@ contains
     call mem_deallocate(this%extend, 'PLIEXTEND', mempath)
     call mem_deallocate(this%idomain, 'PLIDOMAIN', mempath)
     call mem_deallocate(this%iboundary, 'PLIBOUNDARY', mempath)
-  end subroutine deallocate
+  end subroutine destroy
 
-  !> @brief Reallocate particle arrays
+  !> @brief Reallocate particle storage to the given size.
   subroutine resize(this, np, mempath)
     ! dummy
     class(ParticleStoreType), intent(inout) :: this !< particle store
@@ -215,8 +261,8 @@ contains
     call mem_reallocate(this%iexmeth, np, 'PLIEXMETH', mempath)
     call mem_reallocate(this%extol, np, 'PLEXTOL', mempath)
     call mem_reallocate(this%extend, np, 'PLIEXTEND', mempath)
-    call mem_reallocate(this%idomain, np, levelmax, 'PLIDOMAIN', mempath)
-    call mem_reallocate(this%iboundary, np, levelmax, 'PLIBOUNDARY', mempath)
+    call mem_reallocate(this%idomain, np, MAX_LEVEL, 'PLIDOMAIN', mempath)
+    call mem_reallocate(this%iboundary, np, MAX_LEVEL, 'PLIBOUNDARY', mempath)
   end subroutine resize
 
   !> @brief Load a particle from the particle store.
@@ -253,18 +299,18 @@ contains
     particle%tstop = this%tstop(ip)
     particle%ttrack = this%ttrack(ip)
     particle%advancing = .true.
-    particle%idomain(1:levelmax) = &
-      this%idomain(ip, 1:levelmax)
+    particle%idomain(1:MAX_LEVEL) = &
+      this%idomain(ip, 1:MAX_LEVEL)
     particle%idomain(1) = imdl
-    particle%iboundary(1:levelmax) = &
-      this%iboundary(ip, 1:levelmax)
+    particle%iboundary(1:MAX_LEVEL) = &
+      this%iboundary(ip, 1:MAX_LEVEL)
     particle%ifrctrn = this%ifrctrn(ip)
     particle%iexmeth = this%iexmeth(ip)
     particle%extol = this%extol(ip)
     particle%iextend = this%extend(ip)
   end subroutine get
 
-  !> @brief Save a particle's state to the particle store
+  !> @brief Save a particle's state to the particle store.
   subroutine put(this, particle, ip)
     class(ParticleStoreType), intent(inout) :: this !< particle storage
     class(ParticleType), intent(in) :: particle !< particle
@@ -290,12 +336,12 @@ contains
     this%ttrack(ip) = particle%ttrack
     this%idomain( &
       ip, &
-      1:levelmax) = &
-      particle%idomain(1:levelmax)
+      1:MAX_LEVEL) = &
+      particle%idomain(1:MAX_LEVEL)
     this%iboundary( &
       ip, &
-      1:levelmax) = &
-      particle%iboundary(1:levelmax)
+      1:MAX_LEVEL) = &
+      particle%iboundary(1:MAX_LEVEL)
     this%ifrctrn(ip) = particle%ifrctrn
     this%iexmeth(ip) = particle%iexmeth
     this%extol(ip) = particle%extol
@@ -332,6 +378,7 @@ contains
     this%transformed = .true.
   end subroutine transform_coords
 
+  !> @brief Reset particle coordinate transformation properties.
   subroutine reset_transform(this)
     class(ParticleType), intent(inout) :: this !< particle
 
@@ -344,16 +391,17 @@ contains
     this%transformed = .false.
   end subroutine reset_transform
 
-  !> @brief Return the particle's model coordinates.
+  !> @brief Return the particle's model coordinates,
+  !! inverting any applied transformation if needed.
+  !! The particle's state is not altered.
   subroutine get_model_coords(this, x, y, z)
     use GeomUtilModule, only: transform, compose
-    class(ParticleType), intent(inout) :: this !< particle
+    class(ParticleType), intent(in) :: this !< particle
     real(DP), intent(out) :: x !< x coordinate
     real(DP), intent(out) :: y !< y coordinate
     real(DP), intent(out) :: z !< z coordinate
 
     if (this%transformed) then
-      ! Untransform coordinates
       call transform(this%x, this%y, this%z, x, y, z, &
                      this%xorigin, this%yorigin, this%zorigin, &
                      this%sinrot, this%cosrot, invert=.true.)
@@ -364,6 +412,7 @@ contains
     end if
   end subroutine get_model_coords
 
+  !> @brief Return the number of particles.
   integer function num_stored(this) result(n)
     class(ParticleStoreType) :: this
     n = size(this%imdl)

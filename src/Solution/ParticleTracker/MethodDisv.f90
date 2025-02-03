@@ -141,6 +141,7 @@ contains
   subroutine load_particle(this, cell, particle)
     ! modules
     use DisvModule, only: DisvType
+    use ParticleModule, only: TERM_BOUNDARY
     ! dummy
     class(MethodDisvType), intent(inout) :: this
     type(CellPolyType), pointer, intent(inout) :: cell
@@ -174,7 +175,7 @@ contains
       if (ic == particle%icp .and. inface == 7 .and. ilay < particle%ilay) then
         particle%advancing = .false.
         particle%idomain(2) = particle%icp
-        particle%istatus = 2
+        particle%istatus = TERM_BOUNDARY
         particle%izone = particle%izp
         call this%save(particle, reason=3)
         return
@@ -223,6 +224,7 @@ contains
 
   !> @brief Pass a particle to the next cell, if there is one
   subroutine pass_disv(this, particle)
+    use ParticleModule, only: TERM_BOUNDARY
     ! dummy
     class(MethodDisvType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
@@ -236,7 +238,7 @@ contains
       ! boundary face, so terminate the particle.
       ! todo AMP: reconsider when multiple models supported
       if (cell%defn%facenbr(particle%iboundary(2)) .eq. 0) then
-        particle%istatus = 2
+        particle%istatus = TERM_BOUNDARY
         particle%advancing = .false.
         call this%save(particle, reason=3)
       else

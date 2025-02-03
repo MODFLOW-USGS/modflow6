@@ -84,6 +84,7 @@ contains
   !! this context and for any modifications or errors.
   !<
   subroutine track_subcell(this, subcell, particle, tmax)
+    use ParticleModule, only: ACTIVE, TERM_NO_EXITS_SUB
     ! dummy
     class(MethodSubcellPollockType), intent(inout) :: this
     class(SubcellRectType), intent(in) :: subcell
@@ -135,7 +136,7 @@ contains
     !  Subcell has no exit face, terminate the particle
     !  todo: after initial release, consider ramifications
     if ((statusVX .eq. 3) .and. (statusVY .eq. 3) .and. (statusVZ .eq. 3)) then
-      particle%istatus = 9
+      particle%istatus = TERM_NO_EXITS_SUB
       particle%advancing = .false.
       call this%save(particle, reason=3)
       return
@@ -198,7 +199,7 @@ contains
         particle%y = y * subcell%dy
         particle%z = z * subcell%dz
         particle%ttrack = t
-        particle%istatus = 1
+        particle%istatus = ACTIVE
         call this%save(particle, reason=5)
       end do
     end if
@@ -216,7 +217,7 @@ contains
       z = new_x(vz, dvzdz, subcell%vz1, subcell%vz2, &
                 dt, initialZ, subcell%dz, statusVZ == 1)
       exitFace = 0
-      particle%istatus = 1
+      particle%istatus = ACTIVE
       particle%advancing = .false.
       reason = 2 ! timestep end
     else

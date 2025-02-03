@@ -888,6 +888,7 @@ contains
     ! modules
     use TdisModule, only: kper, kstp, totimc, delt, endofsimulation
     use PrtPrpModule, only: PrtPrpType
+    use ParticleModule, only: ACTIVE, TERM_UNRELEASED, TERM_TIMEOUT
     ! dummy variables
     class(PrtModelType) :: this
     ! local variables
@@ -935,17 +936,17 @@ contains
           ! in PRP instead of here. For now, status -8
           ! indicates the permanently unreleased event
           ! is not yet recorded, status 8 it has been.
-          if (particle%istatus == -8) then
-            particle%istatus = 8
+          if (particle%istatus == (-1 * TERM_UNRELEASED)) then
+            particle%istatus = TERM_UNRELEASED
             call this%method%save(particle, reason=3)
             call packobj%particles%put(particle, np)
           end if
 
           ! Skip terminated particles
-          if (particle%istatus > 1) cycle
+          if (particle%istatus > ACTIVE) cycle
 
           ! If particle was released this time step, record release
-          particle%istatus = 1
+          particle%istatus = ACTIVE
           if (particle%trelease >= totimc) &
             call this%method%save(particle, reason=0)
 
@@ -967,16 +968,17 @@ contains
           particle%izp = 0
 
           ! If the particle timed out, terminate it.
-          ! "Timeout" means
-          !   - the particle reached its stop time, or
+          ! "Timeout" means it remains active, but
+          !   - it reached its stop time, or
           !   - the simulation is over and no extending.
           ! We can't detect timeout within the tracking
           ! method because the method just receives the
           ! maximum time with no context on what it is.
-          if (particle%istatus < 2 .and. &
+          ! TODO maybe think about changing that?
+          if (particle%istatus <= ACTIVE .and. &
               (particle%ttrack == particle%tstop .or. &
                (endofsimulation .and. particle%iextend == 0))) then
-            particle%istatus = 10
+            particle%istatus = TERM_TIMEOUT
             call this%method%save(particle, reason=3)
           end if
 

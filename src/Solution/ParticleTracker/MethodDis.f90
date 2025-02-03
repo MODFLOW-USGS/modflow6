@@ -168,6 +168,7 @@ contains
   !> @brief Load cell properties into the particle, including
   ! the z coordinate, entry face, and node and layer numbers.
   subroutine load_particle(this, cell, particle)
+    use ParticleModule, only: TERM_BOUNDARY
     ! dummy
     class(MethodDisType), intent(inout) :: this
     type(CellRectType), pointer, intent(inout) :: cell
@@ -210,7 +211,7 @@ contains
       if (ic == particle%icp .and. inface == 7 .and. ilay < particle%ilay) then
         particle%advancing = .false.
         particle%idomain(2) = particle%icp
-        particle%istatus = 2
+        particle%istatus = TERM_BOUNDARY
         particle%izone = particle%izp
         call this%save(particle, reason=3)
         return
@@ -283,6 +284,7 @@ contains
 
   !> @brief Pass a particle to the next cell, if there is one
   subroutine pass_dis(this, particle)
+    use ParticleModule, only: TERM_BOUNDARY
     ! dummy
     class(MethodDisType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
@@ -296,7 +298,7 @@ contains
       ! boundary face, so terminate the particle.
       ! todo AMP: reconsider when multiple models supported
       if (cell%defn%facenbr(particle%iboundary(2)) .eq. 0) then
-        particle%istatus = 2
+        particle%istatus = TERM_BOUNDARY
         particle%advancing = .false.
         call this%save(particle, reason=3)
       else

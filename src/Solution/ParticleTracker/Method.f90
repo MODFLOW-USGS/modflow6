@@ -194,6 +194,8 @@ contains
   subroutine check(this, particle, cell_defn, tmax)
     ! modules
     use TdisModule, only: endofsimulation, totimc, totim
+    use ParticleModule, only: TERM_WEAKSINK, TERM_NO_EXITS, &
+                              TERM_STOPZONE, TERM_INACTIVE
     ! dummy
     class(MethodType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
@@ -213,14 +215,14 @@ contains
     particle%izone = cell_defn%izone
     if (stop_zone) then
       particle%advancing = .false.
-      particle%istatus = 6
+      particle%istatus = TERM_STOPZONE
       call this%save(particle, reason=3)
       return
     end if
 
     if (no_exit_face .and. .not. dry_cell) then
       particle%advancing = .false.
-      particle%istatus = 5
+      particle%istatus = TERM_NO_EXITS
       call this%save(particle, reason=3)
       return
     end if
@@ -228,7 +230,7 @@ contains
     if (weak_sink) then
       if (particle%istopweaksink > 0) then
         particle%advancing = .false.
-        particle%istatus = 3
+        particle%istatus = TERM_WEAKSINK
         call this%save(particle, reason=3)
         return
       else
@@ -244,7 +246,7 @@ contains
       else if (particle%idrymeth == 1) then
         ! stop
         particle%advancing = .false.
-        particle%istatus = 7
+        particle%istatus = TERM_INACTIVE
         call this%save(particle, reason=3)
         return
       else if (particle%idrymeth == 2) then
@@ -280,7 +282,7 @@ contains
 
         ! terminate if last period/step
         if (endofsimulation) then
-          particle%istatus = 5
+          particle%istatus = TERM_NO_EXITS
           particle%ttrack = ttrackmax
           call this%save(particle, reason=3)
           return
@@ -294,7 +296,7 @@ contains
       else if (particle%idrymeth == 1) then
         ! stop
         particle%advancing = .false.
-        particle%istatus = 7
+        particle%istatus = TERM_INACTIVE
         call this%save(particle, reason=3)
         return
       else if (particle%idrymeth == 2) then
@@ -327,20 +329,12 @@ contains
             if (t > ttrackmax) ttrackmax = t
           end do
         end if
-
-        ! terminate if last period/step
-        if (endofsimulation) then
-          particle%istatus = 5
-          particle%ttrack = ttrackmax
-          call this%save(particle, reason=3)
-        end if
-        return
       end if
     end if
 
     if (no_exit_face) then
       particle%advancing = .false.
-      particle%istatus = 5
+      particle%istatus = TERM_NO_EXITS
       call this%save(particle, reason=3)
       return
     end if

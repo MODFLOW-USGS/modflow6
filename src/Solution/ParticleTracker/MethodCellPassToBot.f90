@@ -43,6 +43,7 @@ contains
 
   !> @brief Pass particle vertically and instantaneously to the cell bottom
   subroutine apply_ptb(this, particle, tmax)
+    use ParticleModule, only: TERM_NO_EXITS
     ! dummy
     class(MethodCellPassToBotType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
@@ -67,7 +68,7 @@ contains
     end select
     if (particle%ilay == nlay) then
       particle%advancing = .false.
-      particle%istatus = 5
+      particle%istatus = TERM_NO_EXITS
       call this%save(particle, reason=3)
     end if
 

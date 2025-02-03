@@ -63,6 +63,7 @@ contains
 
   !> @brief Track a particle across a triangular subcell.
   subroutine track_subcell(this, subcell, particle, tmax)
+    use ParticleModule, only: ACTIVE, TERM_NO_EXITS_SUB
     ! dummy
     class(MethodSubcellTernaryType), intent(inout) :: this
     class(SubcellTriType), intent(in) :: subcell
@@ -211,7 +212,7 @@ contains
     ! If the subcell has no exit face, terminate the particle.
     ! todo: after initial release, consider ramifications
     if (itopbotexit == 0 .and. itrifaceexit == 0) then
-      particle%istatus = 9
+      particle%istatus = TERM_NO_EXITS_SUB
       particle%advancing = .false.
       call this%save(particle, reason=3)
       return
@@ -234,7 +235,7 @@ contains
       end if
       dtexit = dtexitz
     else
-      particle%istatus = 9
+      particle%istatus = TERM_NO_EXITS_SUB
       particle%advancing = .false.
       call this%save(particle, reason=3)
       return
@@ -260,7 +261,7 @@ contains
         particle%y = y
         particle%z = z
         particle%ttrack = t
-        particle%istatus = 1
+        particle%istatus = ACTIVE
         call this%save(particle, reason=5)
       end do
     end if
@@ -274,7 +275,7 @@ contains
       t = tmax
       dt = t - t0
       exitFace = 0
-      particle%istatus = 1
+      particle%istatus = ACTIVE
       particle%advancing = .false.
       reason = 2 ! timestep end
     else
