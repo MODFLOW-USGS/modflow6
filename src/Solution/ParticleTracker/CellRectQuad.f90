@@ -75,9 +75,9 @@ contains
   !! vertices and face flows of a rectangular-quad cell.
   !<
   subroutine load_rect_verts_flows(this)
-    ! -- dummy
+    ! dummy
     class(CellRectQuadType), intent(inout) :: this
-    ! -- local
+    ! local
     integer(I4B) :: n, m
 
     n = 0
@@ -107,21 +107,21 @@ contains
   !! rectangle vertex of a rectangular-quad cell
   !<
   function get_rect_ivert_sw(this) result(irv1)
-    ! -- dummy
+    ! dummy
     class(CellRectQuadType), intent(inout) :: this
     integer(I4B) :: irv1
-    ! -- local
+    ! local
     integer(I4B) :: irv, irv2, irv4, ipv1, ipv2, ipv4
     integer(I4B), dimension(4) :: irvnxt = (/2, 3, 4, 1/)
     real(DP) :: x1, y1, x2, y2, x4, y4
 
-    ! -- Find the "southwest" rectangle vertex by finding the vertex formed
-    ! -- either by (1) a rectangle edge over which x decreases (going
-    ! -- clockwise) followed by an edge over which x does not increase, or by
-    ! -- (2) a rectangle edge over which y does not decrease (again going
-    ! -- clockwise) followed by a rectangle edge over which y increases. In
-    ! -- the end, ipv1 is the index (1, 2, 3, or 4) of the southwest
-    ! -- rectangle vertex.
+    ! Find the "southwest" rectangle vertex by finding the vertex formed
+    ! either by (1) a rectangle edge over which x decreases (going
+    ! clockwise) followed by an edge over which x does not increase, or by
+    ! (2) a rectangle edge over which y does not decrease (again going
+    ! clockwise) followed by a rectangle edge over which y increases. In
+    ! the end, ipv1 is the index (1, 2, 3, or 4) of the southwest
+    ! rectangle vertex.
     do irv = 1, 4
       irv4 = irv
       irv1 = irvnxt(irv4)
@@ -152,18 +152,18 @@ contains
   !! as the origin
   !<
   subroutine get_rect_dim_rot(this)
-    ! -- dummy
+    ! dummy
     class(CellRectQuadType), intent(inout) :: this
-    ! -- local
+    ! local
     integer(I4B) :: irv2, irv4, ipv1, ipv2, ipv4
     integer(I4B), dimension(4) :: irvnxt = (/2, 3, 4, 1/)
     real(DP) :: x1, y1, x2, y2, x4, y4, dx2, dy2, dx4, dy4
 
-    ! -- Get rectangle vertex neighbors irv2 and irv4
+    ! Get rectangle vertex neighbors irv2 and irv4
     irv2 = irvnxt(this%irvOrigin)
     irv4 = irvnxt(irvnxt(irv2))
 
-    ! -- Get model coordinates at irv1, irv2, and irv4
+    ! Get model coordinates at irv1, irv2, and irv4
     ipv1 = this%irectvert(this%irvOrigin)
     x1 = this%defn%polyvert(1, ipv1)
     y1 = this%defn%polyvert(2, ipv1)
@@ -174,7 +174,7 @@ contains
     x4 = this%defn%polyvert(1, ipv4)
     y4 = this%defn%polyvert(2, ipv4)
 
-    ! -- Compute rectangle dimensions
+    ! Compute rectangle dimensions
     this%xOrigin = x1
     this%yOrigin = y1
     this%zOrigin = this%defn%bot
@@ -186,8 +186,8 @@ contains
     this%dy = dsqrt(dx2 * dx2 + dy2 * dy2)
     this%dz = this%defn%top - this%zOrigin
 
-    ! -- Compute sine and cosine of rotation angle (angle between "southern"
-    ! -- rectangle side irv1-irv4 and the model x axis)
+    ! Compute sine and cosine of rotation angle (angle between "southern"
+    ! rectangle side irv1-irv4 and the model x axis)
     this%sinrot = dy4 / this%dx
     this%cosrot = dx4 / this%dx
   end subroutine get_rect_dim_rot
@@ -202,7 +202,7 @@ contains
 
   !> @brief Return whether a rectangle face is refined
   function face_is_refined(this, i) result(is_refined)
-    ! -- dummy
+    ! dummy
     class(CellRectQuadType), intent(inout) :: this
     integer(I4B) :: i !< face index
     logical(LGP) :: is_refined
