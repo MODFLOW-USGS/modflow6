@@ -109,7 +109,6 @@ contains
   !> @ brief Create a new package object
   !!
   !!  Create a new MST object
-  !!
   !<
   subroutine mst_cr(mstobj, name_model, inunit, iout, fmi)
     ! -- dummy
@@ -140,7 +139,6 @@ contains
   !> @ brief Allocate and read method for package
   !!
   !!  Method to allocate and read static data for the package.
-  !!
   !<
   subroutine mst_ar(this, dis, ibound)
     ! -- modules
@@ -174,7 +172,6 @@ contains
   !> @ brief Fill coefficient method for package
   !!
   !!  Method to calculate and fill coefficients for the package.
-  !!
   !<
   subroutine mst_fc(this, nodes, cold, nja, matrix_sln, idxglo, cnew, &
                     rhs, kiter)
@@ -189,7 +186,6 @@ contains
     real(DP), intent(inout), dimension(nodes) :: rhs !< right-hand side vector for model
     real(DP), intent(in), dimension(nodes) :: cnew !< concentration at end of this time step
     integer(I4B), intent(in) :: kiter !< solution outer iteration number
-    ! -- local
     !
     ! -- storage contribution
     call this%mst_fc_sto(nodes, cold, nja, matrix_sln, idxglo, rhs)
@@ -215,7 +211,6 @@ contains
   !> @ brief Fill storage coefficient method for package
   !!
   !!  Method to calculate and fill storage coefficients for the package.
-  !!
   !<
   subroutine mst_fc_sto(this, nodes, cold, nja, matrix_sln, idxglo, rhs)
     ! -- modules
@@ -262,7 +257,6 @@ contains
   !> @ brief Fill decay coefficient method for package
   !!
   !!  Method to calculate and fill decay coefficients for the package.
-  !!
   !<
   subroutine mst_fc_dcy(this, nodes, cold, cnew, nja, matrix_sln, &
                         idxglo, rhs, kiter)
@@ -297,13 +291,14 @@ contains
       !
       ! -- add decay rate terms to accumulators
       idiag = this%dis%con%ia(n)
-      if (this%idcy == DECAY_FIRST_ORDER) then
+      select case (this%idcy)
+      case (DECAY_FIRST_ORDER)
         !
         ! -- first order decay rate is a function of concentration, so add
         !    to left hand side
         hhcof = -this%decay(n) * vcell * swtpdt * this%thetam(n)
         call matrix_sln%add_value_pos(idxglo(idiag), hhcof)
-      elseif (this%idcy == DECAY_ZERO_ORDER) then
+      case (DECAY_ZERO_ORDER)
         !
         ! -- Call function to get zero-order decay rate, which may be changed
         !    from the user-specified rate to prevent negative concentrations
@@ -312,7 +307,7 @@ contains
         this%decaylast(n) = decay_rate
         rrhs = decay_rate * vcell * swtpdt * this%thetam(n)
         rhs(n) = rhs(n) + rrhs
-      end if
+      end select
       !
     end do
   end subroutine mst_fc_dcy
@@ -320,7 +315,6 @@ contains
   !> @ brief Fill sorption coefficient method for package
   !!
   !!  Method to calculate and fill sorption coefficients for the package.
-  !!
   !<
   subroutine mst_fc_srb(this, nodes, cold, nja, matrix_sln, idxglo, rhs, &
                         cnew)
@@ -381,7 +375,6 @@ contains
   !> @ brief Calculate sorption terms
   !!
   !!  Subroutine to calculate sorption terms
-  !!
   !<
   subroutine mst_srb_term(isrb, volfracm, rhobm, vcell, tled, cnew, cold, &
                           swnew, swold, const1, const2, rate, hcofval, rhsval)
@@ -422,17 +415,18 @@ contains
       cavg = DHALF * (cold + cnew)
       !
       ! -- set values based on isotherm
-      if (isrb == SORPTION_FREUND) then
+      select case (isrb)
+      case (SORPTION_FREUND)
         ! -- freundlich
         cbarnew = get_freundlich_conc(cnew, const1, const2)
         cbarold = get_freundlich_conc(cold, const1, const2)
         derv = get_freundlich_derivative(cavg, const1, const2)
-      else if (isrb == SORPTION_LANG) then
+      case (SORPTION_LANG)
         ! -- langmuir
         cbarnew = get_langmuir_conc(cnew, const1, const2)
         cbarold = get_langmuir_conc(cold, const1, const2)
         derv = get_langmuir_derivative(cavg, const1, const2)
-      end if
+      end select
       !
       ! -- calculate hcof, rhs, and rate for freundlich and langmuir
       term = -volfracm * rhobm * vcell * tled
@@ -454,7 +448,6 @@ contains
   !> @ brief Fill sorption-decay coefficient method for package
   !!
   !!  Method to calculate and fill sorption-decay coefficients for the package.
-  !!
   !<
   subroutine mst_fc_dcy_srb(this, nodes, cold, nja, matrix_sln, idxglo, &
                             rhs, cnew, kiter)
@@ -502,49 +495,50 @@ contains
       term = this%decay_sorbed(n) * volfracm * rhobm * swnew * vcell
       !
       ! -- add sorbed mass decay rate terms to accumulators
-      if (this%idcy == DECAY_FIRST_ORDER) then
+      select case (this%idcy)
+      case (DECAY_FIRST_ORDER)
         !
-        if (this%isrb == SORPTION_LINEAR) then
+        select case (this%isrb)
+        case (SORPTION_LINEAR)
           !
           ! -- first order decay rate is a function of concentration, so add
           !    to left hand side
           hhcof = -term * distcoef
-        else if (this%isrb == SORPTION_FREUND) then
+        case (SORPTION_FREUND)
           !
           ! -- nonlinear Freundlich sorption, so add to RHS
           csrb = get_freundlich_conc(cnew(n), distcoef, this%sp2(n))
           rrhs = term * csrb
-        else if (this%isrb == SORPTION_LANG) then
+        case (SORPTION_LANG)
           !
           ! -- nonlinear Lanmuir sorption, so add to RHS
           csrb = get_langmuir_conc(cnew(n), distcoef, this%sp2(n))
           rrhs = term * csrb
-        end if
-      elseif (this%idcy == DECAY_ZERO_ORDER) then
+        end select
+      case (DECAY_ZERO_ORDER)
         !
-        ! -- Call function to get zero-order decay rate, which may be changed
+        ! -- call function to get zero-order decay rate, which may be changed
         !    from the user-specified rate to prevent negative concentrations
         if (distcoef > DZERO) then
-
-          if (this%isrb == SORPTION_LINEAR) then
+          select case (this%isrb)
+          case (SORPTION_LINEAR)
             csrbold = cold(n) * distcoef
             csrbnew = cnew(n) * distcoef
-          else if (this%isrb == SORPTION_FREUND) then
+          case (SORPTION_FREUND)
             csrbold = get_freundlich_conc(cold(n), distcoef, this%sp2(n))
             csrbnew = get_freundlich_conc(cnew(n), distcoef, this%sp2(n))
-          else if (this%isrb == SORPTION_LANG) then
+          case (SORPTION_LANG)
             csrbold = get_langmuir_conc(cold(n), distcoef, this%sp2(n))
             csrbnew = get_langmuir_conc(cnew(n), distcoef, this%sp2(n))
-          end if
-
+          end select
+          !
           decay_rate = get_zero_order_decay(this%decay_sorbed(n), &
                                             this%decayslast(n), &
                                             kiter, csrbold, csrbnew, delt)
           this%decayslast(n) = decay_rate
           rrhs = decay_rate * volfracm * rhobm * swnew * vcell
         end if
-
-      end if
+      end select
       !
       ! -- Add hhcof to diagonal and rrhs to right-hand side
       call matrix_sln%add_value_pos(idxglo(idiag), hhcof)
@@ -556,17 +550,14 @@ contains
   !> @ brief Calculate flows for package
   !!
   !!  Method to calculate flows for the package.
-  !!
   !<
   subroutine mst_cq(this, nodes, cnew, cold, flowja)
-    ! -- modules
     ! -- dummy
     class(GwtMstType) :: this !< GwtMstType object
     integer(I4B), intent(in) :: nodes !< number of nodes
     real(DP), intent(in), dimension(nodes) :: cnew !< concentration at end of this time step
     real(DP), intent(in), dimension(nodes) :: cold !< concentration at end of last time step
     real(DP), dimension(:), contiguous, intent(inout) :: flowja !< flow between two connected control volumes
-    ! -- local
     !
     ! - storage
     call this%mst_cq_sto(nodes, cnew, cold, flowja)
@@ -595,7 +586,6 @@ contains
   !> @ brief Calculate storage terms for package
   !!
   !!  Method to calculate storage terms for the package.
-  !!
   !<
   subroutine mst_cq_sto(this, nodes, cnew, cold, flowja)
     ! -- modules
@@ -644,7 +634,6 @@ contains
   !> @ brief Calculate decay terms for package
   !!
   !!  Method to calculate decay terms for the package.
-  !!
   !<
   subroutine mst_cq_dcy(this, nodes, cnew, cold, flowja)
     ! -- modules
@@ -699,7 +688,6 @@ contains
   !> @ brief Calculate sorption terms for package
   !!
   !!  Method to calculate sorption terms for the package.
-  !!
   !<
   subroutine mst_cq_srb(this, nodes, cnew, cold, flowja)
     ! -- modules
@@ -758,7 +746,6 @@ contains
   !> @ brief Calculate decay-sorption terms for package
   !!
   !!  Method to calculate decay-sorption terms for the package.
-  !!
   !<
   subroutine mst_cq_dcy_srb(this, nodes, cnew, cold, flowja)
     ! -- modules
@@ -806,45 +793,48 @@ contains
       term = this%decay_sorbed(n) * volfracm * rhobm * swnew * vcell
       !
       ! -- add sorbed mass decay rate terms to accumulators
-      if (this%idcy == DECAY_FIRST_ORDER) then
+      select case (this%idcy)
+      case (DECAY_FIRST_ORDER)
         !
-        if (this%isrb == SORPTION_LINEAR) then
+        select case (this%isrb)
+        case (SORPTION_LINEAR)
           !
           ! -- first order decay rate is a function of concentration, so add
           !    to left hand side
           hhcof = -term * distcoef
-        else if (this%isrb == SORPTION_FREUND) then
+        case (SORPTION_FREUND)
           !
           ! -- nonlinear Freundlich sorption, so add to RHS
           csrb = get_freundlich_conc(cnew(n), distcoef, this%sp2(n))
           rrhs = term * csrb
-        else if (this%isrb == SORPTION_LANG) then
+        case (SORPTION_LANG)
           !
           ! -- nonlinear Lanmuir sorption, so add to RHS
           csrb = get_langmuir_conc(cnew(n), distcoef, this%sp2(n))
           rrhs = term * csrb
-        end if
-      elseif (this%idcy == DECAY_ZERO_ORDER) then
+        end select
+      case (DECAY_ZERO_ORDER)
         !
         ! -- Call function to get zero-order decay rate, which may be changed
         !    from the user-specified rate to prevent negative concentrations
         if (distcoef > DZERO) then
-          if (this%isrb == SORPTION_LINEAR) then
+          select case (this%isrb)
+          case (SORPTION_LINEAR)
             csrbold = cold(n) * distcoef
             csrbnew = cnew(n) * distcoef
-          else if (this%isrb == SORPTION_FREUND) then
+          case (SORPTION_FREUND)
             csrbold = get_freundlich_conc(cold(n), distcoef, this%sp2(n))
             csrbnew = get_freundlich_conc(cnew(n), distcoef, this%sp2(n))
-          else if (this%isrb == SORPTION_LANG) then
+          case (SORPTION_LANG)
             csrbold = get_langmuir_conc(cold(n), distcoef, this%sp2(n))
             csrbnew = get_langmuir_conc(cnew(n), distcoef, this%sp2(n))
-          end if
+          end select
           decay_rate = get_zero_order_decay(this%decay_sorbed(n), &
                                             this%decayslast(n), &
                                             0, csrbold, csrbnew, delt)
           rrhs = decay_rate * volfracm * rhobm * swnew * vcell
         end if
-      end if
+      end select
       !
       ! -- calculate rate
       rate = hhcof * cnew(n) - rrhs
@@ -871,13 +861,14 @@ contains
       csrb = DZERO
       if (this%ibound(n) > 0) then
         distcoef = this%distcoef(n)
-        if (this%isrb == SORPTION_LINEAR) then
+        select case (this%isrb)
+        case (SORPTION_LINEAR)
           csrb = cnew(n) * distcoef
-        else if (this%isrb == SORPTION_FREUND) then
+        case (SORPTION_FREUND)
           csrb = get_freundlich_conc(cnew(n), distcoef, this%sp2(n))
-        else if (this%isrb == SORPTION_LANG) then
+        case (SORPTION_LANG)
           csrb = get_langmuir_conc(cnew(n), distcoef, this%sp2(n))
-        end if
+        end select
       end if
       this%csrb(n) = csrb
     end do
@@ -928,7 +919,6 @@ contains
   !> @ brief Output flow terms for package
   !!
   !!  Method to output terms for the package.
-  !!
   !<
   subroutine mst_ot_flow(this, icbcfl, icbcun)
     ! -- dummy
@@ -1020,7 +1010,6 @@ contains
   !> @ brief Deallocate
   !!
   !!  Method to deallocate memory for the package.
-  !!
   !<
   subroutine mst_da(this)
     ! -- modules
@@ -1061,14 +1050,12 @@ contains
   !> @ brief Allocate scalar variables for package
   !!
   !!  Method to allocate scalar variables for the package.
-  !!
   !<
   subroutine allocate_scalars(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy
     class(GwtMstType) :: this !< GwtMstType object
-    ! -- local
     !
     ! -- Allocate scalars in NumericalPackageType
     call this%NumericalPackageType%allocate_scalars()
@@ -1087,7 +1074,6 @@ contains
   !> @ brief Allocate arrays for package
   !!
   !!  Method to allocate arrays for the package.
-  !!
   !<
   subroutine allocate_arrays(this, nodes)
     ! -- modules
@@ -1177,7 +1163,6 @@ contains
   !> @ brief Read options for package
   !!
   !!  Method to read options for the package.
-  !!
   !<
   subroutine read_options(this)
     ! -- modules
@@ -1280,7 +1265,6 @@ contains
   !> @ brief Read data for package
   !!
   !!  Method to read data for the package.
-  !!
   !<
   subroutine read_data(this)
     ! -- modules
@@ -1295,7 +1279,6 @@ contains
     logical :: isfound, endOfBlock
     logical, dimension(6) :: lname
     character(len=24), dimension(6) :: aname
-    ! -- formats
     ! -- data
     data aname(1)/'  MOBILE DOMAIN POROSITY'/
     data aname(2)/'            BULK DENSITY'/
@@ -1480,10 +1463,8 @@ contains
   !!
   !!  Method to add immobile domain volume fracions, which are stored as a
   !!  cumulative value in volfracim.
-  !!
   !<
   subroutine addto_volfracim(this, volfracim)
-    ! -- modules
     ! -- dummy
     class(GwtMstType) :: this !< GwtMstType object
     real(DP), dimension(:), intent(in) :: volfracim !< immobile domain volume fraction that contributes to total immobile volume fraction
@@ -1505,10 +1486,8 @@ contains
   !> @ brief Return mobile domain volume fraction
   !!
   !!  Calculate and return the volume fraction of the aquifer that is mobile
-  !!
   !<
   function get_volfracm(this, node) result(volfracm)
-    ! -- modules
     ! -- dummy
     class(GwtMstType) :: this !< GwtMstType object
     integer(I4B), intent(in) :: node !< node number
@@ -1521,7 +1500,6 @@ contains
   !> @ brief Calculate sorption concentration using Freundlich
   !!
   !!  Function to calculate sorption concentration using Freundlich
-  !!
   !<
   function get_freundlich_conc(conc, kf, a) result(cbar)
     ! -- dummy
@@ -1541,7 +1519,6 @@ contains
   !> @ brief Calculate sorption concentration using Langmuir
   !!
   !!  Function to calculate sorption concentration using Langmuir
-  !!
   !<
   function get_langmuir_conc(conc, kl, sbar) result(cbar)
     ! -- dummy
@@ -1561,7 +1538,6 @@ contains
   !> @ brief Calculate sorption derivative using Freundlich
   !!
   !!  Function to calculate sorption derivative using Freundlich
-  !!
   !<
   function get_freundlich_derivative(conc, kf, a) result(derv)
     ! -- dummy
@@ -1581,7 +1557,6 @@ contains
   !> @ brief Calculate sorption derivative using Langmuir
   !!
   !!  Function to calculate sorption derivative using Langmuir
-  !!
   !<
   function get_langmuir_derivative(conc, kl, sbar) result(derv)
     ! -- dummy
