@@ -432,15 +432,6 @@ contains
 
       ! TODO: can we use some of the terms of the centroid calculation
       ! to do a cheap point in polygon check?
-      !
-      ! allocate(poly(2, nvert))
-      ! poly(1,:) = this%xvert
-      ! poly(2,:) = this%yvert
-      ! if (.not. point_in_polygon(this%xctr, this%yctr, poly)) then
-      !   print *, "error -- centroid not in cell ", this%cell%defn%icell, this%xctr, this%yctr
-      !   call pstop(1)
-      ! end if
-      ! deallocate(poly)
 
       ! Subcell areas
       do i = 1, this%nverts

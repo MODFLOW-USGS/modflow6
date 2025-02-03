@@ -15,10 +15,10 @@ contains
     use CellRectModule, only: CellRectType, create_cell_rect
     use CellPolyModule, only: CellPolyType
     use CellDefnModule, only: CellDefnType
-    ! -- dummy
+    ! dummy
     type(CellPolyType), intent(in), pointer :: poly
     type(CellRectType), intent(inout), pointer :: rect
-    ! -- local
+    ! local
     type(CellDefnType), pointer :: defn
     integer(I4B) :: ipv, ipv1, ipv2, ipv3, ipv4
     integer(I4B), dimension(4) :: ipvnxt = (/2, 3, 4, 1/)
@@ -29,19 +29,19 @@ contains
 
     call create_cell_rect(rect)
     defn => poly%defn
-    ! -- Translate and rotate the rectangular cell into local coordinates
-    ! -- with x varying from 0 to dx and y varying from 0 to dy. Choose the
-    ! -- "south-west" vertex to be the local origin so that the rotation
-    ! -- angle is zero if the cell already aligns with the model x and y
-    ! -- coordinates. The "southwest" vertex is found by finding the vertex
-    ! -- formed either by (1) an edge over which x decreases (going
-    ! -- clockwise) followed by an edge over which x does not increase, or
-    ! -- by (2) an edge over which y does not decrease (again going
-    ! -- clockwise) followed by an edge over which y increases. In the end,
-    ! -- ipv1 is the local vertex number (within the cell, taking a value
-    ! -- of 1, 2, 3, or 4) of the southwest vertex, and ipv2, ipv3, and
-    ! -- ipv4 are the local vertex numbers of the remaining three vertices
-    ! -- going clockwise.
+    ! Translate and rotate the rectangular cell into local coordinates
+    ! with x varying from 0 to dx and y varying from 0 to dy. Choose the
+    ! "south-west" vertex to be the local origin so that the rotation
+    ! angle is zero if the cell already aligns with the model x and y
+    ! coordinates. The "southwest" vertex is found by finding the vertex
+    ! formed either by (1) an edge over which x decreases (going
+    ! clockwise) followed by an edge over which x does not increase, or
+    ! by (2) an edge over which y does not decrease (again going
+    ! clockwise) followed by an edge over which y increases. In the end,
+    ! ipv1 is the local vertex number (within the cell, taking a value
+    ! of 1, 2, 3, or 4) of the southwest vertex, and ipv2, ipv3, and
+    ! ipv4 are the local vertex numbers of the remaining three vertices
+    ! going clockwise.
     do ipv = 1, 4
       ipv4 = ipv
       ipv1 = ipvnxt(ipv4)
@@ -67,9 +67,9 @@ contains
     end do
     ipv3 = ipvnxt(ipv2)
 
-    ! -- Compute upper bounds on the local coordinates (the rectangular
-    ! -- dimensions of the cell) and the sine and cosine of the rotation
-    ! -- angle, and store local origin information
+    ! Compute upper bounds on the local coordinates (the rectangular
+    ! dimensions of the cell) and the sine and cosine of the rotation
+    ! angle, and store local origin information
     xOrigin = x1
     yOrigin = y1
     zOrigin = defn%bot
@@ -93,7 +93,7 @@ contains
     rect%zOrigin = zOrigin
     rect%ipvOrigin = ipv1
 
-    ! -- Compute (unscaled) cell edge velocities from face flows
+    ! Compute (unscaled) cell edge velocities from face flows
     areax = dx * dz
     areay = dy * dz
     areaz = dx * dy
@@ -115,24 +115,24 @@ contains
     use CellRectQuadModule, only: CellRectQuadType, create_cell_rect_quad
     use CellPolyModule, only: CellPolyType
     use MathUtilModule, only: mod_offset
-    ! -- dummy
+    ! dummy
     type(CellPolyType), intent(in), pointer :: poly
     type(CellRectQuadType), intent(inout), pointer :: quad
-    ! -- local
+    ! local
     integer(I4B) :: i, irv, isc
     real(DP) :: qhalf, qdisttopbot, q1, q2, q4
 
     call create_cell_rect_quad(quad)
     call quad%init_from(poly%defn)
-    ! -- Translate and rotate the rect-quad cell into local coordinates with
-    ! -- x varying from 0 to dx and y varying from 0 to dy. Choose the "south-
-    ! -- west" rectangle vertex to be the local origin so that the rotation
-    ! -- angle is zero if the cell already aligns with the model x and y
-    ! -- coordinates.
+    ! Translate and rotate the rect-quad cell into local coordinates with
+    ! x varying from 0 to dx and y varying from 0 to dy. Choose the "south-
+    ! west" rectangle vertex to be the local origin so that the rotation
+    ! angle is zero if the cell already aligns with the model x and y
+    ! coordinates.
     quad%irvOrigin = quad%get_rect_ivert_sw()
     call quad%get_rect_dim_rot()
 
-    ! -- Set the external and internal face flows used for subcells
+    ! Set the external and internal face flows used for subcells
     do i = 0, 3
       irv = mod_offset(i + quad%irvOrigin, 4, 1)
       isc = mod_offset(i + 3, 4, 1)

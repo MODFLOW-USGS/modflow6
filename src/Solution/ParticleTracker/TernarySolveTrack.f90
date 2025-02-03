@@ -33,7 +33,7 @@ contains
                                alpexit, betexit, &
                                itrifaceenter, itrifaceexit, &
                                alp1, bet1, alp2, bet2, alpi, beti)
-    ! -- dummy
+    ! dummy
     integer(I4B), intent(in) :: isolv !< solution method
     real(DP), intent(in) :: tol !< solution tolerance
     real(DP), intent(out) :: texit !< time particle exits the cell
@@ -47,7 +47,7 @@ contains
     real(DP) :: bet2
     real(DP) :: alpi
     real(DP) :: beti !< alpha and beta coefficients
-    ! -- local
+    ! local
     real(DP) :: texit0
     real(DP) :: alpexit0
     real(DP) :: betexit0
@@ -58,13 +58,13 @@ contains
     real(DP) :: alpexit2
     real(DP) :: betexit2
 
-    ! -- Compute elements of matrix W
+    ! Compute elements of matrix W
     call get_w(alp1, bet1, alp2, bet2, waa, wab, wba, wbb)
 
-    ! -- Determine alpha and beta analytically as functions of time
+    ! Determine alpha and beta analytically as functions of time
     call solve_coefs(alpi, beti)
 
-    ! -- Compute exit time (travel time to exit) and exit location
+    ! Compute exit time (travel time to exit) and exit location
     call find_exit_bary(isolv, 0, itrifaceenter, &
                         alpi, beti, tol, &
                         texit0, alpexit0, betexit0)
@@ -76,8 +76,8 @@ contains
                         texit2, alpexit2, betexit2)
     texit = min(texit0, texit1, texit2)
 
-    ! -- Note that while the numbering of triangle faces is generally zero-based
-    ! -- (0, 1, 2), itrifaceexit, which gets passed out, is one-based (1, 2, 3).
+    ! Note that while the numbering of triangle faces is generally zero-based
+    ! (0, 1, 2), itrifaceexit, which gets passed out, is one-based (1, 2, 3).
     if (texit .eq. texit0) then
       alpexit = alpexit0
       betexit = betexit0
@@ -102,7 +102,7 @@ contains
                        rxx, rxy, ryx, ryy, &
                        sxx, sxy, syy, &
                        alp0, bet0, alp1, bet1, alp2, bet2, alpi, beti)
-    ! -- dummy
+    ! dummy
     real(DP) :: x0
     real(DP) :: y0
     real(DP) :: x1
@@ -130,7 +130,7 @@ contains
     real(DP) :: bet2
     real(DP) :: alpi
     real(DP) :: beti !< alpha and beta coefficients
-    ! -- local
+    ! local
     real(DP) :: baselen
     real(DP) :: oobaselen
     real(DP) :: sinomega
@@ -143,7 +143,7 @@ contains
     real(DP) :: yidiff
     real(DP) :: rot(2, 2), res(2)
 
-    ! -- Translate and rotate coordinates to "canonical" configuration
+    ! Translate and rotate coordinates to "canonical" configuration
     x1diff = x1 - x0
     y1diff = y1 - y0
     x2diff = x2 - x0
@@ -196,7 +196,7 @@ contains
   subroutine get_w( &
     alp1, bet1, alp2, bet2, &
     waa, wab, wba, wbb)
-    ! -- dummy
+    ! dummy
     real(DP) :: alp1
     real(DP) :: bet1
     real(DP) :: alp2
@@ -205,12 +205,12 @@ contains
     real(DP) :: wab
     real(DP) :: wba
     real(DP) :: wbb !< w matrix
-    ! -- local
+    ! local
     real(DP) :: v1alpdiff
     real(DP) :: v2alpdiff
     real(DP) :: v2betdiff
 
-    ! -- Note: wab is the "alpha,beta" entry in matrix W
+    ! Note: wab is the "alpha,beta" entry in matrix W
     !    and the alpha component of the w^(beta) vector
     v1alpdiff = cv1(1) - cv0(1)
     v2alpdiff = cv2(1) - cv0(1)
@@ -224,10 +224,10 @@ contains
 
   !> @brief Compute analytical solution coefficients depending on case
   subroutine solve_coefs(alpi, beti)
-    ! -- dummy
+    ! dummy
     real(DP) :: alpi
     real(DP) :: beti
-    ! -- local
+    ! local
     real(DP) :: zerotol
     real(DP) :: wratv
     real(DP) :: acoef
@@ -244,28 +244,28 @@ contains
       bcoef = wratv + wab * beti
       afact = acoef / waa
       vfact = cv0(2) / wbb
-      ! -- Coefs for beta do not depend on whether waa = 0 or not
+      ! Coefs for beta do not depend on whether waa = 0 or not
       cb1 = -vfact ! const term in beta
       cb2 = vfact + beti ! coef for e(wbb*t) term in beta
-      ! -- Coefs for alpha
+      ! Coefs for alpha
       if (dabs(waa) .gt. zerotol) then
-        ! -- Case waa <> 0, wbb <> 0
+        ! Case waa <> 0, wbb <> 0
         if (dabs(wbb - waa) .gt. zerotol) then
-          ! -- Subcase wbb <> waa
+          ! Subcase wbb <> waa
           bfact = bcoef / (wbb - waa)
           ca1 = -afact ! const term in alpha
           ca2 = alpi + afact - bfact ! coef for exp(waa*t) term in alpha
           ca3 = bfact ! coef for exp(wbb*t) term in alpha
           icase = 1
         else
-          ! -- Subcase wbb = waa
+          ! Subcase wbb = waa
           ca1 = -afact ! const term in alpha
           ca2 = alpi + afact ! coef for exp(waa*t) term in alpha
           ca3 = bcoef ! coef for t*exp(waa*t) term in alpha
           icase = -1
         end if
       else
-        ! -- Case waa = 0, wbb <> 0
+        ! Case waa = 0, wbb <> 0
         bfact = bcoef / wbb
         ca1 = alpi - bfact ! const term in alpha
         ca2 = acoef ! coef for t term in alpha
@@ -273,11 +273,11 @@ contains
         icase = 2
       end if
     else
-      ! -- Coefs for beta do not depend on whether waa = 0 or not
+      ! Coefs for beta do not depend on whether waa = 0 or not
       cb1 = beti ! const term in beta
       cb2 = cv0(2) ! coef for t term in beta
       if (dabs(waa) .gt. zerotol) then
-        ! -- Case waa <> 0, wbb = 0
+        ! Case waa <> 0, wbb = 0
         oowaa = 1d0 / waa
         vfact = (wab * oowaa) * cv0(2)
         ca1 = -oowaa * (cv0(1) + wab * beti + vfact) ! const term in alpha
@@ -285,7 +285,7 @@ contains
         ca3 = alpi - ca1 ! coef for exp(waa*t) term in alpha
         icase = 3
       else
-        ! -- Case waa = 0, wbb = 0
+        ! Case waa = 0, wbb = 0
         ca1 = alpi ! const term in alpha
         ca2 = cv0(1) + wab * beti ! coef for t term in alpha
         ca3 = 5d-1 * wab * cv0(2) ! coef for t^2 term in alpha
@@ -297,7 +297,7 @@ contains
 
   !> @brief Step (evaluate) analytically depending on case
   subroutine step_analytical(t, alp, bet)
-    ! -- dummy
+    ! dummy
     real(DP), intent(in) :: t
     real(DP) :: alp
     real(DP) :: bet
@@ -325,7 +325,7 @@ contains
   subroutine find_exit_bary(isolv, itriface, itrifaceenter, &
                             alpi, beti, tol, &
                             texit, alpexit, betexit)
-    ! -- dummy
+    ! dummy
     integer(I4B) :: isolv
     integer(I4B) :: itriface
     integer(I4B) :: itrifaceenter
@@ -335,7 +335,7 @@ contains
     real(DP) :: texit
     real(DP) :: alpexit
     real(DP) :: betexit
-    ! -- local
+    ! local
     real(DP) :: alplo
     real(DP) :: alphi
     real(DP) :: alpt
@@ -361,82 +361,82 @@ contains
 
     zerotol = 1d-10 ! todo AMP: consider tolerance
 
-    ! -- Use iterative scheme or numerical integration indicated by isolv.
+    ! Use iterative scheme or numerical integration indicated by isolv.
     if (itriface .eq. 0) then
-      ! -- Checking for exit on canonical face 0 (beta = 0)
+      ! Checking for exit on canonical face 0 (beta = 0)
       if (itrifaceenter .eq. 0) then
-        ! -- Entrance face, so no exit. (Normal velocity is uniform along face 0,
-        ! -- so it cannot be both an entrance and an exit.)
+        ! Entrance face, so no exit. (Normal velocity is uniform along face 0,
+        ! so it cannot be both an entrance and an exit.)
         texit = huge(1d0)
       else
-        ! -- Not the entrance face, so check for outflow
+        ! Not the entrance face, so check for outflow
         if (cv0(2) .ge. DZERO) then ! check beta velocity along beta=0 face
-          ! -- Inflow or no flow, so no exit
+          ! Inflow or no flow, so no exit
           texit = huge(DONE)
         else
-          ! -- Outflow, so check beta-velocity at the initial location,
-          ! -- recognizing that it will never change sign along the
-          ! -- trajectory (and will not be blocked from zero by an asymptote)
+          ! Outflow, so check beta-velocity at the initial location,
+          ! recognizing that it will never change sign along the
+          ! trajectory (and will not be blocked from zero by an asymptote)
           vbeti = cv0(2) + wbb * beti
           if (vbeti .ge. DZERO) then
-            ! -- Can't exit along beta = 0
+            ! Can't exit along beta = 0
             texit = huge(DONE)
           else
-            ! -- get alpt and check it
+            ! get alpt and check it
             call get_t_alpt(DZERO, t, alpt)
             if ((alpt .ge. DZERO) .and. (alpt .le. DONE)) then
-              ! -- alpt within the edge, so exit found
+              ! alpt within the edge, so exit found
               texit = t
               alpexit = alpt
               betexit = DZERO
             else
-              ! -- alpt not within the edge, so not an exit
+              ! alpt not within the edge, so not an exit
               texit = huge(DONE)
             end if
           end if
         end if
       end if
-      ! -- End canonical face 0 (beta = 0)
+      ! End canonical face 0 (beta = 0)
     else
-      ! -- Checking for exit on canonical face 1 (gamma = 0.) or 2 (alpha = 0.)
+      ! Checking for exit on canonical face 1 (gamma = 0.) or 2 (alpha = 0.)
       if (itriface .eq. 1) then
-        ! -- Normal velocities (gamma components) at ends of canonical face 1
+        ! Normal velocities (gamma components) at ends of canonical face 1
         v1n = -cv1(1) - cv1(2)
         v2n = -cv2(1) - cv2(2)
       else
-        ! -- Normal velocities (alpha components) at ends of canonical face 2
+        ! Normal velocities (alpha components) at ends of canonical face 2
         v1n = cv0(1)
         v2n = cv2(1)
       end if
       if ((v1n .ge. DZERO) .and. (v2n .ge. DZERO)) then
-        ! -- No outflow at vn1 and vn2 corners; no outflow interval, so no exit.
+        ! No outflow at vn1 and vn2 corners; no outflow interval, so no exit.
         texit = huge(DONE)
       else
-        ! -- Find outflow interval
+        ! Find outflow interval
         call get_bet_outflow_bary(v1n, v2n, betoutlo, betouthi)
-        ! -- Find trend of and limits on beta from beta{t} solution
+        ! Find trend of and limits on beta from beta{t} solution
         call get_bet_soln_limits(beti, betsollo, betsolhi, ibettrend)
-        ! -- Look for exit
+        ! Look for exit
         if (ibettrend .eq. 0) then
-          ! -- Beta is constant, so check if it's within the outflow interval;
-          ! -- if not, no exit; if so, solve for t and alpha
+          ! Beta is constant, so check if it's within the outflow interval;
+          ! if not, no exit; if so, solve for t and alpha
           if ((beti .gt. betouthi) .or. (beti .lt. betoutlo)) then
             texit = huge(1d0)
           else
-            ! -- Check alpha-velocity at the initial location,
-            ! -- recognizing that it will never change sign along the
-            ! -- trajectory (and will not be blocked from zero by an asymptote)
-            ! -- in this special case
+            ! Check alpha-velocity at the initial location,
+            ! recognizing that it will never change sign along the
+            ! trajectory (and will not be blocked from zero by an asymptote)
+            ! in this special case
             v0alpstar = cv0(1) + wab * beti
             valpi = v0alpstar + waa * alpi
             if ((itriface .eq. 1) .and. (valpi .le. DZERO)) then
-              ! -- Can't exit along gamma = 0.
+              ! Can't exit along gamma = 0.
               texit = huge(DONE)
             else if ((itriface .eq. 2) .and. (valpi .ge. DZERO)) then
-              ! -- Can't exit along alpha = 0.
+              ! Can't exit along alpha = 0.
               texit = huge(DONE)
             else
-              ! -- get exit
+              ! get exit
               if (itriface .eq. 1) then
                 alpexit = DONE - beti
               else
@@ -451,16 +451,16 @@ contains
               end if
             end if
           end if
-          ! -- End constant-beta case
+          ! End constant-beta case
         else
-          ! -- Beta varies along trajectory; combine outflow and soln limits on beta
+          ! Beta varies along trajectory; combine outflow and soln limits on beta
           bethi = min(betouthi, betsolhi)
           betlo = max(betoutlo, betsollo)
           if (betlo .gt. bethi) then
-            ! -- If bounds on bet leave no feasible interval, no exit
+            ! If bounds on bet leave no feasible interval, no exit
             texit = huge(DONE)
           else
-            ! -- Check sign of function value at beta bounds
+            ! Check sign of function value at beta bounds
             call get_t_alpt(bethi, thi, alphi)
             call get_t_alpt(betlo, tlo, alplo)
             if (itriface .eq. 1) then
@@ -471,17 +471,17 @@ contains
               fbx = alphi
             end if
             if (fax * fbx .gt. DZERO) then
-              ! -- Root not bracketed; no exit
+              ! Root not bracketed; no exit
               texit = huge(DONE)
             else
               if (isolv .eq. 1) then
-                ! -- Use Brent's method with initial bounds on beta of betlo and bethi,
-                ! -- assuming they bound the root
+                ! Use Brent's method with initial bounds on beta of betlo and bethi,
+                ! assuming they bound the root
                 call soln_brent(itriface, betlo, bethi, tol, texit, &
                                 alpexit, betexit)
               else if (isolv .eq. 2) then
-                ! -- Use Chandrupatla's method with initial bounds on beta of betlo and bethi,
-                ! -- assuming they bound the root
+                ! Use Chandrupatla's method with initial bounds on beta of betlo and bethi,
+                ! assuming they bound the root
                 call soln_chand(itriface, betlo, bethi, tol, texit, &
                                 alpexit, betexit)
               else
@@ -489,10 +489,10 @@ contains
               end if
             end if
           end if
-          ! -- End variable-beta case
+          ! End variable-beta case
         end if
       end if
-      ! -- End canonical face 1 (gamma = 0.) or 2 (alpha = 0.)
+      ! End canonical face 1 (gamma = 0.) or 2 (alpha = 0.)
     end if
 
     if (texit .ne. huge(DONE) .and. texit .lt. DZERO) then
@@ -503,39 +503,39 @@ contains
 
   !> @brief Brent's method applied to canonical face 1 (gamma = 0)
   function fbary1(bet) result(fb)
-    ! -- dummy
+    ! dummy
     real(DP), intent(in) :: bet
     real(DP) :: fb
-    ! -- local
+    ! local
     real(DP) :: t
     real(DP) :: alpt
 
-    ! -- Evaluate gamma{t{beta}} = 1. - alpha{t{beta}} - beta
+    ! Evaluate gamma{t{beta}} = 1. - alpha{t{beta}} - beta
     call get_t_alpt(bet, t, alpt)
     fb = DONE - alpt - bet
   end function
 
   !> @brief Brent's method applied to canonical face 2 (alpha = 0)
   function fbary2(bet) result(fb)
-    ! -- dummy
+    ! dummy
     real(DP), intent(in) :: bet
     real(DP) :: fb
-    ! -- local
+    ! local
     real(DP) :: t
     real(DP) :: alpt
 
-    ! -- Evaluate alpha{t{beta}}
+    ! Evaluate alpha{t{beta}}
     call get_t_alpt(bet, t, alpt)
     fb = alpt
   end function
 
   !> @brief Given beta evaluate t and alpha depending on case
   subroutine get_t_alpt(bet, t, alp)
-    ! -- dummy
+    ! dummy
     real(DP), intent(in) :: bet
     real(DP) :: t
     real(DP) :: alp
-    ! -- local
+    ! local
     real(DP) :: term
     real(DP) :: zerotol
     real(DP) :: waat
@@ -589,33 +589,33 @@ contains
 
   !> @brief Find outflow interval
   subroutine get_bet_outflow_bary(vn1, vn2, betoutlo, betouthi)
-    ! -- dummy
+    ! dummy
     real(DP) :: vn1
     real(DP) :: vn2
     real(DP) :: betoutlo
     real(DP) :: betouthi
-    ! -- local
+    ! local
     real(DP) :: vndiff
 
     vndiff = vn2 - vn1
     if (vn1 .lt. DZERO) then
-      ! -- Outflow at vn1 corner
+      ! Outflow at vn1 corner
       betoutlo = DZERO
       if (vn2 .le. DZERO) then
-        ! -- Outflow along entire edge (except possibly no-flow right at vn2 corner)
+        ! Outflow along entire edge (except possibly no-flow right at vn2 corner)
         betouthi = DONE
       else
-        ! -- Outflow along part of edge
+        ! Outflow along part of edge
         betouthi = -vn1 / vndiff
       end if
     else
-      ! -- Outflow at vn2 corner
+      ! Outflow at vn2 corner
       betouthi = DONE
       if (vn1 .le. DZERO) then
-        ! -- Outflow along entire edge (except possibly no-flow right at vn1 corner)
+        ! Outflow along entire edge (except possibly no-flow right at vn1 corner)
         betoutlo = DZERO
       else
-        ! -- Outflow along part of edge
+        ! Outflow along part of edge
         betoutlo = -vn1 / vndiff
       end if
     end if
@@ -624,12 +624,12 @@ contains
 
   !> @brief Find trend of and limits on beta from beta{t} solution
   subroutine get_bet_soln_limits(beti, betsollo, betsolhi, ibettrend)
-    ! -- dummy
+    ! dummy
     real(DP), intent(in) :: beti
     real(DP) :: betsollo
     real(DP) :: betsolhi
     integer(I4B), intent(inout) :: ibettrend
-    ! -- local
+    ! local
     real(DP) :: betlim
 
     if (icase > 2) then
@@ -683,7 +683,7 @@ contains
   !> @brief Use Brent's method with initial bounds on beta of betlo and bethi
   subroutine soln_brent(itriface, betlo, bethi, tol, &
                         texit, alpexit, betexit)
-    ! -- dummy
+    ! dummy
     integer(I4B), intent(in) :: itriface
     real(DP) :: betlo
     real(DP) :: bethi
@@ -691,12 +691,12 @@ contains
     real(DP) :: texit
     real(DP) :: alpexit
     real(DP) :: betexit
-    ! -- local
+    ! local
     real(DP) :: blo
     real(DP) :: bhi
     procedure(f1d), pointer :: f
 
-    ! -- assuming betlo and bethi bracket the root
+    ! assuming betlo and bethi bracket the root
     blo = betlo
     bhi = bethi
     if (itriface .eq. 1) then
@@ -713,7 +713,7 @@ contains
   !> @brief Use Chandrupatla's method with initial bounds on beta of betlo and bethi
   subroutine soln_chand(itriface, betlo, bethi, tol, &
                         texit, alpexit, betexit)
-    ! -- dummy
+    ! dummy
     integer(I4B), intent(in) :: itriface
     real(DP) :: betlo
     real(DP) :: bethi
@@ -721,12 +721,12 @@ contains
     real(DP) :: texit
     real(DP) :: alpexit
     real(DP) :: betexit
-    ! -- local
+    ! local
     real(DP) :: blo
     real(DP) :: bhi
     procedure(f1d), pointer :: f
 
-    ! -- note: assuming betlo and bethi bracket the root
+    ! note: assuming betlo and bethi bracket the root
     blo = betlo
     bhi = bethi
     if (itriface .eq. 1) then
