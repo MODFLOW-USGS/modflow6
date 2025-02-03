@@ -19,6 +19,10 @@ jobs:
           - {os: ubuntu-22.04, compiler: gcc, version: 12}
           - {os: ubuntu-22.04, compiler: gcc, version: 13}
           - {os: ubuntu-22.04, compiler: gcc, version: 14}
+          - {os: ubuntu-24.04, compiler: gcc, version: 11}
+          - {os: ubuntu-24.04, compiler: gcc, version: 12}
+          - {os: ubuntu-24.04, compiler: gcc, version: 13}
+          - {os: ubuntu-24.04, compiler: gcc, version: 14}
           - {os: macos-13, compiler: gcc, version: 11}
           - {os: macos-13, compiler: gcc, version: 12}
           - {os: macos-13, compiler: gcc, version: 13}
