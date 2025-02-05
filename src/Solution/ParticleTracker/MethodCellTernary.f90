@@ -99,6 +99,7 @@ contains
 
   !> @brief Pass particle to next subcell if there is one, or to the cell face
   subroutine pass_mct(this, particle)
+    use ParticleModule, only: LVL_CELL, LVL_SUBCELL
     ! dummy
     class(MethodCellTernaryType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
@@ -107,8 +108,8 @@ contains
     integer(I4B) :: exitFace
     integer(I4B) :: inface
 
-    exitFace = particle%iboundary(3)
-    isc = particle%itrdomain(3)
+    exitFace = particle%iboundary(LVL_SUBCELL)
+    isc = particle%itrdomain(LVL_SUBCELL)
 
     select case (exitFace)
     case (0)
@@ -122,15 +123,15 @@ contains
       ! Subcell face --> next subcell in "cycle" (cell interior)
       isc = isc + 1
       if (isc .gt. this%nverts) isc = 1
-      particle%itrdomain(3) = isc
-      particle%iboundary(3) = 3
+      particle%itrdomain(LVL_SUBCELL) = isc
+      particle%iboundary(LVL_SUBCELL) = 3
       inface = 0
     case (3)
       ! Subcell face --> preceding subcell in "cycle" (cell interior)
       isc = isc - 1
       if (isc .lt. 1) isc = this%nverts
-      particle%itrdomain(3) = isc
-      particle%iboundary(3) = 2
+      particle%itrdomain(LVL_SUBCELL) = isc
+      particle%iboundary(LVL_SUBCELL) = 2
       inface = 0
     case (4)
       ! Subcell bottom (cell bottom)
@@ -141,11 +142,11 @@ contains
     end select
 
     if (inface .eq. -1) then
-      particle%iboundary(2) = 0
+      particle%iboundary(LVL_CELL) = 0
     else if (inface .eq. 0) then
-      particle%iboundary(2) = 0
+      particle%iboundary(LVL_CELL) = 0
     else
-      particle%iboundary(2) = inface
+      particle%iboundary(LVL_CELL) = inface
     end if
   end subroutine pass_mct
 
@@ -248,6 +249,7 @@ contains
 
   !> @brief Loads a triangular subcell from the polygonal cell
   subroutine load_subcell(this, particle, subcell)
+    use ParticleModule, only: LVL_SUBCELL
     ! dummy
     class(MethodCellTernaryType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
@@ -280,7 +282,7 @@ contains
     type is (CellPolyType)
       ic = cell%defn%icell
       subcell%icell = ic
-      isc = particle%itrdomain(3)
+      isc = particle%itrdomain(LVL_SUBCELL)
       if (isc .le. 0) then
         xi = particle%x
         yi = particle%y
@@ -315,7 +317,7 @@ contains
 
           call pstop(1)
         else
-          particle%itrdomain(3) = isc
+          particle%itrdomain(LVL_SUBCELL) = isc
         end if
       end if
       subcell%isubcell = isc

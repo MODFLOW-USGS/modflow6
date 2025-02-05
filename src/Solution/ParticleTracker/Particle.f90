@@ -14,6 +14,12 @@ module ParticleModule
   !! more methods as appropriate for finer-grained levels.
   integer, parameter :: MAX_LEVEL = 4
 
+  !> @brief Particle tracking level.
+  !!
+  !! Identifies the domain over which a tracking method is responsible for
+  !! moving a particle. Tracking methods at lower levels (coarser-grained)
+  !! defer to higher-level (finer-grained) methods within their subdomains.
+  !<
   enum, bind(C)
     enumerator :: LVL_MODEL = 1
     enumerator :: LVL_CELL = 2
