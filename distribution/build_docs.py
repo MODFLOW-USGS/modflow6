@@ -29,7 +29,6 @@ PROJ_ROOT_PATH = get_project_root_path()
 BIN_PATH = PROJ_ROOT_PATH / "bin"
 EXAMPLES_REPO_PATH = PROJ_ROOT_PATH.parent / "modflow6-examples"
 DISTRIBUTION_PATH = PROJ_ROOT_PATH / "distribution"
-BENCHMARKS_PATH = PROJ_ROOT_PATH / "distribution" / ".benchmarks"
 DOCS_PATH = PROJ_ROOT_PATH / "doc"
 MF6IO_PATH = DOCS_PATH / "mf6io"
 MF6IVAR_PATH = MF6IO_PATH / "mf6ivar"
@@ -78,10 +77,8 @@ def build_benchmark_tex(
 ):
     """Build LaTeX files for MF6 performance benchmarks to go into the release notes."""
 
-    BENCHMARKS_PATH.mkdir(parents=True, exist_ok=True)
-    benchmarks_path = BENCHMARKS_PATH / "run-time-comparison.md"
-
     # run benchmarks again if no benchmarks found on GitHub or overwrite requested
+    benchmarks_path = output_path / "run-time-comparison.md"
     if force or not benchmarks_path.is_file():
         run_benchmarks(
             build_path=PROJ_ROOT_PATH / "builddir",
