@@ -300,6 +300,7 @@ modflow_sources = files(
     'Solution' / 'ParticleTracker' / 'CellRectQuad.f90',
     'Solution' / 'ParticleTracker' / 'CellUtil.f90',
     'Solution' / 'ParticleTracker' / 'Method.f90',
+    'Solution' / 'ParticleTracker' / 'MethodCell.f90',
     'Solution' / 'ParticleTracker' / 'MethodCellPollock.f90',
     'Solution' / 'ParticleTracker' / 'MethodCellPollockQuad.f90',
     'Solution' / 'ParticleTracker' / 'MethodCellPool.f90',

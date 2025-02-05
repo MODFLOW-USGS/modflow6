@@ -3,6 +3,7 @@ module MethodCellPollockModule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DONE, DZERO
   use MethodModule, only: MethodType
+  use MethodCellModule, only: MethodCellType
   use MethodSubcellPoolModule, only: method_subcell_plck, &
                                      method_subcell_tern
   use CellRectModule, only: CellRectType, create_cell_rect
@@ -14,7 +15,7 @@ module MethodCellPollockModule
   public :: MethodCellPollockType
   public :: create_method_cell_pollock
 
-  type, extends(MethodType) :: MethodCellPollockType
+  type, extends(MethodCellType) :: MethodCellPollockType
   contains
     procedure, public :: apply => apply_mcp
     procedure, public :: deallocate => destroy_mcp

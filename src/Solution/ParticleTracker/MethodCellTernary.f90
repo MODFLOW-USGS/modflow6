@@ -2,7 +2,8 @@ module MethodCellTernaryModule
 
   use KindModule, only: DP, I4B, LGP
   use ErrorUtilModule, only: pstop
-  use MethodModule
+  use MethodModule, only: MethodType
+  use MethodCellModule, only: MethodCellType
   use MethodSubcellPoolModule
   use CellPolyModule
   use CellDefnModule
@@ -17,7 +18,7 @@ module MethodCellTernaryModule
   public :: MethodCellTernaryType
   public :: create_method_cell_ternary
 
-  type, extends(MethodType) :: MethodCellTernaryType
+  type, extends(MethodCellType) :: MethodCellTernaryType
     private
     integer(I4B) :: nverts !< number of vertices
     real(DP), allocatable, dimension(:) :: xvert
