@@ -329,6 +329,7 @@ def run_benchmarks(
             build_path=build_path,
             bin_path=previous_bin_path,
         )
+        shutil.rmtree(download_path)
 
     print("Benchmarking MODFLOW 6 versions:")
     print(f"    dev: {dev_exe}")
