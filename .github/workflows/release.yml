@@ -571,24 +571,27 @@ jobs:
           fi
           echo "ostag=$ostag" >> $GITHUB_OUTPUT
 
-      - name: Download artifacts
+      - name: Download binaries
         uses: actions/download-artifact@v4
         with:
+          name: bin
+          path: ${{ needs.build.outputs.distname }}_${{ steps.ostag.outputs.ostag }}
+
+      - name: Download docs
+        uses: actions/download-artifact@v4
+        with:
+          name: doc
+          path: ${{ needs.build.outputs.distname }}_${{ steps.ostag.outputs.ostag }}
+
+      - name: Download deprecations
+        uses: actions/download-artifact@v4
+        with:
+          name: deprecations
           path: ${{ needs.build.outputs.distname }}_${{ steps.ostag.outputs.ostag }}
       
-      - name: Select artifacts
+      - name: List artifacts
         working-directory: ${{ needs.build.outputs.distname }}_${{ steps.ostag.outputs.ostag }}
         run: |
-          echo "selecting ${{ steps.ostag.outputs.ostag }} artifacts"
-          # remove dists for other systems
-          rm -rf ${{ needs.build.outputs.distname }}_*
-          # remove release notes
-          rm -rf release_notes
-          # rename dist bin directory
-          mv bin-${{ steps.ostag.outputs.ostag }} bin
-          # remove binaries for other systems
-          rm -rf bin-*
-
           echo "dist directory contains:"
           ls
       
