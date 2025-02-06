@@ -1,7 +1,7 @@
 module MethodCellPassToBotModule
 
   use KindModule, only: DP, I4B
-  use MethodModule, only: MethodType
+  use MethodCellModule, only: MethodCellType
   use CellDefnModule, only: CellDefnType, create_defn
   use PrtFmiModule, only: PrtFmiType
   use BaseDisModule, only: DisBaseType
@@ -17,7 +17,7 @@ module MethodCellPassToBotModule
   public :: MethodCellPassToBotType
   public :: create_method_cell_ptb
 
-  type, extends(MethodType) :: MethodCellPassToBotType
+  type, extends(MethodCellType) :: MethodCellPassToBotType
     private
   contains
     procedure, public :: apply => apply_ptb

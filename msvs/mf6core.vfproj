@@ -396,6 +396,7 @@
 		<File RelativePath="..\src\Solution\ParticleTracker\CellRectQuad.f90"/>
 		<File RelativePath="..\src\Solution\ParticleTracker\CellUtil.f90"/>
 		<File RelativePath="..\src\Solution\ParticleTracker\Method.f90"/>
+		<File RelativePath="..\src\Solution\ParticleTracker\MethodCell.f90"/>
 		<File RelativePath="..\src\Solution\ParticleTracker\MethodCellPassToBot.f90"/>
 		<File RelativePath="..\src\Solution\ParticleTracker\MethodCellPollock.f90"/>
 		<File RelativePath="..\src\Solution\ParticleTracker\MethodCellPollockQuad.f90"/>
