@@ -87,6 +87,7 @@ def build_benchmark_tex(
             examples_path=EXAMPLES_REPO_PATH / "examples",
             output_path=output_path,
         )
+    assert benchmarks_path.is_file()
 
     # convert markdown benchmark results to LaTeX
     with set_dir(RELEASE_NOTES_PATH):
@@ -97,9 +98,10 @@ def build_benchmark_tex(
         )
         assert not ret, out + err
         assert tex_path.is_file()
+    assert (RELEASE_NOTES_PATH / f"{benchmarks_path.stem}.tex").is_file()
 
-    if (DISTRIBUTION_PATH / f"{benchmarks_path.stem}.md").is_file():
-        assert (RELEASE_NOTES_PATH / f"{benchmarks_path.stem}.tex").is_file()
+    # clean up benchmark results
+    benchmarks_path.unlink()
 
 
 def build_deprecations_tex(force: bool = False):
