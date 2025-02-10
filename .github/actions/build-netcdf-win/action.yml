@@ -37,3 +37,10 @@ runs:
       shell: cmd
       run: |
         "%ONEAPI_ROOT%\setvars.bat" intel64 vs2022 && "%TEMP%\compile_netcdf.bat"
+
+    - name: Update path for NetCDF libs
+      shell: bash
+      run: |
+        echo "$GITHUB_WORKSPACE/netcdf/netCDF4.9.2-NC4-64/bin" >> $GITHUB_PATH
+        echo "$GITHUB_WORKSPACE/netcdf/netCDF4.9.2-NC4-64/lib" >> $GITHUB_PATH
+        echo "$GITHUB_WORKSPACE/netcdf/netcdf-fortran-4.6.1/build/fortran" >> $GITHUB_PATH
