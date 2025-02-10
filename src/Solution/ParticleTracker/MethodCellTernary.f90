@@ -1,22 +1,24 @@
 module MethodCellTernaryModule
 
-  use KindModule, only: DP, I4B
+  use KindModule, only: DP, I4B, LGP
   use ErrorUtilModule, only: pstop
-  use MethodModule
+  use MethodModule, only: MethodType
+  use MethodCellModule, only: MethodCellType
   use MethodSubcellPoolModule
   use CellPolyModule
   use CellDefnModule
   use SubcellTriModule, only: SubcellTriType, create_subcell_tri
   use ParticleModule
-  use GeomUtilModule, only: area
-  use ConstantsModule, only: DZERO, DONE, DTWO
+  use GeomUtilModule, only: area, transform
+  use ConstantsModule, only: DZERO, DONE, DTWO, DSIX
+  use GeomUtilModule, only: point_in_polygon
   implicit none
 
   private
   public :: MethodCellTernaryType
   public :: create_method_cell_ternary
 
-  type, extends(MethodType) :: MethodCellTernaryType
+  type, extends(MethodCellType) :: MethodCellTernaryType
     private
     integer(I4B) :: nverts !< number of vertices
     real(DP), allocatable, dimension(:) :: xvert
@@ -86,6 +88,7 @@ contains
     type is (SubcellTriType)
       call this%load_subcell(particle, subcell)
     end select
+
     call method_subcell_tern%init( &
       fmi=this%fmi, &
       cell=this%cell, &
@@ -137,6 +140,7 @@ contains
       ! Subcell top (cell top)
       inface = this%nverts + 3
     end select
+
     if (inface .eq. -1) then
       particle%iboundary(2) = 0
     else if (inface .eq. 0) then
@@ -155,12 +159,14 @@ contains
     real(DP), intent(in) :: tmax
     ! local
     integer(I4B) :: i
+    real(DP) :: x, y, z, xO, yO
+    real(DP), allocatable :: xs(:), ys(:)
 
     ! (Re)allocate type-bound arrays
     select type (cell => this%cell)
     type is (CellPolyType)
       ! Check termination/reporting conditions
-      call this%check(particle, this%cell%defn)
+      call this%check(particle, this%cell%defn, tmax)
       if (.not. particle%advancing) return
 
       ! Number of vertices
@@ -191,10 +197,24 @@ contains
       allocate (this%xvertnext(this%nverts))
       allocate (this%yvertnext(this%nverts))
 
+      ! New origin is the corner of the cell's
+      ! bounding box closest to the old origin
+      allocate (xs(this%nverts))
+      allocate (ys(this%nverts))
+      xs = cell%defn%polyvert(1, :)
+      ys = cell%defn%polyvert(2, :)
+      xO = xs(minloc(abs(xs), dim=1))
+      yO = ys(minloc(abs(ys), dim=1))
+      deallocate (xs)
+      deallocate (ys)
+
       ! Cell vertices
       do i = 1, this%nverts
-        this%xvert(i) = cell%defn%polyvert(1, i)
-        this%yvert(i) = cell%defn%polyvert(2, i)
+        x = cell%defn%polyvert(1, i)
+        y = cell%defn%polyvert(2, i)
+        call transform(x, y, DZERO, x, y, z, xO, yO)
+        this%xvert(i) = x
+        this%yvert(i) = y
       end do
 
       ! Top, bottom, and thickness
@@ -209,13 +229,21 @@ contains
       this%iprev = cshift(this%iprev, -1)
       this%xvertnext = cshift(this%xvert, 1)
       this%yvertnext = cshift(this%yvert, 1)
+
+      ! Calculate vertex velocities.
+      call this%vertvelo()
+
+      ! Transform particle coordinates
+      call particle%transform(xO, yO)
+
+      ! Track the particle across the cell.
+      call this%track(particle, 2, tmax)
+
+      ! Transform particle coordinates back
+      call particle%transform(xO, yO, invert=.true.)
+      call particle%reset_transform()
+
     end select
-
-    ! Calculate vertex velocities.
-    call this%vertvelo()
-
-    ! Track the particle across the cell.
-    call this%track(particle, 2, tmax)
 
   end subroutine apply_mct
 
@@ -356,6 +384,8 @@ contains
     real(DP), allocatable, dimension(:) :: vm0y
     real(DP), allocatable, dimension(:) :: vm1x
     real(DP), allocatable, dimension(:) :: vm1y
+    ! real(DP), allocatable, dimension(:, :) :: poly
+    integer(I4B) :: nvert
 
     select type (cell => this%cell)
     type is (CellPolyType)
@@ -393,14 +423,16 @@ contains
       unextx = -wk2 / le
       unexty = wk1 / le
 
-      ! Cell area
-      areacell = area(this%xvert, this%yvert)
-
       ! Cell centroid (in general, this is NOT the average of the vertex coordinates)
-      sixa = areacell * 6.d0
+      areacell = area(this%xvert, this%yvert)
+      sixa = areacell * DSIX
       wk1 = -(this%xvert * this%yvertnext - this%xvertnext * this%yvert)
+      nvert = size(this%xvert)
       this%xctr = sum((this%xvert + this%xvertnext) * wk1) / sixa
       this%yctr = sum((this%yvert + this%yvertnext) * wk1) / sixa
+
+      ! TODO: can we use some of the terms of the centroid calculation
+      ! to do a cheap point in polygon check?
 
       ! Subcell areas
       do i = 1, this%nverts

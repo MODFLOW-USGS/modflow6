@@ -246,13 +246,13 @@ def check_output(idx, test):
     fpth = os.path.join(test.workspace, "conc_obs.csv")
     tc = np.genfromtxt(fpth, names=True, delimiter=",")
 
-    assert np.allclose(
-        tc["1_1_10"], conc[:, 0, 0, 9]
-    ), "obs concentrations do not match oc concentrations."
+    assert np.allclose(tc["1_1_10"], conc[:, 0, 0, 9]), (
+        "obs concentrations do not match oc concentrations."
+    )
 
-    assert np.allclose(
-        tc["1_1_50"], conc[:, 0, 0, 49]
-    ), "obs concentrations do not match oc concentrations."
+    assert np.allclose(tc["1_1_50"], conc[:, 0, 0, 49]), (
+        "obs concentrations do not match oc concentrations."
+    )
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

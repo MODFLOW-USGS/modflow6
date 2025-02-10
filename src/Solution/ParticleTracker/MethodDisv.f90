@@ -88,6 +88,8 @@ contains
       ic = particle%idomain(next_level)
       call this%load_cell_defn(ic, cell%defn)
       if (this%fmi%ibdgwfsat0(ic) == 0) then
+        ! Cell is active but dry, so select and initialize pass-to-bottom
+        ! cell method and set cell method pointer
         call method_cell_ptb%init( &
           fmi=this%fmi, &
           cell=this%cell, &
@@ -95,6 +97,7 @@ contains
           tracktimes=this%tracktimes)
         submethod => method_cell_ptb
       else if (particle%ifrctrn > 0) then
+        ! Force the ternary method
         call method_cell_tern%init( &
           fmi=this%fmi, &
           cell=this%cell, &
@@ -102,6 +105,8 @@ contains
           tracktimes=this%tracktimes)
         submethod => method_cell_tern
       else if (cell%defn%can_be_rect) then
+        ! Cell is a rectangle, convert it to a rectangular cell type and
+        ! initialize Pollock's method
         call cell_poly_to_rect(cell, rect)
         base => rect
         call method_cell_plck%init( &
@@ -111,6 +116,8 @@ contains
           tracktimes=this%tracktimes)
         submethod => method_cell_plck
       else if (cell%defn%can_be_quad) then
+        ! Cell is quad-refined, convert to a quad rect cell type and
+        ! initialize the corresponding method
         call cell_poly_to_quad(cell, quad)
         base => quad
         call method_cell_quad%init( &
@@ -120,6 +127,7 @@ contains
           tracktimes=this%tracktimes)
         submethod => method_cell_quad
       else
+        ! Default to the ternary method
         call method_cell_tern%init( &
           fmi=this%fmi, &
           cell=this%cell, &
@@ -133,6 +141,7 @@ contains
   subroutine load_particle(this, cell, particle)
     ! modules
     use DisvModule, only: DisvType
+    use ParticleModule, only: TERM_BOUNDARY
     ! dummy
     class(MethodDisvType), intent(inout) :: this
     type(CellPolyType), pointer, intent(inout) :: cell
@@ -166,7 +175,7 @@ contains
       if (ic == particle%icp .and. inface == 7 .and. ilay < particle%ilay) then
         particle%advancing = .false.
         particle%idomain(2) = particle%icp
-        particle%istatus = 2
+        particle%istatus = TERM_BOUNDARY
         particle%izone = particle%izp
         call this%save(particle, reason=3)
         return
@@ -215,6 +224,7 @@ contains
 
   !> @brief Pass a particle to the next cell, if there is one
   subroutine pass_disv(this, particle)
+    use ParticleModule, only: TERM_BOUNDARY
     ! dummy
     class(MethodDisvType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
@@ -228,11 +238,12 @@ contains
       ! boundary face, so terminate the particle.
       ! todo AMP: reconsider when multiple models supported
       if (cell%defn%facenbr(particle%iboundary(2)) .eq. 0) then
-        particle%istatus = 2
+        particle%istatus = TERM_BOUNDARY
         particle%advancing = .false.
         call this%save(particle, reason=3)
       else
-        ! Update old to new cell properties
+        ! Otherwise, load cell properties into the
+        ! particle. It may be marked to terminate.
         call this%load_particle(cell, particle)
         if (.not. particle%advancing) return
 

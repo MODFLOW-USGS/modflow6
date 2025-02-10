@@ -142,17 +142,16 @@ contains
       tprevious = trelease
     end if
 
-    ! Add explicitly configured release times, up
-    ! to the configured tolerance of coincidence.
+    ! Schedule explicitly specified release times, up
+    ! to the configured tolerance of coincidence
     if (this%time_select%any()) then
       do it = this%time_select%selection(1), this%time_select%selection(2)
         trelease = this%time_select%times(it)
-        ! Skip the release time if it's too close
-        ! to the previously scheduled release time.
         if (tprevious >= DZERO .and. is_close( &
             tprevious, &
             trelease, &
             atol=this%tolerance)) cycle
+
         call this%schedule(trelease)
         tprevious = trelease
       end do

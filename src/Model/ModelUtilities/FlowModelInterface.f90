@@ -10,6 +10,7 @@ module FlowModelInterfaceModule
   use ListModule, only: ListType
   use BudgetFileReaderModule, only: BudgetFileReaderType
   use HeadFileReaderModule, only: HeadFileReaderType
+  use GridFileReaderModule, only: GridFileReaderType
   use PackageBudgetModule, only: PackageBudgetType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr_bfr
 
@@ -23,7 +24,7 @@ module FlowModelInterfaceModule
     logical, pointer :: flows_from_file => null() !< if .false., then flows come from GWF through GWF-Model exg
     type(ListType), pointer :: gwfbndlist => null() !< list of gwf stress packages
     integer(I4B), pointer :: iflowsupdated => null() !< flows were updated for this time step
-    integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to Model ibound
+    integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to this model ibound
     real(DP), dimension(:), pointer, contiguous :: gwfflowja => null() !< pointer to the GWF flowja array
     real(DP), dimension(:, :), pointer, contiguous :: gwfspdis => null() !< pointer to npf specific discharge array
     real(DP), dimension(:), pointer, contiguous :: gwfhead => null() !< pointer to the GWF head array
@@ -37,12 +38,14 @@ module FlowModelInterfaceModule
     integer(I4B), pointer :: iubud => null() !< unit number GWF budget file
     integer(I4B), pointer :: iuhds => null() !< unit number GWF head file
     integer(I4B), pointer :: iumvr => null() !< unit number GWF mover budget file
+    integer(I4B), pointer :: iugrb => null() !< unit number binary grid file
     integer(I4B), pointer :: nflowpack => null() !< number of GWF flow packages
     integer(I4B), dimension(:), pointer, contiguous :: igwfmvrterm => null() !< flag to indicate that gwf package is a mover term
     type(BudgetFileReaderType) :: bfr !< budget file reader
     type(HeadFileReaderType) :: hfr !< head file reader
+    type(GridFileReaderType) :: gfr !< grid file reader
     type(PackageBudgetType), dimension(:), allocatable :: gwfpackages !< used to get flows between a package and gwf
-    type(BudgetObjectType), pointer :: mvrbudobj => null() !< pointer to the mover budget budget object
+    type(BudgetObjectType), pointer :: mvrbudobj => null() !< pointer to the mover budget object
     character(len=16), dimension(:), allocatable :: flowpacknamearray !< array of boundary package names (e.g. LAK-1, SFR-3, etc.)
     character(len=LENVARNAME) :: depvartype = ''
 
@@ -181,6 +184,7 @@ contains
     call mem_deallocate(this%iubud)
     call mem_deallocate(this%iuhds)
     call mem_deallocate(this%iumvr)
+    call mem_deallocate(this%iugrb)
     call mem_deallocate(this%nflowpack)
     call mem_deallocate(this%idryinactive)
     !
@@ -208,6 +212,7 @@ contains
     call mem_allocate(this%iubud, 'IUBUD', this%memoryPath)
     call mem_allocate(this%iuhds, 'IUHDS', this%memoryPath)
     call mem_allocate(this%iumvr, 'IUMVR', this%memoryPath)
+    call mem_allocate(this%iugrb, 'IUGRB', this%memoryPath)
     call mem_allocate(this%nflowpack, 'NFLOWPACK', this%memoryPath)
     call mem_allocate(this%idryinactive, "IDRYINACTIVE", this%memoryPath)
     !
@@ -220,6 +225,7 @@ contains
     this%iubud = 0
     this%iuhds = 0
     this%iumvr = 0
+    this%iugrb = 0
     this%nflowpack = 0
     this%idryinactive = 1
   end subroutine allocate_scalars
@@ -331,6 +337,12 @@ contains
     use ConstantsModule, only: LINELENGTH, DEM6, LENPACKAGENAME
     use InputOutputModule, only: getunit, openfile, urdaux
     use SimModule, only: store_error, store_error_unit
+    use DisModule, only: DisType
+    use DisvModule, only: DisvType
+    use DisuModule, only: DisuType
+    use Dis2dModule, only: Dis2dType
+    use Disv2dModule, only: Disv2dType
+    use Disv1dModule, only: Disv1dType
     ! -- dummy
     class(FlowModelInterfaceType) :: this
     ! -- local
@@ -338,20 +350,34 @@ contains
     integer(I4B) :: ierr
     integer(I4B) :: inunit
     integer(I4B) :: iapt
+    integer(I4B) :: nodes
     logical :: isfound, endOfBlock
     logical :: blockrequired
     logical :: exist
+    integer(I4B), allocatable :: idomain1d(:), idomain2d(:, :), idomain3d(:, :, :)
+    ! -- formats
+    character(len=*), parameter :: fmtdiserr = &
+      "('Models do not have the same discretization&
+      & ',a,'.&
+      &  GWF model has ', i0, ' user nodes and ', i0, ' reduced nodes.&
+      &  This model has ', i0, ' user nodes and ', i0, ' reduced nodes.&
+      &  Ensure discretization packages, including IDOMAIN, are identical.')"
+    character(len=*), parameter :: fmtidomerr = &
+      "('Models do not have the same discretization&
+      & ',a,'.&
+      &  Models have different IDOMAIN arrays.&
+      &  Ensure discretization packages, including IDOMAIN, are identical.')"
     !
     ! -- initialize
     iapt = 0
     blockrequired = .true.
     !
-    ! -- get options block
+    ! -- get packagedata block
     call this%parser%GetBlock('PACKAGEDATA', isfound, ierr, &
                               blockRequired=blockRequired, &
                               supportOpenClose=.true.)
     !
-    ! -- parse options block if detected
+    ! -- parse packagedata block if detected
     if (isfound) then
       write (this%iout, '(1x,a)') 'PROCESSING FMI PACKAGEDATA'
       do
@@ -410,6 +436,126 @@ contains
           call budgetobject_cr_bfr(this%mvrbudobj, 'MVT', this%iumvr, &
                                    this%iout)
           call this%mvrbudobj%fill_from_bfr(this%dis, this%iout)
+        case ('GWFGRID')
+          call this%parser%GetStringCaps(keyword)
+          if (keyword /= 'FILEIN') then
+            call store_error('GWFGRID KEYWORD MUST BE FOLLOWED BY '// &
+                             '"FILEIN" then by filename.')
+            call this%parser%StoreErrorUnit()
+          end if
+          call this%parser%GetString(fname)
+          inunit = getunit()
+          call openfile(inunit, this%iout, fname, 'DATA(BINARY)', &
+                        FORM, ACCESS, 'UNKNOWN')
+          this%iugrb = inunit
+          call this%gfr%initialize(this%iugrb)
+
+          ! check grid equivalence
+          select case (this%gfr%grid_type)
+          case ('DIS')
+            select type (dis => this%dis)
+            type is (DisType)
+              nodes = this%gfr%read_int("NCELLS")
+              if (nodes /= this%dis%nodes) then
+                write (errmsg, fmtdiserr) trim(this%text)
+                call store_error(errmsg, terminate=.TRUE.)
+              end if
+              idomain1d = this%gfr%read_int_1d("IDOMAIN")
+              idomain3d = reshape(idomain1d, [ &
+                                  this%gfr%read_int("NCOL"), &
+                                  this%gfr%read_int("NROW"), &
+                                  this%gfr%read_int("NLAY") &
+                                  ])
+              if (.not. all(dis%idomain == idomain3d)) then
+                write (errmsg, fmtidomerr) trim(this%text)
+                call store_error(errmsg, terminate=.TRUE.)
+              end if
+            end select
+          case ('DISV')
+            select type (dis => this%dis)
+            type is (DisvType)
+              nodes = this%gfr%read_int("NCELLS")
+              if (nodes /= this%dis%nodes) then
+                write (errmsg, fmtdiserr) trim(this%text)
+                call store_error(errmsg, terminate=.TRUE.)
+              end if
+              idomain1d = this%gfr%read_int_1d("IDOMAIN")
+              idomain2d = reshape(idomain1d, [ &
+                                  this%gfr%read_int("NCPL"), &
+                                  this%gfr%read_int("NLAY") &
+                                  ])
+              if (.not. all(dis%idomain == idomain2d)) then
+                write (errmsg, fmtidomerr) trim(this%text)
+                call store_error(errmsg, terminate=.TRUE.)
+              end if
+            end select
+          case ('DISU')
+            select type (dis => this%dis)
+            type is (DisuType)
+              nodes = this%gfr%read_int("NODES")
+              if (nodes /= this%dis%nodes) then
+                write (errmsg, fmtdiserr) trim(this%text)
+                call store_error(errmsg, terminate=.TRUE.)
+              end if
+              idomain1d = this%gfr%read_int_1d("IDOMAIN")
+              if (.not. all(dis%idomain == idomain1d)) then
+                write (errmsg, fmtidomerr) trim(this%text)
+                call store_error(errmsg, terminate=.TRUE.)
+              end if
+            end select
+          case ('DIS2D')
+            select type (dis => this%dis)
+            type is (Dis2dType)
+              nodes = this%gfr%read_int("NCELLS")
+              if (nodes /= this%dis%nodes) then
+                write (errmsg, fmtdiserr) trim(this%text)
+                call store_error(errmsg, terminate=.TRUE.)
+              end if
+              idomain1d = this%gfr%read_int_1d("IDOMAIN")
+              idomain2d = reshape(idomain1d, [ &
+                                  this%gfr%read_int("NCOL"), &
+                                  this%gfr%read_int("NROW") &
+                                  ])
+              if (.not. all(dis%idomain == idomain2d)) then
+                write (errmsg, fmtidomerr) trim(this%text)
+                call store_error(errmsg, terminate=.TRUE.)
+              end if
+            end select
+          case ('DISV2D')
+            select type (dis => this%dis)
+            type is (Disv2dType)
+              nodes = this%gfr%read_int("NODES")
+              if (nodes /= this%dis%nodes) then
+                write (errmsg, fmtdiserr) trim(this%text)
+                call store_error(errmsg, terminate=.TRUE.)
+              end if
+              idomain1d = this%gfr%read_int_1d("IDOMAIN")
+              if (.not. all(dis%idomain == idomain1d)) then
+                write (errmsg, fmtidomerr) trim(this%text)
+                call store_error(errmsg, terminate=.TRUE.)
+              end if
+            end select
+          case ('DISV1D')
+            select type (dis => this%dis)
+            type is (Disv1dType)
+              nodes = this%gfr%read_int("NCELLS")
+              if (nodes /= this%dis%nodes) then
+                write (errmsg, fmtdiserr) trim(this%text)
+                call store_error(errmsg, terminate=.TRUE.)
+              end if
+              idomain1d = this%gfr%read_int_1d("IDOMAIN")
+              if (.not. all(dis%idomain == idomain1d)) then
+                write (errmsg, fmtidomerr) trim(this%text)
+                call store_error(errmsg, terminate=.TRUE.)
+              end if
+            end select
+          end select
+
+          if (allocated(idomain3d)) deallocate (idomain3d)
+          if (allocated(idomain2d)) deallocate (idomain2d)
+          if (allocated(idomain1d)) deallocate (idomain1d)
+
+          call this%gfr%finalize()
         case default
           write (errmsg, '(a,3(1x,a))') &
             'UNKNOWN', trim(adjustl(this%text)), 'PACKAGEDATA:', trim(keyword)
@@ -421,25 +567,18 @@ contains
   end subroutine read_packagedata
 
   !> @brief Initialize the budget file reader
-  !<
   subroutine initialize_bfr(this)
-    ! -- modules
     class(FlowModelInterfaceType) :: this
-    ! -- dummy
     integer(I4B) :: ncrbud
-    !
-    ! -- Initialize the budget file reader
     call this%bfr%initialize(this%iubud, this%iout, ncrbud)
-    !
-    ! -- todo: need to run through the budget terms
-    !    and do some checking
+    ! todo: need to run through the budget terms
+    ! and do some checking
   end subroutine initialize_bfr
 
   !> @brief Advance the budget file reader
   !!
   !! Advance the budget file reader by reading the next chunk
   !! of information for the current time step and stress period.
-  !!
   !<
   subroutine advance_bfr(this)
     ! -- modules
@@ -586,35 +725,22 @@ contains
   end subroutine advance_bfr
 
   !> @brief Finalize the budget file reader
-  !<
   subroutine finalize_bfr(this)
-    ! -- modules
     class(FlowModelInterfaceType) :: this
-    ! -- dummy
-    !
-    ! -- Finalize the budget file reader
     call this%bfr%finalize()
-    !
   end subroutine finalize_bfr
 
   !> @brief Initialize the head file reader
-  !<
   subroutine initialize_hfr(this)
-    ! -- modules
     class(FlowModelInterfaceType) :: this
-    ! -- dummy
-    !
-    ! -- Initialize the budget file reader
     call this%hfr%initialize(this%iuhds, this%iout)
-    !
-    ! -- todo: need to run through the head terms
-    !    and do some checking
+    ! todo: need to run through the head terms
+    ! and do some checking
   end subroutine initialize_hfr
 
   !> @brief Advance the head file reader
-  !<
   subroutine advance_hfr(this)
-    ! -- modules
+    ! modules
     use TdisModule, only: kstp, kper
     class(FlowModelInterfaceType) :: this
     integer(I4B) :: nu, nr, i, ilay
@@ -705,22 +831,15 @@ contains
   end subroutine advance_hfr
 
   !> @brief Finalize the head file reader
-  !<
   subroutine finalize_hfr(this)
-    ! -- modules
     class(FlowModelInterfaceType) :: this
-    ! -- dummy
-    !
-    ! -- Finalize the head file reader
     close (this%iuhds)
-    !
   end subroutine finalize_hfr
 
   !> @brief Initialize gwf terms from budget file
   !!
   !! initialize terms and figure out how many
   !! different terms and packages are contained within the file
-  !!
   !<
   subroutine initialize_gwfterms_from_bfr(this)
     ! -- modules
@@ -818,7 +937,6 @@ contains
   end subroutine initialize_gwfterms_from_bfr
 
   !> @brief Initialize gwf terms from a GWF exchange
-  !<
   subroutine initialize_gwfterms_from_gwfbndlist(this)
     ! -- modules
     use BndModule, only: BndType, GetBndFromList
@@ -918,22 +1036,16 @@ contains
   end subroutine allocate_gwfpackages
 
   !> @brief Deallocate memory in the gwfpackages array
-  !<
   subroutine deallocate_gwfpackages(this)
-    ! -- modules
-    ! -- dummy
     class(FlowModelInterfaceType) :: this
-    ! -- local
     integer(I4B) :: n
-    !
-    ! -- initialize
+
     do n = 1, this%nflowpack
       call this%gwfpackages(n)%da()
     end do
   end subroutine deallocate_gwfpackages
 
   !> @brief Find the package index for the package with the given name
-  !<
   subroutine get_package_index(this, name, idx)
     use BndModule, only: BndType, GetBndFromList
     class(FlowModelInterfaceType) :: this

@@ -295,9 +295,9 @@ def check_output(idx, test):
 
     csim = csim[:, 2, 12]
     # rtol is set larger here because convergence is looser
-    assert np.allclose(
-        cres, csim, rtol=1.0e-4
-    ), "simulated concentrations do not match with known solution."
+    assert np.allclose(cres, csim, rtol=1.0e-4), (
+        "simulated concentrations do not match with known solution."
+    )
 
 
 @pytest.mark.slow

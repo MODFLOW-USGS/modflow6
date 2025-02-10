@@ -4,8 +4,9 @@ module GweModule
 
   use KindModule, only: DP, I4B
   use InputOutputModule, only: ParseLine, upcase
-  use ConstantsModule, only: LENFTYPE, LENMEMPATH, DZERO, LENPAKLOC, &
-                             LENVARNAME, LENPACKAGETYPE
+  use ConstantsModule, only: LENFTYPE, LENMEMPATH, DZERO, DNODATA, &
+                             LENPAKLOC, LENVARNAME, LENPACKAGETYPE, &
+                             LINELENGTH
   use NumericalModelModule, only: NumericalModelType
   use BaseModelModule, only: BaseModelType
   use BndModule, only: BndType, AddBndToList, GetBndFromList
@@ -44,6 +45,7 @@ module GweModule
     procedure :: model_mc => gwe_mc
     procedure :: model_ar => gwe_ar
     procedure :: model_rp => gwe_rp
+    procedure :: model_dt => gwe_dt
     procedure :: model_ad => gwe_ad
     procedure :: model_cf => gwe_cf
     procedure :: model_fc => gwe_fc
@@ -96,7 +98,7 @@ contains
     ! -- modules
     use ListsModule, only: basemodellist
     use BaseModelModule, only: AddBaseModelToList
-    use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
+    use ConstantsModule, only: LENPACKAGENAME
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerExtModule, only: mem_set_value
     use GwfNamInputModule, only: GwfNamParamFoundType
@@ -315,6 +317,29 @@ contains
     end do
   end subroutine gwe_rp
 
+  !> @brief GWT Model time step size
+  !!
+  !! Calculate the maximum allowable time step size subject to time-step
+  !! constraints.  If adaptive time steps are used, then the time step used
+  !! will be no larger than dtmax calculated here.
+  !<
+  subroutine gwe_dt(this)
+    use TdisModule, only: kstp, kper
+    use AdaptiveTimeStepModule, only: ats_submit_delt
+    ! dummy
+    class(GweModelType) :: this
+    ! local
+    real(DP) :: dtmax
+    character(len=LINELENGTH) :: msg
+    dtmax = DNODATA
+
+    ! advection package courant stability
+    call this%adv%adv_dt(dtmax, msg, this%est%porosity)
+    if (msg /= '') then
+      call ats_submit_delt(kstp, kper, dtmax, msg)
+    end if
+  end subroutine gwe_dt
+
   !> @brief GWE Model Time Step Advance
   !!
   !! This subroutine calls the attached packages' advance subroutines
@@ -505,7 +530,6 @@ contains
   !!   - calculates package contributions to the model budget
   !<
   subroutine gwe_bd(this, icnvg, isuppress_output)
-    use ConstantsModule, only: DZERO
     ! -- dummy
     class(GweModelType) :: this
     integer(I4B), intent(in) :: icnvg
@@ -695,7 +719,6 @@ contains
   subroutine package_create(this, filtyp, ipakid, ipaknum, pakname, mempath, &
                             inunit, iout)
     ! -- modules
-    use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error
     use GweCtpModule, only: ctp_create
     use GweEslModule, only: esl_create
@@ -786,7 +809,7 @@ contains
   subroutine create_bndpkgs(this, bndpkgs, pkgtypes, pkgnames, &
                             mempaths, inunits)
     ! -- modules
-    use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
+    use ConstantsModule, only: LENPACKAGENAME
     use CharacterStringModule, only: CharacterStringType
     ! -- dummy
     class(GweModelType) :: this
@@ -839,7 +862,7 @@ contains
   !<
   subroutine create_gwe_packages(this, indis)
     ! -- modules
-    use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
+    use ConstantsModule, only: LENPACKAGENAME
     use CharacterStringModule, only: CharacterStringType
     use ArrayHandlersModule, only: expandarray
     use MemoryManagerModule, only: mem_setptr

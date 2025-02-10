@@ -277,9 +277,9 @@ def check_output(idx, test):
         ]
     )
 
-    assert np.allclose(
-        cres, csim.diagonal().ravel()
-    ), "simulated concentrations do not match with known solution."
+    assert np.allclose(cres, csim.diagonal().ravel()), (
+        "simulated concentrations do not match with known solution."
+    )
 
 
 @pytest.mark.slow

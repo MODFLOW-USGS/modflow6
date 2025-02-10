@@ -4,7 +4,6 @@ import platform
 import shutil
 import sys
 import textwrap
-from datetime import datetime
 from os import PathLike, environ
 from pathlib import Path
 from pprint import pprint
@@ -15,15 +14,12 @@ from warnings import warn
 
 import pytest
 from benchmark import run_benchmarks
-from flaky import flaky
 from modflow_devtools.build import meson_build
 from modflow_devtools.download import (
     download_and_unzip,
-    download_artifact,
     get_release,
-    list_artifacts,
 )
-from modflow_devtools.markers import no_parallel, requires_exe, requires_github
+from modflow_devtools.markers import no_parallel, requires_exe
 from modflow_devtools.misc import run_cmd, run_py_script, set_dir
 
 from utils import assert_match, convert_line_endings, get_project_root_path, glob, match
@@ -33,7 +29,6 @@ PROJ_ROOT_PATH = get_project_root_path()
 BIN_PATH = PROJ_ROOT_PATH / "bin"
 EXAMPLES_REPO_PATH = PROJ_ROOT_PATH.parent / "modflow6-examples"
 DISTRIBUTION_PATH = PROJ_ROOT_PATH / "distribution"
-BENCHMARKS_PATH = PROJ_ROOT_PATH / "distribution" / ".benchmarks"
 DOCS_PATH = PROJ_ROOT_PATH / "doc"
 MF6IO_PATH = DOCS_PATH / "mf6io"
 MF6IVAR_PATH = MF6IO_PATH / "mf6ivar"
@@ -71,74 +66,19 @@ PUB_URLS = [
 ]
 
 
-def download_benchmarks(
-    output_path: PathLike,
-    verbose: bool = False,
-    repo_owner: str = "MODFLOW-USGS",
-) -> Optional[Path]:
-    """Try to download MF6 benchmarks from GitHub Actions."""
-
-    output_path = Path(output_path).expanduser().absolute()
-    name = "run-time-comparison"  # todo make configurable
-    repo = f"{repo_owner}/modflow6"  # todo make configurable, add pytest/cli args
-    artifacts = list_artifacts(repo, name=name, verbose=verbose)
-    artifacts = sorted(
-        artifacts,
-        key=lambda a: datetime.strptime(a["created_at"], "%Y-%m-%dT%H:%M:%SZ"),
-        reverse=True,
-    )
-    artifacts = [
-        a
-        for a in artifacts
-        if a["workflow_run"]["head_branch"] == "develop"  # todo make configurable
-    ]
-    most_recent = next(iter(artifacts), None)
-    print(f"Found most recent benchmarks (artifact {most_recent['id']})")
-    if most_recent:
-        print(f"Downloading benchmarks (artifact {most_recent['id']})")
-        download_artifact(repo, id=most_recent["id"], path=output_path, verbose=verbose)
-        print(f"Downloaded benchmarks to {output_path}")
-        path = output_path / f"{name}.md"
-        assert path.is_file()
-        return path
-    else:
-        print("No benchmarks found")
-        return None
-
-
 @pytest.fixture
 def github_user() -> Optional[str]:
     return environ.get("GITHUB_USER", None)
 
 
-@flaky
-@no_parallel
-@requires_github
-def test_download_benchmarks(tmp_path, github_user):
-    path = download_benchmarks(
-        tmp_path,
-        verbose=True,
-        repo_owner=github_user if github_user else "MODFLOW-USGS",
-    )
-    if path:
-        assert path.name == "run-time-comparison.md"
-
-
 def build_benchmark_tex(
     output_path: PathLike,
     force: bool = False,
-    repo_owner: str = "MODFLOW-USGS",
 ):
     """Build LaTeX files for MF6 performance benchmarks to go into the release notes."""
 
-    BENCHMARKS_PATH.mkdir(parents=True, exist_ok=True)
-    benchmarks_path = BENCHMARKS_PATH / "run-time-comparison.md"
-
-    # download benchmark artifacts if any exist on GitHub
-    if not benchmarks_path.is_file():
-        benchmarks_path = download_benchmarks(BENCHMARKS_PATH, repo_owner=repo_owner)
-
     # run benchmarks again if no benchmarks found on GitHub or overwrite requested
+    benchmarks_path = output_path / "run-time-comparison.md"
     if force or not benchmarks_path.is_file():
         run_benchmarks(
             build_path=PROJ_ROOT_PATH / "builddir",
@@ -147,6 +87,7 @@ def build_benchmark_tex(
             examples_path=EXAMPLES_REPO_PATH / "examples",
             output_path=output_path,
         )
+    assert benchmarks_path.is_file()
 
     # convert markdown benchmark results to LaTeX
     with set_dir(RELEASE_NOTES_PATH):
@@ -157,23 +98,10 @@ def build_benchmark_tex(
         )
         assert not ret, out + err
         assert tex_path.is_file()
+    assert (RELEASE_NOTES_PATH / f"{benchmarks_path.stem}.tex").is_file()
 
-    if (DISTRIBUTION_PATH / f"{benchmarks_path.stem}.md").is_file():
-        assert (RELEASE_NOTES_PATH / f"{benchmarks_path.stem}.tex").is_file()
-
-
-@flaky
-@no_parallel
-@requires_github
-def test_build_benchmark_tex(tmp_path):
-    benchmarks_path = BENCHMARKS_PATH / "run-time-comparison.md"
-    tex_path = DISTRIBUTION_PATH / f"{benchmarks_path.stem}.tex"
-
-    try:
-        build_benchmark_tex(tmp_path)
-        assert benchmarks_path.is_file()
-    finally:
-        tex_path.unlink(missing_ok=True)
+    # clean up benchmark results
+    benchmarks_path.unlink()
 
 
 def build_deprecations_tex(force: bool = False):
@@ -429,12 +357,12 @@ def build_documentation(
             example_model_path=PROJ_ROOT_PATH / ".mf6minsim",
         )
 
-    # build deprecations table for insertion into LaTex release notes
+    # build deprecations table LaTeX
     build_deprecations_tex(force=force)
 
     if full:
-        # convert benchmarks to LaTex, running them first if necessary
-        build_benchmark_tex(output_path=output_path, force=force, repo_owner=repo_owner)
+        # build benchmarks table LaTex, running benchmarks first if necessary
+        build_benchmark_tex(output_path=output_path, force=force)
 
         # download example docs
         pdf_name = "mf6examples.pdf"

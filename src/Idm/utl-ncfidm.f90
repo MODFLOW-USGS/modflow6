@@ -99,8 +99,8 @@ module UtlNcfInputModule
     'INTEGER', & ! type
     '', & ! shape
     'chunking parameter for the time dimension', & ! longname
-    .true., & ! required
-    .true., & ! multi-record
+    .false., & ! required
+    .false., & ! multi-record
     .false., & ! preserve case
     .false., & ! layered
     .false. & ! timeseries
@@ -118,7 +118,7 @@ module UtlNcfInputModule
     '', & ! shape
     'chunking parameter for the mesh face dimension', & ! longname
     .false., & ! required
-    .true., & ! multi-record
+    .false., & ! multi-record
     .false., & ! preserve case
     .false., & ! layered
     .false. & ! timeseries
@@ -136,7 +136,7 @@ module UtlNcfInputModule
     '', & ! shape
     'chunking parameter for structured z', & ! longname
     .false., & ! required
-    .true., & ! multi-record
+    .false., & ! multi-record
     .false., & ! preserve case
     .false., & ! layered
     .false. & ! timeseries
@@ -154,7 +154,7 @@ module UtlNcfInputModule
     '', & ! shape
     'chunking parameter for structured y', & ! longname
     .false., & ! required
-    .true., & ! multi-record
+    .false., & ! multi-record
     .false., & ! preserve case
     .false., & ! layered
     .false. & ! timeseries
@@ -172,7 +172,7 @@ module UtlNcfInputModule
     '', & ! shape
     'chunking parameter for structured x', & ! longname
     .false., & ! required
-    .true., & ! multi-record
+    .false., & ! multi-record
     .false., & ! preserve case
     .false., & ! layered
     .false. & ! timeseries

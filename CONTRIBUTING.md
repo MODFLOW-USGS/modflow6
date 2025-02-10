@@ -92,7 +92,7 @@ MODFLOW 6 source code is formatted automatically with the [fprettify formatter](
 
 ### Style guide
 
-Automated tools like `fprettify` cannot directly address all style concerns. Please review our [style guide](https://modflow6.readthedocs.io/en/latest/styleguide.html) before submitting your code.
+Automated tools like `fprettify` cannot directly address all style concerns. Please review our [style guide](https://modflow6.readthedocs.io/en/latest/_dev/styleguide.html) before submitting your code.
 
 ## Commit messages
 

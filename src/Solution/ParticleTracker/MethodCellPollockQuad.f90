@@ -4,6 +4,7 @@ module MethodCellPollockQuadModule
   use ErrorUtilModule, only: pstop
   use ConstantsModule, only: DONE, DZERO
   use MethodModule, only: MethodType
+  use MethodCellModule, only: MethodCellType
   use MethodSubcellPoolModule, only: method_subcell_plck
   use CellRectQuadModule, only: CellRectQuadType, create_cell_rect_quad
   use CellDefnModule, only: CellDefnType
@@ -15,7 +16,7 @@ module MethodCellPollockQuadModule
   public :: MethodCellPollockQuadType
   public :: create_method_cell_quad
 
-  type, extends(MethodType) :: MethodCellPollockQuadType
+  type, extends(MethodCellType) :: MethodCellPollockQuadType
   contains
     procedure, public :: apply => apply_mcpq
     procedure, public :: deallocate
@@ -209,7 +210,7 @@ contains
     select type (cell => this%cell)
     type is (CellRectQuadType)
       ! Check termination/reporting conditions
-      call this%check(particle, cell%defn)
+      call this%check(particle, cell%defn, tmax)
       if (.not. particle%advancing) return
 
       ! Transform model coordinates to local cell coordinates

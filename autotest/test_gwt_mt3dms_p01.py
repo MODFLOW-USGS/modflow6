@@ -503,9 +503,9 @@ def test_mt3dmsp01a(function_tmpdir, targets):
         mt3dms=mt3dms,
     )
 
-    assert np.allclose(
-        conc_mt3d, conc_mf6, atol=1e-4
-    ), f"concentrations not equal {conc_mt3d} {conc_mf6}"
+    assert np.allclose(conc_mt3d, conc_mf6, atol=1e-4), (
+        f"concentrations not equal {conc_mt3d} {conc_mf6}"
+    )
 
     # load transport budget
     # budget text:
@@ -568,9 +568,9 @@ def test_mt3dmsp01b(function_tmpdir, targets):
         mt3dms=mt3dms,
     )
 
-    assert np.allclose(
-        conc_mt3d, conc_mf6, atol=1e-4
-    ), f"concentrations not equal {conc_mt3d} {conc_mf6}"
+    assert np.allclose(conc_mt3d, conc_mf6, atol=1e-4), (
+        f"concentrations not equal {conc_mt3d} {conc_mf6}"
+    )
 
 
 def test_mt3dmsp01c(function_tmpdir, targets):
@@ -608,9 +608,9 @@ def test_mt3dmsp01c(function_tmpdir, targets):
         mt3dms=mt3dms,
     )
 
-    assert np.allclose(
-        conc_mt3d, conc_mf6, atol=1e-4
-    ), f"concentrations not equal {conc_mt3d} {conc_mf6}"
+    assert np.allclose(conc_mt3d, conc_mf6, atol=1e-4), (
+        f"concentrations not equal {conc_mt3d} {conc_mf6}"
+    )
 
 
 def test_mt3dmsp01d(function_tmpdir, targets):
@@ -648,9 +648,9 @@ def test_mt3dmsp01d(function_tmpdir, targets):
         mt3dms=mt3dms,
     )
 
-    assert np.allclose(
-        conc_mt3d, conc_mf6, atol=1e-4
-    ), f"concentrations not equal {conc_mt3d} {conc_mf6}"
+    assert np.allclose(conc_mt3d, conc_mf6, atol=1e-4), (
+        f"concentrations not equal {conc_mt3d} {conc_mf6}"
+    )
 
 
 def test_mt3dmsp01e(function_tmpdir, targets):
@@ -688,9 +688,9 @@ def test_mt3dmsp01e(function_tmpdir, targets):
         mt3dms=mt3dms,
     )
 
-    assert np.allclose(
-        conc_mt3d, conc_mf6, atol=1e-1
-    ), f"concentrations not equal {conc_mt3d} {conc_mf6}"
+    assert np.allclose(conc_mt3d, conc_mf6, atol=1e-1), (
+        f"concentrations not equal {conc_mt3d} {conc_mf6}"
+    )
 
 
 def test_mt3dmsp01f(function_tmpdir, targets):
@@ -729,9 +729,9 @@ def test_mt3dmsp01f(function_tmpdir, targets):
         mt3dms=mt3dms,
     )
 
-    assert np.allclose(
-        conc_mt3d, conc_mf6, atol=1e-1
-    ), f"concentrations not equal {conc_mt3d} {conc_mf6}"
+    assert np.allclose(conc_mt3d, conc_mf6, atol=1e-1), (
+        f"concentrations not equal {conc_mt3d} {conc_mf6}"
+    )
 
 
 def test_mt3dmsp01g(function_tmpdir, targets):
@@ -772,6 +772,6 @@ def test_mt3dmsp01g(function_tmpdir, targets):
         mt3dms=mt3dms,
     )
 
-    assert np.allclose(
-        conc_mt3d, conc_mf6, atol=1.0e-4
-    ), f"concentrations not equal {conc_mt3d} {conc_mf6}"
+    assert np.allclose(conc_mt3d, conc_mf6, atol=1.0e-4), (
+        f"concentrations not equal {conc_mt3d} {conc_mf6}"
+    )

@@ -15,7 +15,8 @@ import pytest
 from framework import TestFramework
 
 cases = [
-    "olf-swr-t2-dis",
+    "olf-swrt2-dis01",
+    "olf-swrt2-dis02",
 ]
 
 
@@ -113,16 +114,29 @@ def build_models(idx, test):
         ],
     )
 
-    # flw
     qinflow = 23.570
-    spd = [(i, 0, qinflow) for i in range(nrow)]
-    flw = flopy.mf6.ModflowOlfflw(
-        olf,
-        maxbound=len(spd),
-        print_input=True,
-        print_flows=True,
-        stress_period_data=spd,
-    )
+
+    if idx == 0:
+        # apply inflow with flw package
+        spd = [(i, 0, qinflow) for i in range(nrow)]
+        flw = flopy.mf6.ModflowOlfflw(
+            olf,
+            maxbound=len(spd),
+            print_input=True,
+            print_flows=True,
+            stress_period_data=spd,
+        )
+
+    if idx == 1:
+        # apply inflow with pcp package
+        spd = spd = [(i, 0, qinflow / dx**2) for i in range(nrow)]
+        pcp = flopy.mf6.ModflowOlfpcp(
+            olf,
+            maxbound=len(spd),
+            print_input=True,
+            print_flows=True,
+            stress_period_data=spd,
+        )
 
     spd = [(i, ncol - 1, 1.05) for i in range(nrow)]
     chd = flopy.mf6.ModflowOlfchd(
@@ -196,9 +210,9 @@ def check_output(idx, test):
     # at end of simulation, water depth should be 1.0 for all reaches
     olf = mfsim.get_model(olfname)
     depth = stage_all[-1] - olf.dis.bottom.array
-    assert np.allclose(
-        depth, 1.0
-    ), f"Simulated depth at end should be 1, but found {depth}"
+    assert np.allclose(depth, 1.0), (
+        f"Simulated depth at end should be 1, but found {depth}"
+    )
 
 
 @pytest.mark.developmode

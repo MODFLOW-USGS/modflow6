@@ -29,7 +29,10 @@ module MemoryTypeModule
     logical(LGP), pointer :: logicalsclr => null() !< pointer to the logical
     integer(I4B), pointer :: intsclr => null() !< pointer to the integer
     real(DP), pointer :: dblsclr => null() !< pointer to the double
-    character(len=:), dimension(:), pointer, contiguous :: astr1d => null() !< pointer to the 1d character string array
+    ! The 1d character string array is handled differently than the other arrays due to a bug in gfortran 11.3 and 12.1.
+    ! Due to this bug the length of the string is not stored in the array descriptor. With a segmentation fault as a result
+    ! on deallocation.
+    class(*), dimension(:), pointer, contiguous :: astr1d => null() !< pointer to the 1d character string array
     integer(I4B), dimension(:), pointer, contiguous :: aint1d => null() !< pointer to 1d integer array
     integer(I4B), dimension(:, :), pointer, contiguous :: aint2d => null() !< pointer to 2d integer array
     integer(I4B), dimension(:, :, :), pointer, contiguous :: aint3d => null() !< pointer to 3d integer array
@@ -98,8 +101,12 @@ contains
   end function mt_associated
 
   subroutine mt_deallocate(this)
+    use iso_c_binding, only: c_loc, c_ptr, c_null_ptr, c_f_pointer
     class(MemoryType) :: this
     integer(I4B) :: n
+    type(c_ptr) :: cptr
+
+    character(len=1), dimension(:), pointer :: astr1d
 
     if (associated(this%strsclr)) then
       if (this%master) deallocate (this%strsclr)
@@ -121,8 +128,30 @@ contains
       nullify (this%dblsclr)
     end if
 
+    ! Handle the dealloction of the 1d character string array differently due to a bug in gfortran 11.3, 12.1, 13.1 and 13.2.
+    ! Due to a bug in the gfortran compiler we can't use a deferred length character variable
+    ! https://gcc.gnu.org/bugzilla/show_bug.cgi?id=106317
+    !
+    ! We use a c_ptr to cast the pointer to a string array with a length of 1. The actual length of the array is
+    ! computed by the actual length of the string multiplied by the array size.
+    ! So we go from the actual character(len=element_size), dimension(isize) to a character(len=1), dimension(isize*element_size).
+
     if (associated(this%astr1d)) then
+      select type (item => this%astr1d)
+      type is (character(*))
+        cptr = c_loc(item)
+      class default
+        cptr = c_null_ptr
+      end select
+
+      call c_f_pointer(cptr, astr1d, [this%isize * this%element_size])
+
+#if __GFORTRAN__  && ((__GNUC__ < 13) || (__GNUC__ == 13 && __GNUC_MINOR__ < 3))
+      if (this%master) deallocate (astr1d)
+#else
       if (this%master) deallocate (this%astr1d)
+#endif
+
       nullify (this%astr1d)
     end if
 

@@ -135,9 +135,11 @@ def build_prt_sim(name, gwf_ws, prt_ws, mf6):
     gwf_name = get_model_name(name, "gwf")
     gwf_budget_file = gwf_ws / f"{gwf_name}.bud"
     gwf_head_file = gwf_ws / f"{gwf_name}.hds"
+    grb_file = gwf_ws / f"{gwf_name}.dis.grb"
     flopy.mf6.ModflowPrtfmi(
         prt,
         packagedata=[
+            ("GWFGRID", grb_file),
             ("GWFHEAD", gwf_head_file),
             ("GWFBUDGET", gwf_budget_file),
         ],

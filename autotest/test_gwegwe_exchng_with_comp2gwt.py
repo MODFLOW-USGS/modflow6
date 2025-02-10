@@ -995,9 +995,9 @@ def check_output(idx, test):
     models = []
     for mname in mf6_sim.model_names:
         models.append(mf6_sim.get_model(mname))
-    assert (
-        len(models) == 6
-    ), "Unexpected number of models encountered while loading simulation"
+    assert len(models) == 6, (
+        "Unexpected number of models encountered while loading simulation"
+    )
 
     if plotModel:
         # Create figure for scenario

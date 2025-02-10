@@ -4,6 +4,7 @@ module NumericalSolutionModule
   use KindModule, only: DP, I4B, LGP
   use ErrorUtilModule, only: pstop
   use TimerModule, only: code_timer
+  use ProfilerModule
   use ConstantsModule, only: LINELENGTH, LENSOLUTIONNAME, LENPAKLOC, &
                              DPREC, DZERO, DEM20, DEM15, DEM6, &
                              DEM4, DEM3, DEM2, DEM1, DHALF, DONETHIRD, &
@@ -127,6 +128,16 @@ module NumericalSolutionModule
     real(DP), pointer :: ptcdel => null() !< PTC delta value
     real(DP), pointer :: ptcdel0 => null() !< initial PTC delta value
     real(DP), pointer :: ptcexp => null() !< PTC exponent
+    !
+    ! -- timer handles
+    integer(I4B) :: tmr_prep_solve !< timer - prepare solve
+    integer(I4B) :: tmr_solve !< timer - solve
+    integer(I4B) :: tmr_final_solve !< timer - finalize solve
+    integer(I4B) :: tmr_formulate !< timer - formulate
+    integer(I4B) :: tmr_linsolve !< timer - linear solve
+    integer(I4B) :: tmr_flows !< timer - calculate flows
+    integer(I4B) :: tmr_budgets !< timer - calculate budgets
+    character(len=24) :: id_postfix !< solution id based postfix for timer titles
     !
     ! -- adaptive time step
     real(DP), pointer :: atsfrac => null() !< adaptive time step faction
@@ -493,6 +504,17 @@ contains
     !
     ! -- Assign connections, fill ia/ja, map connections
     call this%sln_connect()
+
+    ! add timers
+    write (this%id_postfix, '(a,i0,a)') " (", this%id, ")"
+    this%tmr_prep_solve = -1
+    this%tmr_solve = -1
+    this%tmr_final_solve = -1
+    this%tmr_formulate = -1
+    this%tmr_linsolve = -1
+    this%tmr_flows = -1
+    this%tmr_budgets = -1
+
   end subroutine sln_df
 
   !> @ brief Allocate and read data
@@ -1421,6 +1443,9 @@ contains
     class(NumericalExchangeType), pointer :: cp => null()
     class(NumericalModelType), pointer :: mp => null()
 
+    ! start timer
+    call g_prof%start("Prepare solve"//this%id_postfix, this%tmr_prep_solve)
+
     ! synchronize for AD
     call this%synchronize(STG_BFR_EXG_AD, this%synchronize_ctx)
 
@@ -1438,6 +1463,9 @@ contains
 
     ! advance solution
     call this%sln_ad()
+
+    ! stop timer
+    call g_prof%stop(this%tmr_prep_solve)
 
   end subroutine prepareSolve
 
@@ -1493,6 +1521,10 @@ contains
     real(DP) :: ttsoln
     real(DP) :: dpak
     real(DP) :: outer_hncg
+
+    ! start timer
+    call g_prof%start("Solve"//this%id_postfix, this%tmr_solve)
+
     !
     ! -- initialize local variables
     icsv0 = max(1, this%itertot_sim + 1)
@@ -1546,6 +1578,7 @@ contains
     end if
     !
     call code_timer(0, ttform, this%ttform)
+    call g_prof%start("Formulate", this%tmr_formulate)
     !
     ! -- (re)build the solution matrix
     call this%sln_buildsystem(kiter, inewton=1)
@@ -1559,10 +1592,13 @@ contains
       call mp%model_nr(kiter, this%system_matrix, 1)
     end do
     call code_timer(1, ttform, this%ttform)
+    call g_prof%stop(this%tmr_formulate)
     !
     ! -- linear solve
     call code_timer(0, ttsoln, this%ttsoln)
+    call g_prof%start("Linear solve", this%tmr_linsolve)
     call this%sln_ls(kiter, kstp, kper, iter, iptc, ptcf)
+    call g_prof%stop(this%tmr_linsolve)
     call code_timer(1, ttsoln, this%ttsoln)
     !
     ! -- increment counters storing the total number of linear and
@@ -1795,6 +1831,9 @@ contains
                                         kiter, iter, icsv0, kcsv0)
     end if
 
+    ! stop timer
+    call g_prof%stop(this%tmr_solve)
+
   end subroutine solve
 
   !> @ brief finalize a solution
@@ -1821,6 +1860,10 @@ contains
     character(len=*), parameter :: fmtcnvg = &
       "(1X, I0, ' CALLS TO NUMERICAL SOLUTION ', 'IN TIME STEP ', I0, &
       &' STRESS PERIOD ',I0,/1X,I0,' TOTAL ITERATIONS')"
+
+    ! start timer
+    call g_prof%start("Finalize solve"//this%id_postfix, this%tmr_final_solve)
+
     !
     ! -- finalize the outer iteration table
     if (this%iprims > 0) then
@@ -1856,6 +1899,9 @@ contains
     !
     ! -- set solution group convergence flag
     if (this%icnvg == 0) isgcnvg = 0
+
+    call g_prof%start("Calculate flows", this%tmr_flows)
+
     !
     ! -- Calculate flow for each model
     do im = 1, this%modellist%Count()
@@ -1868,6 +1914,10 @@ contains
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
       call cp%exg_cq(isgcnvg, isuppress_output, this%id)
     end do
+
+    call g_prof%stop(this%tmr_flows)
+    call g_prof%start("Calculate budgets", this%tmr_budgets)
+
     !
     ! -- Budget terms for each model
     do im = 1, this%modellist%Count()
@@ -1880,6 +1930,10 @@ contains
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
       call cp%exg_bd(isgcnvg, isuppress_output, this%id)
     end do
+
+    ! stop timer
+    call g_prof%stop(this%tmr_budgets)
+    call g_prof%stop(this%tmr_final_solve)
 
   end subroutine finalizeSolve
 

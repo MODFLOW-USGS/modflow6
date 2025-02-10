@@ -47,7 +47,7 @@ def build_models(idx, test):
     ic = flopy.mf6.ModflowGwfic(gwf, strt=0.0)
     npf = flopy.mf6.ModflowGwfnpf(gwf)
     spd = {0: [[(0,), 1.0], [(nrow * ncol - 1), 0.0]]}
-    chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(gwf, stress_period_data=spd)
+    chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=spd)
     return sim, None
 
 
@@ -59,6 +59,10 @@ def check_output(idx, test):
     nodes = grbobj._datadict["NODES"]
     ia = grbobj._datadict["IA"]
     ja = grbobj._datadict["JA"]
+    idomain = grbobj._datadict["IDOMAIN"]
+
+    if idx == 0:
+        assert np.array_equal(idomain, np.array(27 * [1]), int)
 
     if idx == 1:
         assert np.array_equal(ia[0:4], np.array([1, 4, 4, 7]))
@@ -66,6 +70,7 @@ def check_output(idx, test):
         assert ia[-1] == 127
         assert ia.shape[0] == 28, "ia should have size of 28"
         assert ja.shape[0] == 126, "ja should have size of 126"
+        assert np.array_equal(idomain, np.array([1, 0] + 25 * [1]), int)
 
 
 @pytest.mark.parametrize("idx, name", enumerate(cases))

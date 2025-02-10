@@ -409,9 +409,9 @@ def check_output(idx, test):
         k, i, j = mg.intersect(x, y, z)
         nn = mg.get_node([k, i, j]) + 1
         neighbors = mg.neighbors(nn)
-        assert np.isclose(nn, icell, atol=1) or any(
-            (nn - 1) == n for n in neighbors
-        ), f"nn comparison failed: expected {nn}, got {icell}"
+        assert np.isclose(nn, icell, atol=1) or any((nn - 1) == n for n in neighbors), (
+            f"nn comparison failed: expected {nn}, got {icell}"
+        )
         assert ilay == (k + 1) == 1
 
     if "all" in name:

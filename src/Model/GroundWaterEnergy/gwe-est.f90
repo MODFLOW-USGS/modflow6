@@ -13,7 +13,7 @@
 module GweEstModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DONE, DZERO, DTWO, DHALF, LENBUDTXT, DEP3
+  use ConstantsModule, only: DONE, IZERO, DZERO, DTWO, DHALF, LENBUDTXT, DEP3
   use SimVariablesModule, only: errmsg, warnmsg
   use SimModule, only: store_error, count_errors, &
                        store_warning
@@ -27,9 +27,19 @@ module GweEstModule
   public :: GweEstType
   public :: est_cr
   !
-  integer(I4B), parameter :: NBDITEMS = 2
+  integer(I4B), parameter :: NBDITEMS = 3
   character(len=LENBUDTXT), dimension(NBDITEMS) :: budtxt
-  data budtxt/' STORAGE-CELLBLK', '   DECAY-AQUEOUS'/
+  data budtxt/' STORAGE-CELLBLK', '   DECAY-AQUEOUS', '     DECAY-SOLID'/
+
+  !> @brief Enumerator that defines the decay options
+  !<
+  ENUM, BIND(C)
+    ENUMERATOR :: DECAY_OFF = 0 !< Decay (or production) of thermal energy inactive (default)
+    ENUMERATOR :: DECAY_ZERO_ORDER = 2 !< Zeroth-order decay
+    ENUMERATOR :: DECAY_WATER = 1 !< Zeroth-order decay in water only
+    ENUMERATOR :: DECAY_SOLID = 2 !< Zeroth-order decay in solid only
+    ENUMERATOR :: DECAY_BOTH = 3 !< Zeroth-order decay in water and solid
+  END ENUM
 
   !> @ brief Energy storage and transfer
   !!
@@ -47,10 +57,14 @@ module GweEstModule
     real(DP), dimension(:), pointer, contiguous :: ratesto => null() !< rate of energy storage
     !
     ! -- decay
-    integer(I4B), pointer :: idcy => null() !< order of decay rate (0:none, 1:first, 2:zero)
-    real(DP), dimension(:), pointer, contiguous :: decay => null() !< first or zero order decay rate (aqueous)
-    real(DP), dimension(:), pointer, contiguous :: ratedcy => null() !< rate of decay
-    real(DP), dimension(:), pointer, contiguous :: decaylast => null() !< decay rate used for last iteration (needed for zero order decay)
+    integer(I4B), pointer :: idcy => null() !< order of decay rate (0:none, 1:first, 2:zero (aqueous and/or solid))
+    integer(I4B), pointer :: idcysrc => null() !< decay source (or sink) (1: aqueous only, 2: solid only, 3: both phases
+    real(DP), dimension(:), pointer, contiguous :: decay_water => null() !< first or zero order decay rate (aqueous)
+    real(DP), dimension(:), pointer, contiguous :: decay_solid => null() !< first or zero order decay rate (solid)
+    real(DP), dimension(:), pointer, contiguous :: ratedcyw => null() !< rate of decay in aqueous phase
+    real(DP), dimension(:), pointer, contiguous :: ratedcys => null() !< rate of decay in solid phase
+    real(DP), dimension(:), pointer, contiguous :: decaylastw => null() !< aqueous phase decay rate used for last iteration (needed for zero order decay)
+    real(DP), dimension(:), pointer, contiguous :: decaylasts => null() !< solid phase decay rate used for last iteration (needed for zero order decay)
     !
     ! -- misc
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
@@ -63,10 +77,12 @@ module GweEstModule
     procedure :: est_ar
     procedure :: est_fc
     procedure :: est_fc_sto
-    procedure :: est_fc_dcy
+    procedure :: est_fc_dcy_water
+    procedure :: est_fc_dcy_solid
     procedure :: est_cq
     procedure :: est_cq_sto
     procedure :: est_cq_dcy
+    procedure :: est_cq_dcy_solid
     procedure :: est_bd
     procedure :: est_ot_flow
     procedure :: est_da
@@ -156,7 +172,6 @@ contains
   !<
   subroutine est_fc(this, nodes, cold, nja, matrix_sln, idxglo, cnew, &
                     rhs, kiter)
-    ! -- modules
     ! -- dummy
     class(GweEstType) :: this !< GweEstType object
     integer, intent(in) :: nodes !< number of nodes
@@ -167,15 +182,16 @@ contains
     real(DP), intent(inout), dimension(nodes) :: rhs !< right-hand side vector for model
     real(DP), intent(in), dimension(nodes) :: cnew !< temperature at end of this time step
     integer(I4B), intent(in) :: kiter !< solution outer iteration number
-    ! -- local
     !
     ! -- storage contribution
     call this%est_fc_sto(nodes, cold, nja, matrix_sln, idxglo, rhs)
     !
     ! -- decay contribution
-    if (this%idcy /= 0) then
-      call this%est_fc_dcy(nodes, cold, cnew, nja, matrix_sln, idxglo, &
-                           rhs, kiter)
+    if (this%idcy == DECAY_ZERO_ORDER) then
+      call this%est_fc_dcy_water(nodes, cold, cnew, nja, matrix_sln, idxglo, &
+                                 rhs, kiter)
+      call this%est_fc_dcy_solid(nodes, cold, nja, matrix_sln, idxglo, rhs, &
+                                 cnew, kiter)
     end if
   end subroutine est_fc
 
@@ -231,10 +247,8 @@ contains
   !!
   !!  Method to calculate and fill decay coefficients for the package.
   !<
-  subroutine est_fc_dcy(this, nodes, cold, cnew, nja, matrix_sln, &
-                        idxglo, rhs, kiter)
-    ! -- modules
-    use TdisModule, only: delt
+  subroutine est_fc_dcy_water(this, nodes, cold, cnew, nja, matrix_sln, &
+                              idxglo, rhs, kiter)
     ! -- dummy
     class(GweEstType) :: this !< GweEstType object
     integer, intent(in) :: nodes !< number of nodes
@@ -246,8 +260,8 @@ contains
     real(DP), intent(inout), dimension(nodes) :: rhs !< right-hand side vector for model
     integer(I4B), intent(in) :: kiter !< solution outer iteration number
     ! -- local
-    integer(I4B) :: n, idiag
-    real(DP) :: hhcof, rrhs
+    integer(I4B) :: n
+    real(DP) :: rrhs
     real(DP) :: swtpdt
     real(DP) :: vcell
     real(DP) :: decay_rate
@@ -262,37 +276,75 @@ contains
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
       swtpdt = this%fmi%gwfsat(n)
       !
-      ! -- add decay rate terms to accumulators
-      idiag = this%dis%con%ia(n)
-      if (this%idcy == 1) then
+      ! -- add zero-order decay rate terms to accumulators
+      if (this%idcy == DECAY_ZERO_ORDER .and. (this%idcysrc == DECAY_WATER .or. &
+                                               this%idcysrc == DECAY_BOTH)) then
         !
-        ! -- first order decay rate is a function of temperature, so add       ! note: May want to remove first-order decay for temperature and support only zero-order
-        !    to left hand side
-        hhcof = -this%decay(n) * vcell * swtpdt * this%porosity(n) &
-                * this%eqnsclfac
-        call matrix_sln%add_value_pos(idxglo(idiag), hhcof)
-      elseif (this%idcy == 2) then
-        !
-        ! -- Call function to get zero-order decay rate, which may be changed
-        !    from the user-specified rate to prevent negative temperatures     ! Important note: still need to think through negative temps
-        decay_rate = get_zero_order_decay(this%decay(n), this%decaylast(n), &
-                                          kiter, cold(n), cnew(n), delt)
+        decay_rate = this%decay_water(n)
         ! -- This term does get divided by eqnsclfac for fc purposes because it
         !    should start out being a rate of energy
-        this%decaylast(n) = decay_rate
+        this%decaylastw(n) = decay_rate
         rrhs = decay_rate * vcell * swtpdt * this%porosity(n)
         rhs(n) = rhs(n) + rrhs
       end if
       !
     end do
-  end subroutine est_fc_dcy
+  end subroutine est_fc_dcy_water
+
+  !> @ brief Fill solid decay coefficient method for package
+  !!
+  !!  Method to calculate and fill energy decay coefficients for the solid phase.
+  !<
+  subroutine est_fc_dcy_solid(this, nodes, cold, nja, matrix_sln, idxglo, &
+                              rhs, cnew, kiter)
+    ! -- dummy
+    class(GweEstType) :: this !< GwtMstType object
+    integer, intent(in) :: nodes !< number of nodes
+    real(DP), intent(in), dimension(nodes) :: cold !< temperature at end of last time step
+    integer(I4B), intent(in) :: nja !< number of GWE connections
+    class(MatrixBaseType), pointer :: matrix_sln !< solution coefficient matrix
+    integer(I4B), intent(in), dimension(nja) :: idxglo !< mapping vector for model (local) to solution (global)
+    real(DP), intent(inout), dimension(nodes) :: rhs !< right-hand side vector for model
+    real(DP), intent(in), dimension(nodes) :: cnew !< temperature at end of this time step
+    integer(I4B), intent(in) :: kiter !< solution outer iteration number
+    ! -- local
+    integer(I4B) :: n
+    real(DP) :: rrhs
+    real(DP) :: vcell
+    real(DP) :: decay_rate
+    !
+    ! -- loop through and calculate sorption contribution to hcof and rhs
+    do n = 1, this%dis%nodes
+      !
+      ! -- skip if transport inactive
+      if (this%ibound(n) <= 0) cycle
+      !
+      ! -- set variables
+      rrhs = DZERO
+      vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
+      !
+      ! -- account for zero-order decay rate terms in rhs
+      if (this%idcy == DECAY_ZERO_ORDER .and. (this%idcysrc == DECAY_SOLID .or. &
+                                               this%idcysrc == DECAY_BOTH)) then
+        !
+        ! -- negative temps are currently not checked for or prevented since a
+        !    user can define a temperature scale of their own choosing.  if
+        !    negative temps result from the specified zero-order decay value,
+        !    it is up to the user to decide if the calculated temperatures are
+        !    acceptable
+        decay_rate = this%decay_solid(n)
+        this%decaylasts(n) = decay_rate
+        rrhs = decay_rate * vcell * (1 - this%porosity(n)) * this%rhos(n)
+        rhs(n) = rhs(n) + rrhs
+      end if
+    end do
+  end subroutine est_fc_dcy_solid
 
   !> @ brief Calculate flows for package
   !!
   !!  Method to calculate flows for the package.
   !<
   subroutine est_cq(this, nodes, cnew, cold, flowja)
-    ! -- modules
     ! -- dummy
     class(GweEstType) :: this !< GweEstType object
     integer(I4B), intent(in) :: nodes !< number of nodes
@@ -305,8 +357,13 @@ contains
     call this%est_cq_sto(nodes, cnew, cold, flowja)
     !
     ! -- decay
-    if (this%idcy /= 0) then
-      call this%est_cq_dcy(nodes, cnew, cold, flowja)
+    if (this%idcy == DECAY_ZERO_ORDER) then
+      if (this%idcysrc == DECAY_WATER .or. this%idcysrc == DECAY_BOTH) then
+        call this%est_cq_dcy(nodes, cnew, cold, flowja)
+      end if
+      if (this%idcysrc == DECAY_SOLID .or. this%idcysrc == DECAY_BOTH) then
+        call this%est_cq_dcy_solid(nodes, cnew, cold, flowja)
+      end if
     end if
   end subroutine est_cq
 
@@ -362,13 +419,11 @@ contains
     end do
   end subroutine est_cq_sto
 
-  !> @ brief Calculate decay terms for package
+  !> @ brief Calculate decay terms for aqueous phase
   !!
-  !!  Method to calculate decay terms for the package.
+  !!  Method to calculate decay terms for the aqueous phase.
   !<
-  subroutine est_cq_dcy(this, nodes, cnew, cold, flowja) ! Important note: this handles only decay in water; need to add zero-order (but not first-order?) decay in solid
-    ! -- modules
-    use TdisModule, only: delt
+  subroutine est_cq_dcy(this, nodes, cnew, cold, flowja)
     ! -- dummy
     class(GweEstType) :: this !< GweEstType object
     integer(I4B), intent(in) :: nodes !< number of nodes
@@ -384,13 +439,11 @@ contains
     real(DP) :: vcell
     real(DP) :: decay_rate
     !
-    ! -- initialize
-    !
     ! -- Calculate decay change
     do n = 1, nodes
       !
       ! -- skip if transport inactive
-      this%ratedcy(n) = DZERO
+      this%ratedcyw(n) = DZERO
       if (this%ibound(n) <= 0) cycle
       !
       ! -- calculate new and old water volumes
@@ -401,21 +454,70 @@ contains
       rate = DZERO
       hhcof = DZERO
       rrhs = DZERO
-      if (this%idcy == 1) then ! Important note: do we need/want first-order decay for temperature???
-        hhcof = -this%decay(n) * vcell * swtpdt * this%porosity(n) &
-                * this%eqnsclfac
-      elseif (this%idcy == 2) then
-        decay_rate = get_zero_order_decay(this%decay(n), this%decaylast(n), &
-                                          0, cold(n), cnew(n), delt)
-        rrhs = decay_rate * vcell * swtpdt * this%porosity(n) ! Important note: this term does NOT get multiplied by eqnsclfac for cq purposes because it should already be a rate of energy
+      ! -- zero order decay aqueous phase
+      if (this%idcy == DECAY_ZERO_ORDER .and. &
+          (this%idcysrc == DECAY_WATER .or. this%idcysrc == DECAY_BOTH)) then
+        decay_rate = this%decay_water(n)
+        ! -- this term does NOT get multiplied by eqnsclfac for cq purposes
+        !    because it should already be a rate of energy
+        rrhs = decay_rate * vcell * swtpdt * this%porosity(n)
       end if
       rate = hhcof * cnew(n) - rrhs
-      this%ratedcy(n) = rate
+      this%ratedcyw(n) = rate
       idiag = this%dis%con%ia(n)
       flowja(idiag) = flowja(idiag) + rate
       !
     end do
   end subroutine est_cq_dcy
+
+  !> @ brief Calculate decay terms for solid phase
+  !!
+  !!  Method to calculate decay terms for the solid phase.
+  !<
+  subroutine est_cq_dcy_solid(this, nodes, cnew, cold, flowja)
+    ! -- dummy
+    class(GweEstType) :: this !< GweEstType object
+    integer(I4B), intent(in) :: nodes !< number of nodes
+    real(DP), intent(in), dimension(nodes) :: cnew !< temperature at end of this time step
+    real(DP), intent(in), dimension(nodes) :: cold !< temperature at end of last time step
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja !< flow between two connected control volumes
+    ! -- local
+    integer(I4B) :: n
+    integer(I4B) :: idiag
+    real(DP) :: rate
+    real(DP) :: hhcof, rrhs
+    real(DP) :: vcell
+    real(DP) :: decay_rate
+    !
+    ! -- Calculate decay change
+    do n = 1, nodes
+      !
+      ! -- skip if transport inactive
+      this%ratedcys(n) = DZERO
+      if (this%ibound(n) <= 0) cycle
+      !
+      ! -- calculate new and old water volumes
+      vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
+      !
+      ! -- calculate decay gains and losses
+      rate = DZERO
+      hhcof = DZERO
+      rrhs = DZERO
+      ! -- first-order decay (idcy=1) is not supported for temperature modeling
+      if (this%idcy == DECAY_ZERO_ORDER .and. &
+          (this%idcysrc == DECAY_SOLID .or. this%idcysrc == DECAY_BOTH)) then ! zero order decay in the solid phase
+        decay_rate = this%decay_solid(n)
+        ! -- this term does NOT get multiplied by eqnsclfac for cq purposes
+        !    because it should already be a rate of energy
+        rrhs = decay_rate * vcell * (1 - this%porosity(n)) * this%rhos(n)
+      end if
+      rate = hhcof * cnew(n) - rrhs
+      this%ratedcys(n) = rate
+      idiag = this%dis%con%ia(n)
+      flowja(idiag) = flowja(idiag) + rate
+      !
+    end do
+  end subroutine est_cq_dcy_solid
 
   !> @ brief Calculate budget terms for package
   !!
@@ -439,10 +541,19 @@ contains
                                isuppress_output, rowlabel=this%packName)
     !
     ! -- dcy
-    if (this%idcy /= 0) then
-      call rate_accumulator(this%ratedcy, rin, rout)
-      call model_budget%addentry(rin, rout, delt, budtxt(2), &
-                                 isuppress_output, rowlabel=this%packName)
+    if (this%idcy == DECAY_ZERO_ORDER) then
+      if (this%idcysrc == DECAY_WATER .or. this%idcysrc == DECAY_BOTH) then
+        ! -- aqueous phase
+        call rate_accumulator(this%ratedcyw, rin, rout)
+        call model_budget%addentry(rin, rout, delt, budtxt(2), &
+                                   isuppress_output, rowlabel=this%packName)
+      end if
+      if (this%idcysrc == DECAY_SOLID .or. this%idcysrc == DECAY_BOTH) then
+        ! -- solid phase
+        call rate_accumulator(this%ratedcys, rin, rout)
+        call model_budget%addentry(rin, rout, delt, budtxt(3), &
+                                   isuppress_output, rowlabel=this%packName)
+      end if
     end if
   end subroutine est_bd
 
@@ -457,7 +568,6 @@ contains
     integer(I4B), intent(in) :: icbcun !< flag indication if cell-by-cell data should be saved
     ! -- local
     integer(I4B) :: ibinun
-    !character(len=16), dimension(2) :: aname
     integer(I4B) :: iprint, nvaluesp, nwidthp
     character(len=1) :: cdatafmp = ' ', editdesc = ' '
     real(DP) :: dinact
@@ -483,10 +593,20 @@ contains
                                  nwidthp, editdesc, dinact)
       !
       ! -- dcy
-      if (this%idcy /= 0) &
-        call this%dis%record_array(this%ratedcy, this%iout, iprint, -ibinun, &
-                                   budtxt(2), cdatafmp, nvaluesp, &
-                                   nwidthp, editdesc, dinact)
+      if (this%idcy == DECAY_ZERO_ORDER) then
+        if (this%idcysrc == DECAY_WATER .or. this%idcysrc == DECAY_BOTH) then
+          ! -- aqueous phase
+          call this%dis%record_array(this%ratedcyw, this%iout, iprint, &
+                                     -ibinun, budtxt(2), cdatafmp, nvaluesp, &
+                                     nwidthp, editdesc, dinact)
+        end if
+        if (this%idcysrc == DECAY_SOLID .or. this%idcysrc == DECAY_BOTH) then
+          ! -- solid phase
+          call this%dis%record_array(this%ratedcys, this%iout, iprint, &
+                                     -ibinun, budtxt(3), cdatafmp, nvaluesp, &
+                                     nwidthp, editdesc, dinact)
+        end if
+      end if
     end if
   end subroutine est_ot_flow
 
@@ -505,9 +625,13 @@ contains
       call mem_deallocate(this%porosity)
       call mem_deallocate(this%ratesto)
       call mem_deallocate(this%idcy)
-      call mem_deallocate(this%decay)
-      call mem_deallocate(this%ratedcy)
-      call mem_deallocate(this%decaylast)
+      call mem_deallocate(this%idcysrc)
+      call mem_deallocate(this%decay_water)
+      call mem_deallocate(this%decay_solid)
+      call mem_deallocate(this%ratedcyw)
+      call mem_deallocate(this%ratedcys)
+      call mem_deallocate(this%decaylastw)
+      call mem_deallocate(this%decaylasts)
       call mem_deallocate(this%cpw)
       call mem_deallocate(this%cps)
       call mem_deallocate(this%rhow)
@@ -532,7 +656,6 @@ contains
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy
     class(GweEstType) :: this !< GweEstType object
-    ! -- local
     !
     ! -- Allocate scalars in NumericalPackageType
     call this%NumericalPackageType%allocate_scalars()
@@ -542,12 +665,14 @@ contains
     call mem_allocate(this%rhow, 'RHOW', this%memoryPath)
     call mem_allocate(this%latheatvap, 'LATHEATVAP', this%memoryPath)
     call mem_allocate(this%idcy, 'IDCY', this%memoryPath)
+    call mem_allocate(this%idcysrc, 'IDCYSRC', this%memoryPath)
     !
     ! -- Initialize
     this%cpw = DZERO
     this%rhow = DZERO
     this%latheatvap = DZERO
-    this%idcy = 0
+    this%idcy = IZERO
+    this%idcysrc = IZERO
   end subroutine allocate_scalars
 
   !> @ brief Allocate arrays for package
@@ -572,14 +697,22 @@ contains
     call mem_allocate(this%rhos, nodes, 'RHOS', this%memoryPath)
     !
     ! -- dcy
-    if (this%idcy == 0) then
-      call mem_allocate(this%ratedcy, 1, 'RATEDCY', this%memoryPath)
-      call mem_allocate(this%decay, 1, 'DECAY', this%memoryPath)
-      call mem_allocate(this%decaylast, 1, 'DECAYLAST', this%memoryPath)
+    if (this%idcy == DECAY_OFF) then
+      call mem_allocate(this%ratedcyw, 1, 'RATEDCYW', this%memoryPath)
+      call mem_allocate(this%ratedcys, 1, 'RATEDCYS', this%memoryPath)
+      call mem_allocate(this%decay_water, 1, 'DECAY_WATER', this%memoryPath)
+      call mem_allocate(this%decay_solid, 1, 'DECAY_SOLID', this%memoryPath)
+      call mem_allocate(this%decaylastw, 1, 'DECAYLASTW', this%memoryPath)
+      call mem_allocate(this%decaylasts, 1, 'DECAYLAST', this%memoryPath)
     else
-      call mem_allocate(this%ratedcy, this%dis%nodes, 'RATEDCY', this%memoryPath)
-      call mem_allocate(this%decay, nodes, 'DECAY', this%memoryPath)
-      call mem_allocate(this%decaylast, nodes, 'DECAYLAST', this%memoryPath)
+      call mem_allocate(this%ratedcyw, this%dis%nodes, 'RATEDCYW', &
+                        this%memoryPath)
+      call mem_allocate(this%ratedcys, this%dis%nodes, 'RATEDCYS', &
+                        this%memoryPath)
+      call mem_allocate(this%decay_water, nodes, 'DECAY_WATER', this%memoryPath)
+      call mem_allocate(this%decay_solid, nodes, 'DECAY_SOLID', this%memoryPath)
+      call mem_allocate(this%decaylastw, nodes, 'DECAYLASTW', this%memoryPath)
+      call mem_allocate(this%decaylasts, nodes, 'DECAYLASTS', this%memoryPath)
     end if
     !
     ! -- Initialize
@@ -589,10 +722,13 @@ contains
       this%cps(n) = DZERO
       this%rhos(n) = DZERO
     end do
-    do n = 1, size(this%decay)
-      this%decay(n) = DZERO
-      this%ratedcy(n) = DZERO
-      this%decaylast(n) = DZERO
+    do n = 1, size(this%decay_water)
+      this%decay_water(n) = DZERO
+      this%decay_solid(n) = DZERO
+      this%ratedcyw(n) = DZERO
+      this%ratedcys(n) = DZERO
+      this%decaylastw(n) = DZERO
+      this%decaylasts(n) = DZERO
     end do
   end subroutine allocate_arrays
 
@@ -616,7 +752,11 @@ contains
     character(len=*), parameter :: fmtidcy1 = &
                                    "(4x,'FIRST-ORDER DECAY IS ACTIVE. ')"
     character(len=*), parameter :: fmtidcy2 = &
-                                   "(4x,'ZERO-ORDER DECAY IS ACTIVE. ')"
+                                   "(4x,'ZERO-ORDER DECAY IN THE AQUEOUS "// &
+                                   &"PHASE IS ACTIVE. ')"
+    character(len=*), parameter :: fmtidcy3 = &
+                                   "(4x,'ZERO-ORDER DECAY IN THE SOLID "// &
+                                   &"PHASE IS ACTIVE. ')"
     !
     ! -- get options block
     call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false., &
@@ -633,12 +773,26 @@ contains
         case ('SAVE_FLOWS')
           this%ipakcb = -1
           write (this%iout, fmtisvflow)
-        case ('FIRST_ORDER_DECAY')
-          this%idcy = 1
-          write (this%iout, fmtidcy1)
-        case ('ZERO_ORDER_DECAY')
-          this%idcy = 2
+        case ('ZERO_ORDER_DECAY_WATER')
+          this%idcy = DECAY_ZERO_ORDER
+          ! -- idcysrc > 0 indicates decay in the solid phase is active
+          !    in which case the idcysrc should now be upgraded to both phases
+          if (this%idcysrc > IZERO) then
+            this%idcysrc = DECAY_BOTH
+          else
+            this%idcysrc = DECAY_WATER
+          end if
           write (this%iout, fmtidcy2)
+        case ('ZERO_ORDER_DECAY_SOLID')
+          this%idcy = DECAY_ZERO_ORDER
+          ! -- idcysrc > 0 indicates decay in active in water in which case
+          !    the idcysrc should now be upgraded to both phases
+          if (this%idcysrc > IZERO) then
+            this%idcysrc = DECAY_BOTH
+          else
+            this%idcysrc = DECAY_SOLID
+          end if
+          write (this%iout, fmtidcy3)
         case ('HEAT_CAPACITY_WATER')
           this%cpw = this%parser%GetDouble()
           if (this%cpw <= 0.0) then
@@ -693,14 +847,15 @@ contains
     character(len=:), allocatable :: line
     integer(I4B) :: istart, istop, lloc, ierr
     logical :: isfound, endOfBlock
-    logical, dimension(4) :: lname
-    character(len=24), dimension(4) :: aname
+    logical, dimension(5) :: lname
+    character(len=24), dimension(5) :: aname
     ! -- formats
     ! -- data
     data aname(1)/'  MOBILE DOMAIN POROSITY'/
-    data aname(2)/'              DECAY RATE'/
-    data aname(3)/' HEAT CAPACITY OF SOLIDS'/
-    data aname(4)/'       DENSITY OF SOLIDS'/
+    data aname(2)/'DECAY RATE AQUEOUS PHASE'/
+    data aname(3)/'  DECAY RATE SOLID PHASE'/
+    data aname(4)/' HEAT CAPACITY OF SOLIDS'/
+    data aname(5)/'       DENSITY OF SOLIDS'/
     !
     ! -- initialize
     isfound = .false.
@@ -722,24 +877,32 @@ contains
                                         this%parser%iuactive, this%porosity, &
                                         aname(1))
           lname(1) = .true.
-        case ('DECAY')
-          if (this%idcy == 0) &
-            call mem_reallocate(this%decay, this%dis%nodes, 'DECAY', &
+        case ('DECAY_WATER')
+          if (this%idcy == DECAY_OFF) &
+            call mem_reallocate(this%decay_water, this%dis%nodes, 'DECAY_WATER', &
                                 trim(this%memoryPath))
           call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                        this%parser%iuactive, this%decay, &
+                                        this%parser%iuactive, this%decay_water, &
                                         aname(2))
           lname(2) = .true.
+        case ('DECAY_SOLID')
+          if (this%idcy == DECAY_OFF) &
+            call mem_reallocate(this%decay_solid, this%dis%nodes, 'DECAY_SOLID', &
+                                trim(this%memoryPath))
+          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
+                                        this%parser%iuactive, this%decay_solid, &
+                                        aname(3))
+          lname(3) = .true.
         case ('HEAT_CAPACITY_SOLID')
           call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
                                         this%parser%iuactive, this%cps, &
-                                        aname(3))
-          lname(3) = .true.
+                                        aname(4))
+          lname(4) = .true.
         case ('DENSITY_SOLID')
           call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
                                         this%parser%iuactive, this%rhos, &
-                                        aname(4))
-          lname(4) = .true.
+                                        aname(5))
+          lname(5) = .true.
         case default
           write (errmsg, '(a,a)') 'Unknown griddata tag: ', trim(keyword)
           call store_error(errmsg)
@@ -758,28 +921,37 @@ contains
       write (errmsg, '(a)') 'Porosity not specified in griddata block.'
       call store_error(errmsg)
     end if
-    if (.not. lname(3)) then
+    if (.not. lname(4)) then
       write (errmsg, '(a)') 'HEAT_CAPACITY_SOLID not specified in griddata block.'
       call store_error(errmsg)
     end if
-    if (.not. lname(4)) then
+    if (.not. lname(5)) then
       write (errmsg, '(a)') 'DENSITY_SOLID not specified in griddata block.'
       call store_error(errmsg)
     end if
     !
     ! -- Check for required decay/production rate coefficients
-    if (this%idcy > 0) then
-      if (.not. lname(2)) then
-        write (errmsg, '(a)') 'First or zero order decay is &
-          &active but the first rate coefficient is not specified.  Decay &
-          &must be specified in griddata block.'
+    if (this%idcy == DECAY_ZERO_ORDER) then
+      if (.not. lname(2) .and. .not. lname(3)) then
+        write (errmsg, '(a)') 'Zero order decay in either the aqueous &
+          &or solid phase is active but the corresponding zero-order &
+          &rate coefficient is not specified. Either DECAY_WATER or &
+          &DECAY_SOLID must be specified in the griddata block.'
         call store_error(errmsg)
       end if
     else
       if (lname(2)) then
-        write (warnmsg, '(a)') 'First or zero orer decay &
-          &is not active but decay was specified.  Decay will &
-          &have no affect on simulation results.'
+        write (warnmsg, '(a)') 'Zero order decay in the aqueous phase has &
+          &not been activated but DECAY_WATER has been specified. Zero &
+          &order decay in the aqueous phase will have no affect on &
+          &simulation results.'
+        call store_warning(warnmsg)
+        write (this%iout, '(1x,a)') 'WARNING.  '//warnmsg
+      else if (lname(3)) then
+        write (warnmsg, '(a)') 'Zero order decay in the solid phase has not &
+          &been activated but DECAY_SOLID has been specified.  Zero order &
+          &decay in the solid phase will have no affect on simulation &
+          &results.'
         call store_warning(warnmsg)
         write (this%iout, '(1x,a)') 'WARNING.  '//warnmsg
       end if
@@ -790,50 +962,5 @@ contains
       call this%parser%StoreErrorUnit()
     end if
   end subroutine read_data
-
-  !> @ brief Calculate zero-order decay rate and constrain if necessary
-  !!
-  !!  Function to calculate the zero-order decay rate from the user specified
-  !!  decay rate.  If the decay rate is positive, then the decay rate must
-  !!  be constrained so that more energy is not removed than is available.
-  !!  Without this constraint, negative temperatures could result from
-  !!  zero-order decay (no freezing).
-  !<
-  function get_zero_order_decay(decay_rate_usr, decay_rate_last, kiter, &
-                                cold, cnew, delt) result(decay_rate)
-    ! -- dummy
-    real(DP), intent(in) :: decay_rate_usr !< user-entered decay rate
-    real(DP), intent(in) :: decay_rate_last !< decay rate used for last iteration
-    integer(I4B), intent(in) :: kiter !< Picard iteration counter
-    real(DP), intent(in) :: cold !< temperature at end of last time step
-    real(DP), intent(in) :: cnew !< temperature at end of this time step
-    real(DP), intent(in) :: delt !< length of time step
-    ! -- return
-    real(DP) :: decay_rate !< returned value for decay rate
-    !
-    ! -- Return user rate if production, otherwise constrain, if necessary
-    if (decay_rate_usr < DZERO) then
-      !
-      ! -- Production, no need to limit rate
-      decay_rate = decay_rate_usr
-    else
-      !
-      ! -- Need to ensure decay does not result in negative
-      !    temperature, so reduce the rate if it would result in
-      !    removing more energy than is in the cell.          ! kluge note: think through
-      if (kiter == 1) then
-        decay_rate = min(decay_rate_usr, cold / delt) ! kluge note: actually want to use rhow*cpw*cold and rhow*cpw*cnew for rates here and below
-      else
-        decay_rate = decay_rate_last
-        if (cnew < DZERO) then
-          decay_rate = decay_rate_last + cnew / delt
-        else if (cnew > cold) then
-          decay_rate = decay_rate_last + cnew / delt
-        end if
-        decay_rate = min(decay_rate_usr, decay_rate)
-      end if
-      decay_rate = max(decay_rate, DZERO)
-    end if
-  end function get_zero_order_decay
 
 end module GweEstModule

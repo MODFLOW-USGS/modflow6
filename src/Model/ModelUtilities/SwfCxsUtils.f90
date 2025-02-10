@@ -432,12 +432,20 @@ contains
   !!
   !! @return      w               saturated top width
   !<
-  function get_saturated_topwidth(npts, stations) result(w)
+  function get_saturated_topwidth(npts, xfraction, width) result(w)
     ! -- dummy variables
     integer(I4B), intent(in) :: npts !< number of station-height data for a reach
-    real(DP), dimension(npts), intent(in) :: stations !< cross-section station distances (x-distance)
+    real(DP), dimension(npts), intent(in) :: xfraction !< cross-section station fractional distances (x-distance)
+    real(DP), intent(in) :: width
     ! -- local variables
+    integer(I4B) :: n
     real(DP) :: w
+    real(DP), dimension(npts) :: stations
+    !
+    ! -- calculate station from xfractions and width
+    do n = 1, npts
+      stations(n) = xfraction(n) * width
+    end do
     !
     ! -- calculate the saturated top width
     if (npts > 1) then
@@ -1043,42 +1051,37 @@ contains
     real(DP) :: xlen
     real(DP) :: dlen
     real(DP) :: slope
-    real(DP) :: dx
     real(DP) :: xt
-    real(DP) :: xt0
-    real(DP) :: xt1
     !
     ! -- calculate the minimum and maximum depth
     dmin = min(d0, d1)
     dmax = max(d0, d1)
     !
-    ! -- if d is less than or equal to the minimum value the
-    !    station length (xlen) is zero
+    ! -- calculate x0 and x1
     if (d <= dmin) then
+      ! -- if d is less than or equal to the minimum value the
+      !    station length (xlen) is zero
       x1 = x0
-      ! -- if d is between dmin and dmax station length is less
+    else if (d >= dmax) then
+      ! x0 and x1 unchanged (full wetted width)
+      continue
+    else
+      ! -- if d is between dmin and dmax, station length is less
       !    than d1 - d0
-    else if (d < dmax) then
       xlen = x1 - x0
       dlen = d1 - d0
-      if (abs(dlen) > DZERO) then
-        slope = xlen / dlen
-      else
-        slope = DZERO
-      end if
+      ! because of preceding checks
+      ! we know dmin<d<dmax, dmax>dmin, dlen > 0
+      ! no need to check for dlen == 0
+      slope = xlen / dlen
+      xt = x0 + slope * (d - d0)
       if (d0 > d1) then
-        dx = (d - d1) * slope
-        xt = x1 + dx
-        xt0 = xt
-        xt1 = x1
+        ! x1 unchanged
+        x0 = xt
       else
-        dx = (d - d0) * slope
-        xt = x0 + dx
-        xt0 = x0
-        xt1 = xt
+        !x0 unchanged
+        x1 = xt
       end if
-      x0 = xt0
-      x1 = xt1
     end if
   end subroutine get_wetted_station
 

@@ -28,9 +28,9 @@ contains
 
   !> @brief Create a new Pollock's subcell method
   subroutine create_method_subcell_pollock(method)
-    ! -- dummy
+    ! dummy
     type(MethodSubcellPollockType), pointer :: method
-    ! -- local
+    ! local
     type(SubcellRectType), pointer :: subcell
 
     allocate (method)
@@ -48,11 +48,11 @@ contains
 
   !> @brief Apply Pollock's method to a rectangular subcell
   subroutine apply_msp(this, particle, tmax)
-    ! -- dummy
+    ! dummy
     class(MethodSubcellPollockType), intent(inout) :: this
     type(ParticleType), pointer, intent(inout) :: particle
     real(DP), intent(in) :: tmax
-    ! -- local
+    ! local
     real(DP) :: xOrigin
     real(DP) :: yOrigin
     real(DP) :: zOrigin
@@ -61,7 +61,7 @@ contains
 
     select type (subcell => this%subcell)
     type is (SubcellRectType)
-      ! -- Transform particle position into local subcell coordinates,
+      ! Transform particle position into local subcell coordinates,
       !    track particle across subcell, convert back to model coords
       !    (sinrot and cosrot should be 0 and 1, respectively, i.e. no
       !    rotation, also no z translation; only x and y translations)
@@ -73,7 +73,6 @@ contains
       call particle%transform(xOrigin, yOrigin)
       call this%track_subcell(subcell, particle, tmax)
       call particle%transform(xOrigin, yOrigin, invert=.true.)
-      call particle%reset_transform()
     end select
   end subroutine apply_msp
 
@@ -85,6 +84,7 @@ contains
   !! this context and for any modifications or errors.
   !<
   subroutine track_subcell(this, subcell, particle, tmax)
+    use ParticleModule, only: ACTIVE, TERM_NO_EXITS_SUB
     ! dummy
     class(MethodSubcellPollockType), intent(inout) :: this
     class(SubcellRectType), intent(in) :: subcell
@@ -136,7 +136,7 @@ contains
     !  Subcell has no exit face, terminate the particle
     !  todo: after initial release, consider ramifications
     if ((statusVX .eq. 3) .and. (statusVY .eq. 3) .and. (statusVZ .eq. 3)) then
-      particle%istatus = 9
+      particle%istatus = TERM_NO_EXITS_SUB
       particle%advancing = .false.
       call this%save(particle, reason=3)
       return
@@ -199,7 +199,7 @@ contains
         particle%y = y * subcell%dy
         particle%z = z * subcell%dz
         particle%ttrack = t
-        particle%istatus = 1
+        particle%istatus = ACTIVE
         call this%save(particle, reason=5)
       end do
     end if
@@ -217,7 +217,7 @@ contains
       z = new_x(vz, dvzdz, subcell%vz1, subcell%vz2, &
                 dt, initialZ, subcell%dz, statusVZ == 1)
       exitFace = 0
-      particle%istatus = 1
+      particle%istatus = ACTIVE
       particle%advancing = .false.
       reason = 2 ! timestep end
     else
@@ -302,7 +302,7 @@ contains
     real(DP) :: v1v2
     logical(LGP) :: noOutflow
 
-    ! -- Initialize variables.
+    ! Initialize variables.
     status = -1
     dt = 1.0d+20
     v2a = v2
@@ -313,8 +313,8 @@ contains
     dva = dv
     if (dva .lt. DZERO) dva = -dva
 
-    ! -- Check for a uniform zero velocity in this direction.
-    ! -- If so, set status = 2 and return (dt = 1.0d+20).
+    ! Check for a uniform zero velocity in this direction.
+    ! If so, set status = 2 and return (dt = 1.0d+20).
     tol = 1.0d-15
     if ((v2a .lt. tol) .and. (v1a .lt. tol)) then
       v = DZERO
@@ -323,9 +323,9 @@ contains
       return
     end if
 
-    ! -- Check for uniform non-zero velocity in this direction.
-    ! -- If so, set compute dt using the constant velocity,
-    ! -- set status = 1 and return.
+    ! Check for uniform non-zero velocity in this direction.
+    ! If so, set compute dt using the constant velocity,
+    ! set status = 1 and return.
     vv = v1a
     if (v2a .gt. vv) vv = v2a
     vvv = dva / vv
@@ -341,13 +341,13 @@ contains
       return
     end if
 
-    ! -- Velocity has a linear variation.
-    ! -- Compute velocity corresponding to particle position.
+    ! Velocity has a linear variation.
+    ! Compute velocity corresponding to particle position.
     dvdx = dv / dx
     v = (DONE - xL) * v1 + xL * v2
 
-    ! -- If flow is into the cell from both sides there is no outflow.
-    ! -- In that case, set status = 3 and return.
+    ! If flow is into the cell from both sides there is no outflow.
+    ! In that case, set status = 3 and return.
     noOutflow = .true.
     if (v1 .lt. DZERO) noOutflow = .false.
     if (v2 .gt. DZERO) noOutflow = .false.
@@ -356,10 +356,10 @@ contains
       return
     end if
 
-    ! -- If there is a divide in the cell for this flow direction, check to
-    ! -- see if the particle is located exactly on the divide. If it is, move
-    ! -- it very slightly to get it off the divide. This avoids possible
-    ! -- numerical problems related to stagnation points.
+    ! If there is a divide in the cell for this flow direction, check to
+    ! see if the particle is located exactly on the divide. If it is, move
+    ! it very slightly to get it off the divide. This avoids possible
+    ! numerical problems related to stagnation points.
     if ((v1 .le. DZERO) .and. (v2 .ge. DZERO)) then
       if (abs(v) .le. DZERO) then
         v = 1.0d-20
@@ -367,9 +367,9 @@ contains
       end if
     end if
 
-    ! -- If there is a flow divide, this check finds out what side of the
-    ! -- divide the particle is on and sets the value of vr appropriately
-    ! -- to reflect that location.
+    ! If there is a flow divide, this check finds out what side of the
+    ! divide the particle is on and sets the value of vr appropriately
+    ! to reflect that location.
     vr1 = v1 / v
     vr2 = v2 / v
     vr = vr1
@@ -377,17 +377,17 @@ contains
       vr = vr2
     end if
 
-    ! -- If the product v1*v2 > 0, the velocity is in the same direction
-    ! -- throughout the cell (i.e. no flow divide). If so, set the value
-    ! -- of vr to reflect the appropriate direction.
+    ! If the product v1*v2 > 0, the velocity is in the same direction
+    ! throughout the cell (i.e. no flow divide). If so, set the value
+    ! of vr to reflect the appropriate direction.
     v1v2 = v1 * v2
     if (v1v2 .gt. DZERO) then
       if (v .gt. DZERO) vr = vr2
       if (v .lt. DZERO) vr = vr1
     end if
 
-    ! -- Check if vr is (very close to) zero.
-    ! -- If so, set status = 2 and return (dt = 1.0d+20).
+    ! Check if vr is (very close to) zero.
+    ! If so, set status = 2 and return (dt = 1.0d+20).
     if (dabs(vr) .lt. 1.0d-10) then
       v = DZERO
       dvdx = DZERO
@@ -395,7 +395,7 @@ contains
       return
     end if
 
-    ! -- Compute travel time to exit face. Return with status = 0.
+    ! Compute travel time to exit face. Return with status = 0.
     dt = log(vr) / dvdx
     status = 0
 
@@ -422,14 +422,14 @@ contains
     real(DP) :: newx
     logical(LGP) :: lprofile
 
-    ! -- process optional arguments
+    ! process optional arguments
     if (present(velocity_profile)) then
       lprofile = velocity_profile
     else
       lprofile = .false.
     end if
 
-    ! -- recompute coordinate
+    ! recompute coordinate
     newx = x
     if (lprofile) then
       newx = newx + (v1 * dt / dx)
@@ -437,7 +437,7 @@ contains
       newx = newx + (v * (exp(dvdx * dt) - DONE) / dvdx / dx)
     end if
 
-    ! -- clamp to [0, 1]
+    ! clamp to [0, 1]
     if (newx .lt. DZERO) newx = DZERO
     if (newx .gt. DONE) newx = DONE
 

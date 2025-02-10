@@ -1,7 +1,5 @@
 module CellDefnModule
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: DZERO
-  use MathUtilModule, only: is_close
   implicit none
 
   private

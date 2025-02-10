@@ -131,7 +131,7 @@ def check_output(idx, test):
     records = bobj.get_data(text="rch")[0]
 
     for i, (node, node2, q) in enumerate(records):
-        print(f"Checking: index={i+1}; node={node}; node2={node2}; q={q}")
+        print(f"Checking: index={i + 1}; node={node}; node2={node2}; q={q}")
 
     answer = [21, 27, 8, 32, 13, 34]
     errmsg = f"node must be {answer}.  found {records['node']}"

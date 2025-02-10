@@ -262,9 +262,9 @@ def run_flw_and_trnprt_models(dir, exe):
     # Create the ssm sources block information
     sourcerecarray = []
     # sourcerecarray += [("WEL-1", "AUX", "CONCENTRATION")]
-    sourcerecarray += [(f"GHB-{i+1}", "AUX", "CONCENTRATION") for i in [0, 1, 2, 3]]
-    sourcerecarray += [(f"DRN-{i+1}", "AUX", "CONCENTRATION") for i in [0, 1, 2]]
-    sourcerecarray += [(f"WEL-{i+1}", "AUX", "CONCENTRATION") for i in [0]]
+    sourcerecarray += [(f"GHB-{i + 1}", "AUX", "CONCENTRATION") for i in [0, 1, 2, 3]]
+    sourcerecarray += [(f"DRN-{i + 1}", "AUX", "CONCENTRATION") for i in [0, 1, 2]]
+    sourcerecarray += [(f"WEL-{i + 1}", "AUX", "CONCENTRATION") for i in [0]]
     ssm = flopy.mf6.ModflowGwtssm(
         gwt,
         print_flows=True,

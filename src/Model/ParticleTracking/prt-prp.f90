@@ -13,7 +13,7 @@ module PrtPrpModule
   use BlockParserModule, only: BlockParserType
   use PrtFmiModule, only: PrtFmiType
   use ParticleModule, only: ParticleType, ParticleStoreType, &
-                            create_particle, allocate_particle_store
+                            create_particle, create_particle_store
   use SimModule, only: count_errors, store_error, store_error_unit, &
                        store_warning
   use SimVariablesModule, only: errmsg, warnmsg
@@ -181,8 +181,8 @@ contains
     call mem_deallocate(this%rptm)
     call mem_deallocate(this%rptname, 'RPTNAME', this%memoryPath)
 
-    ! Deallocate particle store, release time and release step selections
-    call this%particles%deallocate(this%memoryPath)
+    ! Deallocate objects
+    call this%particles%destroy(this%memoryPath)
     call this%schedule%deallocate()
     deallocate (this%particles)
     deallocate (this%schedule)
@@ -211,7 +211,7 @@ contains
 
     ! Allocate particle store, starting with the number
     ! of release points (arrays resized if/when needed)
-    call allocate_particle_store( &
+    call create_particle_store( &
       this%particles, &
       this%nreleasepoints, &
       this%memoryPath)
@@ -308,8 +308,10 @@ contains
 
   !> @brief Advance a time step and release particles if scheduled.
   subroutine prp_ad(this)
+    use TdisModule, only: totalsimtime
     class(PrtPrpType) :: this
     integer(I4B) :: ip, it
+    real(DP) :: t
 
     ! Notes
     ! -----
@@ -344,7 +346,23 @@ contains
     ! each release time in the current step.
     do ip = 1, this%nreleasepoints
       do it = 1, this%schedule%count()
-        call this%release(ip, this%schedule%times(it))
+        t = this%schedule%times(it)
+        ! Skip the release time if it's before the simulation
+        ! starts, or if no `extend_tracking`, after it ends.
+        if (t < DZERO) then
+          write (warnmsg, '(a,g0,a)') &
+            'Skipping negative release time (t=', t, ').'
+          call store_warning(warnmsg)
+          cycle
+        else if (t > totalsimtime .and. this%iextend == 0) then
+          write (warnmsg, '(a,g0,a)') &
+            'Skipping release time falling after the end of the &
+            &simulation (t=', t, '). Enable EXTEND_TRACKING to &
+            &release particles after the simulation end time.'
+          call store_warning(warnmsg)
+          cycle
+        end if
+        call this%release(ip, t)
       end do
     end do
   end subroutine prp_ad
@@ -418,21 +436,16 @@ contains
     type(ParticleType), pointer :: particle
 
     call this%initialize_particle(particle, ip, trelease)
-
-    ! Increment cumulative particle count
     np = this%nparticles + 1
     this%nparticles = np
-
-    ! Save the particle to the store
-    call this%particles%save_particle(particle, np)
+    call this%particles%put(particle, np)
     deallocate (particle)
-
-    ! Accumulate mass for release point
-    this%rptm(ip) = this%rptm(ip) + DONE
+    this%rptm(ip) = this%rptm(ip) + DONE ! TODO configurable mass
 
   end subroutine release
 
   subroutine initialize_particle(this, particle, ip, trelease)
+    use ParticleModule, only: TERM_UNRELEASED
     class(PrtPrpType), intent(inout) :: this !< this instance
     type(ParticleType), pointer, intent(inout) :: particle !< the particle
     integer(I4B), intent(in) :: ip !< particle index
@@ -468,8 +481,7 @@ contains
     end select
     particle%ilay = ilay
     particle%izone = this%rptzone(ic)
-
-    particle%istatus = 0
+    particle%istatus = 0 ! status 0 until tracking starts
     ! If the cell is inactive, either drape the particle
     ! to the top-most active cell beneath it if drape is
     ! enabled, or else terminate permanently unreleased.
@@ -477,10 +489,14 @@ contains
       ic_old = ic
       if (this%idrape > 0) then
         call this%dis%highest_active(ic, this%ibound)
-        if (ic == ic_old .or. this%ibound(ic) == 0) &
-          particle%istatus = 8
+        if (ic == ic_old .or. this%ibound(ic) == 0) then
+          ! negative unreleased status signals to the
+          ! tracking method that we haven't yet saved
+          ! a termination record, it needs to do so.
+          particle%istatus = -1 * TERM_UNRELEASED
+        end if
       else
-        particle%istatus = 8
+        particle%istatus = -1 * TERM_UNRELEASED
       end if
     end if
 
@@ -924,9 +940,9 @@ contains
         n = ival
 
         if (n < 1 .or. n > this%nreleasepoints) then
-          write (errmsg, '(a,1x,i0,a)') &
-            'Release point number must be greater than 0 and less than', &
-            'or equal to', this%nreleasepoints, '.'
+          write (errmsg, '(a,i0,a,i0,a)') &
+            'Expected ', this%nreleasepoints, ' release points. &
+            &Points must be numbered from 1 to ', this%nreleasepoints, '.'
           call store_error(errmsg)
           cycle
         end if

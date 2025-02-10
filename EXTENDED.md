@@ -1,13 +1,13 @@
-# Developing in parallel MODFLOW 6
+# Developing in extended MODFLOW 6
 
-This document describes how to set up your build environment for developing and testing the parallel version of MODFLOW. It further builds on the instructions given in [DEVELOPER.md](DEVELOPER.md) so make sure to read those first.
+This document describes how to set up your build environment for developing and testing the extended version of MODFLOW. It further builds on the instructions given in [DEVELOPER.md](DEVELOPER.md) so make sure to read those first.
 
 ---
 **DISCLAIMER**
 
 *Expectations on platform compatibility*
 
-The serial version of the MODFLOW 6 program has had no external dependencies and is traditionally available for a variety of platforms (Windows, GNU/linux, macOS) and compatible with the mainstream Fortran compilers (gfortran, ifort). The parallel version comes with dependencies on third party components, most notably the MPI and PETSc libraries. While the goal is a continued support of the above mentioned configurations, this has become more challenging and can generally not be guaranteed. To assist developers as well as end users who are planning to compile the code themselves, a list of successfully tested build configurations will be included in this document.
+The serial version of the MODFLOW 6 program has had no external dependencies and is traditionally available for a variety of platforms (Windows, GNU/linux, macOS) and compatible with the mainstream Fortran compilers (gfortran, ifort). The extended version comes with dependencies on third party components, most notably the MPI, PETSc and NetCDF libraries. While the goal is a continued support of the above mentioned configurations, this has become more challenging and can generally not be guaranteed. To assist developers as well as end users who are planning to compile the code themselves, a list of successfully tested build configurations will be included in this document.
 
 ---
 
@@ -15,15 +15,15 @@ The serial version of the MODFLOW 6 program has had no external dependencies and
 
 ## Introduction
 
-The design philosophy has been to maintain MODFLOW as a single codebase and have it compile to either a serial or a parallel program. The former continues to be a lightweight, highly compatible code which does not require external dependencies other than those provided by the standard compiler libraries. The latter has two distinct dependencies on 3rd party libraries: MPI and PETSc, as described below. Note that the parallel capability is a true extension and the executable will in all cases be capable of *serial* execution with equivalent results.
+The design philosophy has been to maintain MODFLOW as a single codebase and have it compile to either a serial or extended program. The former continues to be a lightweight, highly compatible code which does not require external dependencies other than those provided by the standard compiler libraries. The latter has three distinct dependencies on 3rd party libraries: MPI, PETSc and NetCDF, as described below. Note that extended capabilities are a true extension and the executable will in all cases be capable of *serial* execution with equivalent results.
 
 ## Prerequisites
 
-The parallel version of MODFLOW 6 requires the Message Passing Interface (MPI) and the Portable, Extensible Toolkit for Scientific Computation (PETSc - pronounced PET-see (/ˈpɛt-siː/)) libraries.
+The extended version of MODFLOW 6 requires the Message Passing Interface (MPI), the Portable, Extensible Toolkit for Scientific Computation (PETSc - pronounced PET-see (/ˈpɛt-siː/)) and the NetCDF for array-oriented scientific data libraries.
 
 ### MPI
 
-The parallel version of MODFLOW 6 uses MPI to synchronize data between processes. There are a couple of implementations of the MPI standard available. Their applicability usually depends on the platform that is used:
+The extended version of MODFLOW 6 uses MPI to synchronize data between processes when configured to run in parallel mode. There are a couple of implementations of the MPI standard available. Their applicability usually depends on the platform that is used:
 
 - Open MPI: https://www.open-mpi.org/
 - MPICH: https://www.mpich.org/
@@ -53,17 +53,21 @@ $ make all
 
 in a terminal open in the root directory of your PETSc download
 
+## Compiling NetCDF from source
+
+See, for example, https://docs.unidata.ucar.edu/netcdf-c/4.9.2/building\_netcdf\_fortran.html and https://docs.unidata.ucar.edu/nug/current/getting\_and\_building\_netcdf.html#building for information related to building NetCDF-Fortran and prerequisites in a Unix/Linux environment.
+
 ## Using a package manager to install MPI and PETSc
 
-Use of a package manager can simplify the process of building the parallel version of MODFLOW 6.
+Use of a package manager can simplify the process of building the extended version of MODFLOW 6.
 
 ### MacOS
 
-[OpenMPI](https://formulae.brew.sh/formula/open-mpi) and [PETSc](https://formulae.brew.sh/formula/petsc) are available on Homebrew for Intel and Apple Silicon (M1). Both of these depend on [gcc 13.1.0](https://formulae.brew.sh/formula/gcc). [pkg-config](https://formulae.brew.sh/formula/pkg-config) should also be installed from Homebrew, if not already installed, so that Meson will be able to resolve the installation location of MPI and PETSc.
+[OpenMPI](https://formulae.brew.sh/formula/open-mpi) and [PETSc](https://formulae.brew.sh/formula/petsc) are available on Homebrew for Intel and Apple Silicon (M1). Both of these depend on [gcc 13.1.0](https://formulae.brew.sh/formula/gcc). [NetCDF Fortran](https://formulae.brew.sh/formula/netcdf-fortran) and related dependencies are also available on Homebrew for Intel and Apple Silicon (M1). [pkg-config](https://formulae.brew.sh/formula/pkg-config) should also be installed from Homebrew, if not already installed, so that Meson will be able to resolve the installation location of MPI and PETSc.
 
 ### Ubuntu
 
-OpenMPI and PETSc are available for a variety of Ubuntu versions using the Advanced Packaging Tool (apt).
+OpenMPI, PETSc and NetCDF Fortran are available for a variety of Ubuntu versions using the Advanced Packaging Tool (apt).
 
 ### Windows
 
@@ -87,12 +91,12 @@ and confirm that there are one or more `*.pc` files in there. A similar `pkgconf
 
 To connect everything, both of these folder paths have to be added to the `PKG_CONFIG_PATH` variable so that the `pkg-config` executable can resolve the installed libraries.
 
-## Building the parallel version of MODFLOW 6
+## Building the extended version of MODFLOW 6
 
-The primary build system for MODFLOW is Meson (https://mesonbuild.com/). The `meson.build` script takes an additional argument to activate a parallel build of the software. E.g for building and installing a parallel release version:
+The primary build system for MODFLOW is Meson (https://mesonbuild.com/). The `meson.build` script takes an additional argument to activate an extended build of the software. E.g for building and installing an extended release version:
 
 ```
-meson setup builddir -Ddebug=false -Dparallel=true \
+meson setup builddir -Ddebug=false -Dextended=true \
                      --prefix=$(pwd) --libdir=bin
 meson install -C builddir
 meson test --verbose --no-rebuild -C builddir
@@ -100,7 +104,7 @@ meson test --verbose --no-rebuild -C builddir
 
 Note that changing the option flags in the `meson setup` command requires the flag `--reconfigure` to reconfigure the build directory. If the `PKG_CONFIG_PATH` was set as described above, the linking to PETSc and MPI is done automatically.
 
-It's always a good idea to check your parallel MODFLOW executable to confirm that it is successfully linked against the external dependencies. You can use the command line tools `ldd` (Linux), `otool` (macOS), or `Dependencies.exe` (Windows, https://github.com/lucasg/Dependencies) to do that. In the list of dependencies, you should be able to identify `libpetsc` and `libmpi` for parallel builds.
+It's always a good idea to check your extended MODFLOW executable to confirm that it is successfully linked against the external dependencies. You can use the command line tools `ldd` (Linux), `otool` (macOS), or `Dependencies.exe` (Windows, https://github.com/lucasg/Dependencies) to do that. In the list of dependencies, you should be able to identify `libpetsc`, `libmpi`, `libnetcdff`, `libnetcdf`, and `libhdf5` for extended builds.
 
 The other build systems in the MODFLOW project (MS Visual Studio, `pymake`, `Makefile`) continue to be supported for *serial* builds only. `pymake` uses the `excludefiles.txt` to ignore those files that can only be build when MPI and PETSc are present on the system. In MS Visual Studio these same files are included in the solution but not in the build process.
 
@@ -110,13 +114,13 @@ The other build systems in the MODFLOW project (MS Visual Studio, `pymake`, `Mak
 
 *Don't use MPI and PETSc directly in your code*
 
-Parallel MODFLOW was designed to have all third party functionality (MPI and PETSc currently) made available through the framework. Developers of models and packages **should not** directly call these libraries and change the set of excluded files described above. If you feel you need to include MPI or PETSc functionality in your code (e.g. you want to `use mpi` in your source file), contact the MODFLOW development team on how to best proceed.
+Extended MODFLOW was designed to have all third party functionality (MPI, PETSc and the NetCDF Fortran API) made available through the framework. Developers of models and packages **should not** directly call these libraries and change the set of excluded files described above. If you feel you need to include MPI or PETSc functionality in your code (e.g. you want to `use mpi` in your source file), contact the MODFLOW development team on how to best proceed.
 
 ---
 
-## Testing the parallel of MODFLOW 6
+## Testing the extended of MODFLOW 6
 
-Parallel MODFLOW can be tested using the same test framework as the serial program, with just a few modifications. To run a test inside the `autotest` folder in parallel mode, make sure to add a marker `@pytest.mark.parallel` so that the test is only executed in the Continuous Integration when running a configuration with a parallel build of MODFLOW.
+Extended MODFLOW can be tested using the same test framework as the serial program, with just a few modifications. To run a test inside the `autotest` folder in parallel mode, make sure to add a marker `@pytest.mark.parallel` so that the test is only executed in the Continuous Integration when running a configuration with an extended build of MODFLOW. Similarly, adding the marker `@pytest.mark.netcdf` to a test ensures that the test will only be executed when intended by specifying NetCDF test mode.
 
 The `TestSimulation` object that is being run from the framework should be configured for parallel run mode with the flag `parallel=True` and the number of processes `ncpus=...`. As an example, see the test case in `autotest/test_par_gwf01.py`, which can be run with
 
@@ -124,7 +128,13 @@ The `TestSimulation` object that is being run from the framework should be confi
 $ pytest -s --parallel test_par_gwf01.py
 ```
 
-Running without the `--parallel` flag will simply skip the test.
+To run a test in NetCDF test mode, for example `autotest/test_netcdf_gwe_cnd.py`:
+
+```
+$ pytest --netcdf test_netcdf_gwe_cnd.py
+```
+
+Running without the `--parallel` and `--netcdf` flags will simply skip these tests.
 
 ## Debugging
 
@@ -150,7 +160,7 @@ In order to truly debug in parallel, i.e. step through the instructions side-by-
 
 ### Debugging with VSCode
 
-In VSCode parallel debugging is easiest done by duplicating the development environment. First, make sure that you have set up your environment to build a parallel version in debug mode. The VSCode launch.json should contain an entry to attach to a running process:
+In VSCode parallel debugging is easiest done by duplicating the development environment. First, make sure that you have set up your environment to build an extended version in debug mode. The VSCode launch.json should contain an entry to attach to a running process:
 
 ```
   {
@@ -171,7 +181,7 @@ In VSCode parallel debugging is easiest done by duplicating the development envi
   }
 ```
 
-After building parallel MODFLOW, press `Ctrl+Shift+p` to execute *Workspaces: Duplicate As Workspace in New Window*. This will open a second VSCode window, identical to the first. Starting the debug process and selecting *"Attach to ..."* opens a process selection window with the processes started from the `mpiexec` command described above. Select both, each from their own instance of the VSCode program. Now you can put breakpoints in the code, "Hit enter to continue" on the command prompt, and step through the parallel processes side-by-side.
+After building extended MODFLOW, press `Ctrl+Shift+p` to execute *Workspaces: Duplicate As Workspace in New Window*. This will open a second VSCode window, identical to the first. Starting the debug process and selecting *"Attach to ..."* opens a process selection window with the processes started from the `mpiexec` command described above. Select both, each from their own instance of the VSCode program. Now you can put breakpoints in the code, "Hit enter to continue" on the command prompt, and step through the parallel processes side-by-side.
 
 ---
 **TIP**
@@ -182,7 +192,7 @@ Make sure that you work with gdb versions >= 10. We have found that earlier vers
 
 ## Compatibility
 
-Parallel MODFLOW has been built successfully with the following configurations:
+Parallel MODFLOW (a pre-extended build without NetCDF) has been built successfully with the following configurations:
 
 | Operating System                    | Toolchain                 | MPI               | PETSc               | Package Manager |
 |-------------------------------------|---------------------------|-------------------|---------------------|-----------------|
@@ -198,9 +208,9 @@ Parallel MODFLOW has been built successfully with the following configurations:
 | SUSE Linux Enterprise Server 15 SP2 | intel 19.1.0.166 20191121 | CRAY-MPICH 7.7.19 | CRAY-PETSC 3.14.5.0 | NA              |
 | Red Hat Enterprise Linux 8.7        | intel 2021.10.0 20230609  | CRAY-MPICH 8.1.26 | 3.15.5              | NA              |
 
-The most up-to-date configurations are available in the GitHub CI script: `.github/workflows/ci.yml` under the task `parallel_test`. These are being tested upon every change to the `develop` branch of MODFLOW.
+The most up-to-date configurations are available in the GitHub CI script: `.github/workflows/ci.yml` under the task `extended_test`. These are being tested upon every change to the `develop` branch of MODFLOW.
 
-To improve support, we kindly ask you to share your experience with building and running parallel MODFLOW and report back if you have a successful setup that is not in this table.
+To improve support, we kindly ask you to share your experience with building and running extended MODFLOW and report back if you have a successful setup that is not in this table.
 
 ## Known issues
 

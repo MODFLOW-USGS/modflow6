@@ -1,7 +1,7 @@
 module TrackFileModule
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: DZERO, DPIO180
-  use ParticleModule, only: ParticleType
+  use ParticleModule, only: ParticleType, ACTIVE
   use GeomUtilModule, only: transform
 
   implicit none
@@ -18,54 +18,12 @@ module TrackFileModule
   !! state (e.g. tracking status, position) at a particular moment in time.
   !!
   !! Particles have no ID property. Particles can be uniquely identified
-  !! by composite key, i.e. combination of:
+  !! by composite key, i.e. combination of fields:
   !!
   !!   - imdl: originating model ID
   !!   - iprp: originating PRP ID
   !!   - irpt: particle release location ID
   !!   - trelease: particle release time
-  !!
-  !! Each record has an "ireason" property, which identifies the cause of
-  !! the record. The user selects 1+ conditions or events for recording.
-  !! Identical records (except "ireason") may be duplicated if multiple
-  !! reporting conditions apply to particles at the same moment in time.
-  !! Each "ireason" value corresponds to an OC "trackevent" option value:
-  !!
-  !!     0: particle released
-  !!     1: particle transitioned between cells
-  !!     2: current time step ended****
-  !!     3: particle terminated
-  !!     4: particle in weak sink
-  !!     5: user-specified tracking time
-  !!
-  !! Each record has an "istatus" property, which is the tracking status;
-  !! e.g., awaiting release, active, terminated. A particle may terminate
-  !! for several reasons. Status values greater than one imply termination.
-  !! Particle status strictly increases over time, starting at zero:
-  !!
-  !!     0: pending release*
-  !!     1: active
-  !!     2: terminated at boundary face
-  !!     3: terminated in weak sink cell
-  !!     4: terminated in weak source cell**
-  !!     5: terminated in cell with no exit face
-  !!     6: terminated in cell with specified zone number
-  !!     7: terminated in inactive cell
-  !!     8: permanently unreleased***
-  !!     9: terminated in subcell with no exit face*****
-  !!
-  !! PRT shares the same status enumeration as MODPATH 7. However, some
-  !! don't apply to PRT; for instance, MODPATH 7 distinguishes forwards
-  !! and backwards tracking, but status value 4 is not used by PRT.
-  !!
-  !! Notes
-  !! -----
-  !!
-  !!   * is this necessary?
-  !!   ** unnecessary since PRT makes no distinction between forwards/backwards tracking
-  !!   *** e.g., released into an inactive cell, a stop zone cell, or a termination zone
-  !!   **** this may coincide with termination, in which case two events are reported
-  !!   ***** PRT-specific status indicating a particle stopped within a cell subcell
   !<
   type :: TrackFileType
     private
@@ -102,7 +60,7 @@ contains
 
     ! Set status
     if (particle%istatus .lt. 0) then
-      status = 1
+      status = ACTIVE
     else
       status = particle%istatus
     end if

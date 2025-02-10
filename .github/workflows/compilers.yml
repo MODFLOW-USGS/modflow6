@@ -18,29 +18,28 @@ jobs:
           - {os: ubuntu-22.04, compiler: gcc, version: 11}
           - {os: ubuntu-22.04, compiler: gcc, version: 12}
           - {os: ubuntu-22.04, compiler: gcc, version: 13}
+          - {os: ubuntu-22.04, compiler: gcc, version: 14}
+          - {os: ubuntu-24.04, compiler: gcc, version: 11}
+          - {os: ubuntu-24.04, compiler: gcc, version: 12}
+          - {os: ubuntu-24.04, compiler: gcc, version: 13}
+          - {os: ubuntu-24.04, compiler: gcc, version: 14}
           - {os: macos-13, compiler: gcc, version: 11}
           - {os: macos-13, compiler: gcc, version: 12}
           - {os: macos-13, compiler: gcc, version: 13}
           - {os: macos-14, compiler: gcc, version: 11}
           - {os: macos-14, compiler: gcc, version: 12}
           - {os: macos-14, compiler: gcc, version: 13}
+          - {os: macos-14, compiler: gcc, version: 14}
           - {os: windows-2022, compiler: gcc, version: 11}
           - {os: windows-2022, compiler: gcc, version: 12}
           - {os: windows-2022, compiler: gcc, version: 13}
           # ifx
-          - {os: ubuntu-22.04, compiler: intel, version: 2024.1}
+          - {os: ubuntu-22.04, compiler: intel, version: "2025.0"}
+          - {os: ubuntu-22.04, compiler: intel, version: "2024.1"}
           - {os: ubuntu-22.04, compiler: intel, version: "2024.0"}
-          - {os: ubuntu-22.04, compiler: intel, version: 2023.2}
-          - {os: ubuntu-22.04, compiler: intel, version: 2023.1}
-          - {os: ubuntu-22.04, compiler: intel, version: "2023.0"}
-          - {os: ubuntu-22.04, compiler: intel, version: 2022.2.1}
-          - {os: ubuntu-22.04, compiler: intel, version: 2022.2}
-          - {os: windows-2022, compiler: intel, version: 2024.1}
+          - {os: windows-2022, compiler: intel, version: "2025.0"}
+          - {os: windows-2022, compiler: intel, version: "2024.1"}
           - {os: windows-2022, compiler: intel, version: "2024.0"}
-          - {os: windows-2022, compiler: intel, version: 2023.2}
-          - {os: windows-2022, compiler: intel, version: 2023.1}
-          - {os: windows-2022, compiler: intel, version: "2023.0"}
-          - {os: windows-2022, compiler: intel, version: 2022.2}
           # ifort
           - {os: ubuntu-22.04, compiler: intel-classic, version: "2021.10"}
           - {os: ubuntu-22.04, compiler: intel-classic, version: 2021.9}
@@ -97,12 +96,18 @@ jobs:
       - name: Setup pixi
         uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.24.2
+          pixi-version: v0.40.1
           manifest-path: "modflow6/pixi.toml"
 
       - name: Custom pixi install
         working-directory: modflow6
         run: pixi run install
+
+      - name: Set LDFLAGS (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          ldflags="$LDFLAGS -Wl,-ld_classic"
+          echo "LDFLAGS=$ldflags" >> $GITHUB_ENV
 
       - name: Build modflow6
         working-directory: modflow6
@@ -117,7 +122,7 @@ jobs:
       
       - name: Upload build log
         if: failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: meson-log.txt
           path: modflow6/builddir/meson-logs/meson-log.txt
@@ -176,9 +181,9 @@ jobs:
 
       - name: Upload reports
         if: success() || failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: compat
+          name: compat-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.version }}
           path: compat/*.csv
 
   report:
@@ -203,10 +208,11 @@ jobs:
         run: pip install tabulate pandas
 
       - name: Download reports
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: compat
+          pattern: compat-*
           path: .github/compat/new
+          merge-multiple: true
 
       - name: Concatenate reports
         working-directory: .github/compat
@@ -226,7 +232,7 @@ jobs:
 
       # only upload wide CSVs and Markdown tables
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: compat
           path: |

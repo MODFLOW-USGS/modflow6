@@ -370,8 +370,10 @@ def check_output(idx, test):
 
     # compare heads
     maxdiff = np.amax(abs(heads - heads_merged))
-    assert maxdiff < 10 * hclose_check, f"Max. head diff. {maxdiff} should \
+    assert maxdiff < 10 * hclose_check, (
+        f"Max. head diff. {maxdiff} should \
                      be within solver tolerance (x10): {10 * hclose_check}"
+    )
 
     # compare spdis-x
     qx_top = np.append(qx_tl[0], qx_tr[0], axis=1)
@@ -379,8 +381,10 @@ def check_output(idx, test):
     qx_merged = np.append(qx_top, qx_bot, axis=0)
 
     maxdiff = np.amax(abs(qx - qx_merged))
-    assert maxdiff < 10 * hclose_check, f"Max. diff. in spec. discharge (x) {maxdiff} \
+    assert maxdiff < 10 * hclose_check, (
+        f"Max. diff. in spec. discharge (x) {maxdiff} \
                      should be within solver tolerance (x10): {10 * hclose_check}"
+    )
 
     # compare spdis-y
     qy_top = np.append(qy_tl[0], qy_tr[0], axis=1)
@@ -388,8 +392,10 @@ def check_output(idx, test):
     qy_merged = np.append(qy_top, qy_bot, axis=0)
 
     maxdiff = np.amax(abs(qy - qy_merged))
-    assert maxdiff < 10 * hclose_check, f"Max. diff. in spec. discharge (y) {maxdiff} \
+    assert maxdiff < 10 * hclose_check, (
+        f"Max. diff. in spec. discharge (y) {maxdiff} \
                      should be within solver tolerance (x10): {10 * hclose_check}"
+    )
 
     # compare spdis-z
     qz_top = np.append(qz_tl[0], qz_tr[0], axis=1)
@@ -397,8 +403,10 @@ def check_output(idx, test):
     qz_merged = np.append(qz_top, qz_bot, axis=0)
 
     maxdiff = np.amax(abs(qz - qz_merged))
-    assert maxdiff < 10 * hclose_check, f"Max. diff. in spec. discharge (z) {maxdiff} \
+    assert maxdiff < 10 * hclose_check, (
+        f"Max. diff. in spec. discharge (z) {maxdiff} \
                      should be within solver tolerance (x10): {10 * hclose_check}"
+    )
 
     # check budget error from .lst file
     for mname in ["ref", "tl", "tr", "bl", "br"]:

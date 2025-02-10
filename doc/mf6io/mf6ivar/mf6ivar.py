@@ -189,6 +189,7 @@ def parse_mf6var_file(fname):
 
 
 MF6IVAR_DIR_PATH = Path(__file__).parent
+MF6IO_DIR_PATH = Path(__file__).parents[1]
 DFNS_DIR_PATH = MF6IVAR_DIR_PATH / "dfn"
 EXAMPLES_DIR_PATH = MF6IVAR_DIR_PATH / "examples"
 MD_DIR_PATH = MF6IVAR_DIR_PATH / "md"
@@ -196,7 +197,10 @@ TEX_DIR_PATH = MF6IVAR_DIR_PATH / "tex"
 RTD_DOC_DIR_PATH = Path(__file__).parents[3] / ".build_rtd_docs" / "_mf6io"
 COMMON_DFN_PATH = parse_mf6var_file(DFNS_DIR_PATH / "common.dfn")
 COMMON_DIR_PATH = MF6IVAR_DIR_PATH.parent.parent / "Common"
-DEFAULT_MODELS = ["gwf", "gwt", "gwe", "prt"]  # , "chf", "olf"]
+DEFAULT_MODELS = ["gwf", "gwt", "gwe", "prt"]
+DEVELOP_MODELS = ["chf", "olf"]
+if (MF6IO_DIR_PATH / "develop.version").is_file():
+    DEFAULT_MODELS += DEVELOP_MODELS
 VALID_TYPES = [
     "integer",
     "double precision",
@@ -413,6 +417,11 @@ def write_desc(vardict, block, blk_var_list, varexcludeprefix=None):
                     # s += '\\begin{verbatim}\n'
                     s += "\\begin{lstlisting}[style=blockdefinition]\n"
                     for vn in t.strip().split()[1:]:
+                        if (
+                            "removed" in vardict[(vn, block)]
+                            or "deprecated" in vardict[(vn, block)]
+                        ):
+                            continue
                         blockentry = block_entry(vn, block, vardict, "")
                         s += f"{blockentry}\n"
                     # s += '\\end{verbatim}\n\n'
