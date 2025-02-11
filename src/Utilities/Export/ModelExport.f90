@@ -74,7 +74,7 @@ contains
   !> @brief create export container variable for all local models
   !!
   subroutine modelexports_create(iout)
-    use InputLoadTypeModule, only: model_dynamic_pkgs
+    use InputLoadTypeModule, only: input_models
     use MemoryManagerModule, only: mem_setptr
     use MemoryManagerExtModule, only: mem_set_value
     use MemoryHelperModule, only: create_mem_path
@@ -83,31 +83,31 @@ contains
     use NCModelExportModule, only: NETCDF_MESH2D, NETCDF_STRUCTURED
     use SourceCommonModule, only: file_ext
     integer(I4B), intent(in) :: iout
-    type(ModelDynamicPkgsType), pointer :: model_dynamic_input
+    type(ModelDynamicPkgsType), pointer :: input_model
     type(ExportModelType), pointer :: export_model
     character(len=LENMEMPATH) :: modelnam_mempath, model_mempath, ext
     integer(I4B), pointer :: disenum
     integer(I4B) :: n
     logical(LGP) :: found
 
-    do n = 1, model_dynamic_pkgs%Count()
+    do n = 1, input_models%Count()
       ! allocate and initialize
       allocate (export_model)
 
       ! set pointer to dynamic input model instance
-      model_dynamic_input => GetDynamicModelFromList(model_dynamic_pkgs, n)
+      input_model => GetDynamicModelFromList(input_models, n)
 
       ! set input mempaths
       modelnam_mempath = &
-        create_mem_path(component=model_dynamic_input%modelname, &
+        create_mem_path(component=input_model%modelname, &
                         subcomponent='NAM', context=idm_context)
-      model_mempath = create_mem_path(component=model_dynamic_input%modelname, &
+      model_mempath = create_mem_path(component=input_model%modelname, &
                                       context=idm_context)
       ! set pointer to dis enum type
       call mem_setptr(disenum, 'DISENUM', model_mempath)
 
       ! initialize model
-      call export_model%init(model_dynamic_input, disenum, iout)
+      call export_model%init(input_model, disenum, iout)
 
       ! update NetCDF fileout name if provided
       call mem_set_value(export_model%nc_fname, 'NCMESH2DFILE', &

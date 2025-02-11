@@ -15,7 +15,7 @@ module IdmLoadModule
   use InputLoadTypeModule, only: StaticPkgLoadBaseType, &
                                  DynamicPkgLoadBaseType, &
                                  ModelDynamicPkgsType, &
-                                 model_dynamic_pkgs
+                                 input_models
   use InputDefinitionModule, only: InputParamDefinitionType
   use ModflowInputModule, only: ModflowInputType, getModflowInput
 
@@ -38,8 +38,8 @@ contains
     use InputLoadTypeModule, only: GetDynamicModelFromList
     class(ModelDynamicPkgsType), pointer :: model_dynamic_input
     integer(I4B) :: n
-    do n = 1, model_dynamic_pkgs%Count()
-      model_dynamic_input => GetDynamicModelFromList(model_dynamic_pkgs, n)
+    do n = 1, input_models%Count()
+      model_dynamic_input => GetDynamicModelFromList(input_models, n)
       call model_dynamic_input%df()
     end do
   end subroutine idm_df
@@ -50,8 +50,8 @@ contains
     use InputLoadTypeModule, only: GetDynamicModelFromList
     class(ModelDynamicPkgsType), pointer :: model_dynamic_input
     integer(I4B) :: n
-    do n = 1, model_dynamic_pkgs%Count()
-      model_dynamic_input => GetDynamicModelFromList(model_dynamic_pkgs, n)
+    do n = 1, input_models%Count()
+      model_dynamic_input => GetDynamicModelFromList(input_models, n)
       call model_dynamic_input%rp()
     end do
   end subroutine idm_rp
@@ -62,8 +62,8 @@ contains
     use InputLoadTypeModule, only: GetDynamicModelFromList
     class(ModelDynamicPkgsType), pointer :: model_dynamic_input
     integer(I4B) :: n
-    do n = 1, model_dynamic_pkgs%Count()
-      model_dynamic_input => GetDynamicModelFromList(model_dynamic_pkgs, n)
+    do n = 1, input_models%Count()
+      model_dynamic_input => GetDynamicModelFromList(input_models, n)
       call model_dynamic_input%ad()
     end do
   end subroutine idm_ad
@@ -123,7 +123,7 @@ contains
     integer(I4B), intent(in) :: iout
     class(StaticPkgLoadBaseType), pointer :: static_loader
     class(DynamicPkgLoadBaseType), pointer :: dynamic_loader
-    class(ModelDynamicPkgsType), pointer :: dynamic_pkgs
+    class(ModelDynamicPkgsType), pointer :: dynamic_model
     integer(I4B) :: n
 
     ! create model package loader
@@ -134,14 +134,15 @@ contains
     ! load static input and set dynamic loader
     dynamic_loader => static_loader%load(iout)
 
+    ! set pointer to model dynamic packages list
+    dynamic_model => &
+      dynamic_models(static_loader%mf6_input%component_type, modelname, &
+                     static_loader%component_input_name, nc_vars%nc_fname, &
+                     nc_vars%ncid, iout)
+
     if (associated(dynamic_loader)) then
-      ! set pointer to model dynamic packages list
-      dynamic_pkgs => &
-        dynamic_model_pkgs(static_loader%mf6_input%component_type, modelname, &
-                           static_loader%component_input_name, nc_vars%nc_fname, &
-                           nc_vars%ncid, iout)
       ! add dynamic pkg loader to list
-      call dynamic_pkgs%add(dynamic_loader)
+      call dynamic_model%add(dynamic_loader)
     end if
 
     ! create subpackage list
@@ -460,8 +461,8 @@ contains
 
   !> @brief retrieve list of model dynamic loaders
   !<
-  function dynamic_model_pkgs(modeltype, modelname, modelfname, nc_fname, &
-                              ncid, iout) result(model_dynamic_input)
+  function dynamic_models(modeltype, modelname, modelfname, nc_fname, &
+                          ncid, iout) result(model_dynamic_input)
     use InputLoadTypeModule, only: AddDynamicModelToList, GetDynamicModelFromList
     character(len=*), intent(in) :: modeltype
     character(len=*), intent(in) :: modelname
@@ -477,8 +478,8 @@ contains
     nullify (model_dynamic_input)
 
     ! assign model loader object if found
-    do id = 1, model_dynamic_pkgs%Count()
-      temp => GetDynamicModelFromList(model_dynamic_pkgs, id)
+    do id = 1, input_models%Count()
+      temp => GetDynamicModelFromList(input_models, id)
       if (temp%modelname == modelname) then
         model_dynamic_input => temp
         exit
@@ -490,9 +491,9 @@ contains
       allocate (model_dynamic_input)
       call model_dynamic_input%init(modeltype, modelname, modelfname, &
                                     nc_fname, ncid, iout)
-      call AddDynamicModelToList(model_dynamic_pkgs, model_dynamic_input)
+      call AddDynamicModelToList(input_models, model_dynamic_input)
     end if
-  end function dynamic_model_pkgs
+  end function dynamic_models
 
   !> @brief deallocate all model dynamic loader collections
   !<
@@ -502,14 +503,14 @@ contains
     integer(I4B), intent(in) :: iout
     class(ModelDynamicPkgsType), pointer :: model_dynamic_input
     integer(I4B) :: n
-    do n = 1, model_dynamic_pkgs%Count()
-      model_dynamic_input => GetDynamicModelFromList(model_dynamic_pkgs, n)
+    do n = 1, input_models%Count()
+      model_dynamic_input => GetDynamicModelFromList(input_models, n)
       call nc_close(model_dynamic_input%ncid, model_dynamic_input%nc_fname)
       call model_dynamic_input%destroy()
       deallocate (model_dynamic_input)
       nullify (model_dynamic_input)
     end do
-    call model_dynamic_pkgs%Clear()
+    call input_models%Clear()
   end subroutine dynamic_da
 
   !> @brief return sim input context PRINT_INPUT value
