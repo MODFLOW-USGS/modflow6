@@ -23,7 +23,7 @@ module InputLoadTypeModule
   public :: ModelDynamicPkgsType
   public :: AddDynamicModelToList, GetDynamicModelFromList
   public :: StaticPkgLoadType, DynamicPkgLoadType
-  public :: model_dynamic_pkgs
+  public :: model_inputs
 
   !> @brief type representing package subpackage list
   type :: SubPackageListType
@@ -143,7 +143,7 @@ module InputLoadTypeModule
     procedure :: destroy => dynamicpkgs_destroy
   end type ModelDynamicPkgsType
 
-  type(ListType) :: model_dynamic_pkgs
+  type(ListType) :: model_inputs
 
 contains
 
