@@ -96,7 +96,11 @@ The GWT model for MODFLOW 6 simulates three-dimensional transport of a single so
 
 [Langevin, C.D., Hughes, J.D., Provost, A.M., Russcher, M.J. and Panday, S., 2023, MODFLOW as a Configurable Multi-Model Hydrologic Simulator: Groundwater, v. 62, p. 111-123, https://doi.org/10.1111/gwat.13351.](https://doi.org/10.1111/gwat.13351)
 
-[Larsen, J.D., Langevin, C.D., Hughes, J.D. and Niswonger, R.G. (2024), An Agricultural Package for MODFLOW 6 Using the Application Programming Interface. Groundwater, v. 62, p. 157-166, https://doi.org/10.1111/gwat.13367.](https://doi.org/10.1111/gwat.13367)
+[Larsen, J.D., Langevin, C.D., Hughes, J.D. and Niswonger, R.G., 2024, An Agricultural Package for MODFLOW 6 Using the Application Programming Interface. Groundwater, v. 62, p. 157-166, https://doi.org/10.1111/gwat.13367.](https://doi.org/10.1111/gwat.13367)
+
+[Provost, A.M., Bardot, K., Langevin, C.D., McCallum, J.L., 2025, Accurate Simulation of Flow through Dipping Aquifers with MODFLOW 6 Using Enhanced Cell Connectivity. Groundwater, https://doi.org/10.1111/gwat.13459.]( https://doi.org/10.1111/gwat.13459)
+
+[Morway, E.D., Provost, A.M., Langevin, C.D., Hughes, J.D., Russcher, M.J., Chen, C.Y., Lin, Y.F.F., 2025, A New Groundwater Energy Transport Model for the MODFLOW Hydrologic Simulator. Groundwater, https://doi.org/10.1111/gwat.13470.]( https://doi.org/10.1111/gwat.13470)
 
 #### ***Software/Code***
 
