@@ -203,7 +203,7 @@ html_css_files = [
 ]
 
 # html_theme_options = {
-#     "github_url": "https://github.com/MODFLOW-USGS/modflow6",
+#     "github_url": "https://github.com/MODFLOW-ORG/modflow6",
 #     "use_edit_page_button": False
 # }
 

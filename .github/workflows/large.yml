@@ -63,7 +63,7 @@ jobs:
       - name: Checkout modflow6-largetestmodels
         uses: actions/checkout@v4
         with:
-          repository: MODFLOW-USGS/modflow6-largetestmodels
+          repository: MODFLOW-ORG/modflow6-largetestmodels
           path: modflow6-largetestmodels
 
       - name: Setup pixi

@@ -20,7 +20,7 @@ PROJ_ROOT_PATH = get_project_root_path()
 EXAMPLES_REPO_PATH = PROJ_ROOT_PATH.parent / "modflow6-examples"
 BUILD_PATH = PROJ_ROOT_PATH / "builddir"
 BIN_PATH = PROJ_ROOT_PATH / "bin"
-GITHUB_REPO = "MODFLOW-USGS/modflow6"
+GITHUB_REPO = "MODFLOW-ORG/modflow6"
 BENCHMARKS_FILE_NAME = "run-time-comparison.md"
 IS_WINDOWS = sys.platform.lower() == "win32"
 EXE_EXT = ".exe" if IS_WINDOWS else ""
@@ -258,7 +258,7 @@ def write_results(
             + f"to the previous version ({previous_v}). "
             + "The current example models available from the "
             + "[MODFLOW 6 Examples GitHub Repository]"
-            + "(https://github.com/MODFLOW-USGS/modflow6-examples) are "
+            + "(https://github.com/MODFLOW-ORG/modflow6-examples) are "
             + "used to compare run times. Simulations that fail are "
             + "indicated by '--'. The percent difference, where calculated, "
             + "is relative to the simulation run time for the previous "
@@ -386,7 +386,7 @@ if __name__ == "__main__":
         epilog=textwrap.dedent(
             """\
     Benchmarks the current version of MODFLOW 6 against the latest official release,
-    with the example models stored in the MODFLOW-USGS/modflow6-examples repository.
+    with the example models stored in the MODFLOW-ORG/modflow6-examples repository.
             """
         ),
     )

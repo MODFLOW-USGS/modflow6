@@ -14,12 +14,12 @@ on:
         required: true
         type: string
       compiler_toolchain:
-        description: 'Compiler toolchain to use. For supported options see https://github.com/MODFLOW-USGS/modflow6/blob/develop/DEVELOPER.md#compiler-compatibility.'
+        description: 'Compiler toolchain to use. For supported options see https://github.com/MODFLOW-ORG/modflow6/blob/develop/DEVELOPER.md#compiler-compatibility.'
         required: false
         type: string
         default: 'intel-classic'
       compiler_version:
-        description: 'Compiler version to use. For supported options see https://github.com/MODFLOW-USGS/modflow6/blob/develop/DEVELOPER.md#compiler-compatibility.'
+        description: 'Compiler version to use. For supported options see https://github.com/MODFLOW-ORG/modflow6/blob/develop/DEVELOPER.md#compiler-compatibility.'
         required: false
         type: string
         default: '2021.7'
@@ -269,14 +269,14 @@ jobs:
         if: inputs.run_tests == true && runner.os != 'Windows'
         uses: actions/checkout@v4
         with:
-          repository: MODFLOW-USGS/modflow6-testmodels
+          repository: MODFLOW-ORG/modflow6-testmodels
           path: modflow6-testmodels
 
       - name: Checkout modflow6-examples
         if: inputs.run_tests == true && runner.os != 'Windows'
         uses: actions/checkout@v4
         with:
-          repository: MODFLOW-USGS/modflow6-examples
+          repository: MODFLOW-ORG/modflow6-examples
           path: modflow6-examples
 
       - name: Update flopy
@@ -323,7 +323,7 @@ jobs:
         if: ${{ runner.os == 'Linux' && inputs.run_tests == true }}
         uses: actions/checkout@v4
         with:
-          repository: MODFLOW-USGS/usgslatex
+          repository: MODFLOW-ORG/usgslatex
           path: usgslatex
 
       - name: Install TeX Live
@@ -367,13 +367,13 @@ jobs:
       - name: Checkout modflow6-examples
         uses: actions/checkout@v4
         with:
-          repository: MODFLOW-USGS/modflow6-examples
+          repository: MODFLOW-ORG/modflow6-examples
           path: modflow6-examples
 
       - name: Checkout usgslatex
         uses: actions/checkout@v4
         with:
-          repository: MODFLOW-USGS/usgslatex
+          repository: MODFLOW-ORG/usgslatex
           path: usgslatex
 
       - name: Install TeX Live
@@ -476,7 +476,7 @@ jobs:
       - name: Build documentation
         env:
           # this step is lazy about building the mf6 examples PDF document, first
-          # trying to download a prebuilt PDF from MODFLOW-USGS/modflow6-examples,
+          # trying to download a prebuilt PDF from MODFLOW-ORG/modflow6-examples,
           # so it needs a GITHUB_TOKEN.
           GITHUB_TOKEN: ${{ github.token }}
         run: |
@@ -529,7 +529,7 @@ jobs:
       - name: Checkout modflow6-examples
         uses: actions/checkout@v4
         with:
-          repository: MODFLOW-USGS/modflow6-examples
+          repository: MODFLOW-ORG/modflow6-examples
           path: modflow6-examples
 
       - name: Setup Micromamba

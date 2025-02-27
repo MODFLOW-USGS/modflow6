@@ -2,7 +2,7 @@
 Simulate the effect of a general head boundary (ghb) at the downgradient end
 of the model with a head below the bottom of the cell. Compare api result to
 a non-api simulation using the well package to simulate an equivalent ghb.
-Possible solution to https://github.com/MODFLOW-USGS/modflow6/issues/724
+Possible solution to https://github.com/MODFLOW-ORG/modflow6/issues/724
 """
 
 import os

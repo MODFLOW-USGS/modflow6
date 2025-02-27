@@ -1,6 +1,6 @@
 """
 Test that zonebudget works on a cell budget file from GWT
-https://github.com/MODFLOW-USGS/modflow6/discussions/1181
+https://github.com/MODFLOW-ORG/modflow6/discussions/1181
 """
 
 import os

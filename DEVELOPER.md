@@ -202,7 +202,7 @@ Visual Studio installers can be downloaded from the [official website](https://v
 
 *Doxygen & LaTeX*
 
-[Doxygen](https://www.doxygen.nl/index.html) is used to generate the [MODFLOW 6 source code documentation](https://modflow-usgs.github.io/modflow6/). [Graphviz](https://graphviz.org/) is used by doxygen to produce source code diagrams. [LaTeX](https://www.latex-project.org/) is used to generate the MODFLOW 6 release notes and Input/Output documents.
+[Doxygen](https://www.doxygen.nl/index.html) is used to generate the [MODFLOW 6 source code documentation](https://MODFLOW-ORG.github.io/modflow6/). [Graphviz](https://graphviz.org/) is used by doxygen to produce source code diagrams. [LaTeX](https://www.latex-project.org/) is used to generate the MODFLOW 6 release notes and Input/Output documents.
 
 These programs can be installed from various sources, including by conda, macports, or from individual sources such as https://www.tug.org/. Details about USGS LaTeX libraries can be seen in addition to linux installs in the CI workflow for the docs (`.github/workflows/ci-docs.yml`).
 
@@ -212,7 +212,7 @@ These programs can be installed from various sources, including by conda, macpor
 Fork and clone the MODFLOW 6 repository:
 
 1. Login to your GitHub account or create one by following the instructions given [here](https://github.com/signup/free).
-2. [Fork](http://help.github.com/forking) the [main MODFLOW 6](https://github.com/MODFLOW-USGS/modflow6).
+2. [Fork](http://help.github.com/forking) the [main MODFLOW 6](https://github.com/MODFLOW-ORG/modflow6).
 3. Clone your fork of the MODFLOW 6 repository and create an `upstream` remote pointing back to your fork.
 
 After forking the MODFLOW 6 repository on GitHub.
@@ -232,7 +232,7 @@ cd modflow6
 3. Add the main MODFLOW 6 repository as an upstream remote to your repository.
 
 ```shell
-git remote add upstream https://github.com/MODFLOW-USGS/modflow6.git
+git remote add upstream https://github.com/MODFLOW-ORG/modflow6.git
 ```
 
 ## Install the python environment
@@ -302,7 +302,7 @@ Like MODFLOW 6, `flopy` is modular &mdash; for each MODFLOW 6 package there is g
 
 #### `modflow-devtools`
 
-The tests use a set of shared fixtures and utilities provided by the [`modflow-devtools`](https://github.com/MODFLOW-USGS/modflow-devtools) package.
+The tests use a set of shared fixtures and utilities provided by the [`modflow-devtools`](https://github.com/MODFLOW-ORG/modflow-devtools) package.
 
 ## Building
 
@@ -517,11 +517,11 @@ As mentioned above, binaries live in the `bin` subdirectory of the project root.
 
 - local development binaries in the top-level `bin`
 - binaries rebuilt in development mode from the latest MODFLOW 6 release in `bin/rebuilt/`
-- related programs installed from the [executables distribution](https://github.com/MODFLOW-USGS/executables/releases) in `bin/downloaded/`
+- related programs installed from the [executables distribution](https://github.com/MODFLOW-ORG/executables/releases) in `bin/downloaded/`
 
 ##### Rebuilding release binaries
 
-Tests require the latest official MODFLOW 6 release to be compiled in develop mode with the same Fortran compiler as the development version. A number of binaries distributed from the [executables repo](https://github.com/MODFLOW-USGS/executables) must also be installed. The script `autotest/get_exes.py` does both of these things. It can be run from the project root with:
+Tests require the latest official MODFLOW 6 release to be compiled in develop mode with the same Fortran compiler as the development version. A number of binaries distributed from the [executables repo](https://github.com/MODFLOW-ORG/executables) must also be installed. The script `autotest/get_exes.py` does both of these things. It can be run from the project root with:
 
 ```shell
 pixi run get-exes
@@ -575,9 +575,9 @@ pixi run update-fortran-definitions
 
 Some autotests load models from external repositories:
 
-- [`MODFLOW-USGS/modflow6-testmodels`](https://github.com/MODFLOW-USGS/modflow6-testmodels)
-- [`MODFLOW-USGS/modflow6-largetestmodels`](https://github.com/MODFLOW-USGS/modflow6-largetestmodels)
-- [`MODFLOW-USGS/modflow6-examples`](https://github.com/MODFLOW-USGS/modflow6-examples)
+- [`MODFLOW-ORG/modflow6-testmodels`](https://github.com/MODFLOW-ORG/modflow6-testmodels)
+- [`MODFLOW-ORG/modflow6-largetestmodels`](https://github.com/MODFLOW-ORG/modflow6-largetestmodels)
+- [`MODFLOW-ORG/modflow6-examples`](https://github.com/MODFLOW-ORG/modflow6-examples)
 
 See the [MODFLOW devtools documentation](https://modflow-devtools.readthedocs.io/en/latest/md/install.html#installing-external-model-repositories) for instructions to install external model repositories.
 
@@ -789,7 +789,7 @@ The framework has three hooks:
 
 A test script conventionally contains one or more test cases, fed to the test function as `idx, name` pairs. `idx` can be used to index parameter values or expected results for a specific test case. The test case `name` is useful for model/subdirectory naming, etc.
 
-The framework will not run an unknown program. The path to any program under test (or used for a comparison) must be registered in the `targets` dictionary. Keys are strings. See `autotest/conftest.py` for the contents of `targets` &mdash; naming follows the [executables distribution](https://github.com/MODFLOW-USGS/executables).
+The framework will not run an unknown program. The path to any program under test (or used for a comparison) must be registered in the `targets` dictionary. Keys are strings. See `autotest/conftest.py` for the contents of `targets` &mdash; naming follows the [executables distribution](https://github.com/MODFLOW-ORG/executables).
 
 The `.run()` function
 

@@ -11,7 +11,7 @@ from modflow_devtools.build import meson_build
 from modflow_devtools.download import download_and_unzip, get_release
 from modflow_devtools.misc import get_ostag
 
-repository = "MODFLOW-USGS/modflow6"
+repository = "MODFLOW-ORG/modflow6"
 top_bin_path = project_root_path / "bin"
 
 

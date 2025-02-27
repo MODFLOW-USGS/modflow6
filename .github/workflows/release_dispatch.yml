@@ -25,12 +25,12 @@ on:
         required: true
         type: string
       compiler_toolchain:
-        description: 'Compiler toolchain to use. For supported options see https://github.com/MODFLOW-USGS/modflow6/blob/develop/DEVELOPER.md#compiler-compatibility.'
+        description: 'Compiler toolchain to use. For supported options see https://github.com/MODFLOW-ORG/modflow6/blob/develop/DEVELOPER.md#compiler-compatibility.'
         required: false
         type: string
         default: 'intel-classic'
       compiler_version:
-        description: 'Compiler version to use. For supported options see https://github.com/MODFLOW-USGS/modflow6/blob/develop/DEVELOPER.md#compiler-compatibility.'
+        description: 'Compiler version to use. For supported options see https://github.com/MODFLOW-ORG/modflow6/blob/develop/DEVELOPER.md#compiler-compatibility.'
         required: false
         type: string
         default: '2021.7'
@@ -146,7 +146,7 @@ jobs:
           echo "models=$models" >> $GITHUB_OUTPUT
   make_dist:
     name: Make distribution
-    uses: MODFLOW-USGS/modflow6/.github/workflows/release.yml@develop
+    uses: MODFLOW-ORG/modflow6/.github/workflows/release.yml@develop
     needs: set_options
     with:
       # If the workflow is manually triggered, the maintainer must manually set approve=true to approve a release.

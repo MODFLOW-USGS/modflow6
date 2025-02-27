@@ -330,7 +330,7 @@ def build_documentation(
     force: bool = False,
     full: bool = False,
     models: Optional[list[str]] = None,
-    repo_owner: str = "MODFLOW-USGS",
+    repo_owner: str = "MODFLOW-ORG",
 ):
     """Build documentation for a MODFLOW 6 distribution."""
 
@@ -460,7 +460,7 @@ Additional LaTeX files may be included in the distribution by specifying --tex-p
     parser.add_argument(
         "--repo-owner",
         required=False,
-        default="MODFLOW-USGS",
+        default="MODFLOW-ORG",
         help="Repository owner (substitute your own for a fork)",
     )
     parser.add_argument(

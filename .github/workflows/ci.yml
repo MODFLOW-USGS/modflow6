@@ -231,13 +231,13 @@ jobs:
       - name: Checkout test models
         uses: actions/checkout@v4
         with:
-          repository: MODFLOW-USGS/modflow6-testmodels
+          repository: MODFLOW-ORG/modflow6-testmodels
           path: modflow6-testmodels
 
       - name: Checkout examples
         uses: actions/checkout@v4
         with:
-          repository: MODFLOW-USGS/modflow6-examples
+          repository: MODFLOW-ORG/modflow6-examples
           path: modflow6-examples
 
       - name: Setup ${{ env.FC }} ${{ env.FC_V }}
@@ -335,7 +335,7 @@ jobs:
         if: runner.os == 'Linux'
         uses: actions/checkout@v4
         with:
-          repository: MODFLOW-USGS/usgslatex
+          repository: MODFLOW-ORG/usgslatex
           path: usgslatex
 
       - name: Install TeX Live
@@ -397,13 +397,13 @@ jobs:
       - name: Checkout test models
         uses: actions/checkout@v4
         with:
-          repository: MODFLOW-USGS/modflow6-testmodels
+          repository: MODFLOW-ORG/modflow6-testmodels
           path: modflow6-testmodels
 
       - name: Checkout examples
         uses: actions/checkout@v4
         with:
-          repository: MODFLOW-USGS/modflow6-examples
+          repository: MODFLOW-ORG/modflow6-examples
           path: modflow6-examples
 
       - name: Setup pixi
