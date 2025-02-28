@@ -8,7 +8,7 @@ the Newton formulation.
 
 This test case is adapted from the example
 simulation provided by @javgs-bd in
-https://github.com/MODFLOW-USGS/modflow6/issues/2014.
+https://github.com/MODFLOW-ORG/modflow6/issues/2014.
 """
 
 import os

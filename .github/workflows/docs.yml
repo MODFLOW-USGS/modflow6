@@ -53,13 +53,13 @@ jobs:
       - name: Checkout modflow6-examples
         uses: actions/checkout@v4
         with:
-          repository: MODFLOW-USGS/modflow6-examples
+          repository: MODFLOW-ORG/modflow6-examples
           path: modflow6-examples
 
       - name: Checkout usgslatex
         uses: actions/checkout@v4
         with:
-          repository: MODFLOW-USGS/usgslatex
+          repository: MODFLOW-ORG/usgslatex
           path: usgslatex
 
       - name: Setup pixi
@@ -201,7 +201,7 @@ jobs:
     name: rtd-trigger
     needs: rtd_build
     runs-on: ubuntu-22.04
-    if: github.repository_owner == 'MODFLOW-USGS' && github.event_name == 'push'
+    if: github.repository_owner == 'MODFLOW-ORG' && github.event_name == 'push'
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4

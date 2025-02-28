@@ -115,7 +115,7 @@ def setup_examples(
     examples_path = Path(examples_path).expanduser().absolute()
 
     # find and download example models distribution from latest examples release
-    latest = get_release("MODFLOW-USGS/modflow6-examples", tag="latest", verbose=True)
+    latest = get_release("MODFLOW-ORG/modflow6-examples", tag="latest", verbose=True)
     assets = latest["assets"]
     print(f"Found {len(assets)} assets from the latest examples release:")
     pprint([a["name"] for a in assets])

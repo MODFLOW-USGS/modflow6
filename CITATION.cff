@@ -10,7 +10,7 @@ abstract: MODFLOW 6 is an object-oriented program and framework developed to pro
   same simulation. Within this framework, a regional-scale groundwater model may be
   coupled with multiple local-scale groundwater models. Or, a groundwater flow model
   could be coupled to a groundwater transport model of a single solute species.
-repository-code: https://github.com/MODFLOW-USGS/modflow6
+repository-code: https://github.com/MODFLOW-ORG/modflow6
 license: CC0-1.0
 authors:
 - family-names: Langevin

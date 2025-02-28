@@ -21,7 +21,7 @@ from M22, but not the other way around.
 The test was added to reproduce and fix the issue
 listed here:
 
-  https://github.com/MODFLOW-USGS/modflow6/issues/1744
+  https://github.com/MODFLOW-ORG/modflow6/issues/1744
 
 """
 

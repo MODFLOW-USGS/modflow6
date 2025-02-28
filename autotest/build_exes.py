@@ -5,7 +5,7 @@ import pytest
 from conftest import project_root_path
 from modflow_devtools.build import meson_build
 
-repository = "MODFLOW-USGS/modflow6"
+repository = "MODFLOW-ORG/modflow6"
 top_bin_path = project_root_path / "bin"
 
 
