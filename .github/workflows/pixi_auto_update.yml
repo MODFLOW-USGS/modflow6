@@ -19,7 +19,6 @@ jobs:
 
       - name: Update pixi lock file
         run: |
-          rm pixi.lock
           pixi global install pixi-diff-to-markdown
           printf "Update pixi dependencies to the latest version\n\n" >> diff.md
           pixi update --json | pixi exec pixi-diff-to-markdown >> diff.md
