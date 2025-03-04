@@ -14,6 +14,10 @@ module ChfDisv1DInputModule
   type ChfDisv1dParamFoundType
     logical :: length_units = .false.
     logical :: nogrb = .false.
+    logical :: grb_filerecord = .false.
+    logical :: grb6 = .false.
+    logical :: fileout = .false.
+    logical :: grb6_filename = .false.
     logical :: xorigin = .false.
     logical :: yorigin = .false.
     logical :: angrot = .false.
@@ -72,6 +76,78 @@ module ChfDisv1DInputModule
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    chfdisv1d_grb_filerecord = InputParamDefinitionType &
+    ( &
+    'CHF', & ! component
+    'DISV1D', & ! subcomponent
+    'OPTIONS', & ! block
+    'GRB_FILERECORD', & ! tag name
+    'GRB_FILERECORD', & ! fortran variable
+    'RECORD GRB6 FILEOUT GRB6_FILENAME', & ! type
+    '', & ! shape
+    '', & ! longname
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    chfdisv1d_grb6 = InputParamDefinitionType &
+    ( &
+    'CHF', & ! component
+    'DISV1D', & ! subcomponent
+    'OPTIONS', & ! block
+    'GRB6', & ! tag name
+    'GRB6', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'grb keyword', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    chfdisv1d_fileout = InputParamDefinitionType &
+    ( &
+    'CHF', & ! component
+    'DISV1D', & ! subcomponent
+    'OPTIONS', & ! block
+    'FILEOUT', & ! tag name
+    'FILEOUT', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'file keyword', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    chfdisv1d_grb6_filename = InputParamDefinitionType &
+    ( &
+    'CHF', & ! component
+    'DISV1D', & ! subcomponent
+    'OPTIONS', & ! block
+    'GRB6_FILENAME', & ! tag name
+    'GRB6_FILENAME', & ! fortran variable
+    'STRING', & ! type
+    '', & ! shape
+    'file name of GRB information', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .true., & ! preserve case
     .false., & ! layered
     .false. & ! timeseries
     )
@@ -369,6 +445,10 @@ module ChfDisv1DInputModule
     [ &
     chfdisv1d_length_units, &
     chfdisv1d_nogrb, &
+    chfdisv1d_grb_filerecord, &
+    chfdisv1d_grb6, &
+    chfdisv1d_fileout, &
+    chfdisv1d_grb6_filename, &
     chfdisv1d_xorigin, &
     chfdisv1d_yorigin, &
     chfdisv1d_angrot, &

@@ -14,6 +14,10 @@ module OlfDisv2DInputModule
   type OlfDisv2dParamFoundType
     logical :: length_units = .false.
     logical :: nogrb = .false.
+    logical :: grb_filerecord = .false.
+    logical :: grb6 = .false.
+    logical :: fileout = .false.
+    logical :: grb6_filename = .false.
     logical :: xorigin = .false.
     logical :: yorigin = .false.
     logical :: angrot = .false.
@@ -72,6 +76,78 @@ module OlfDisv2DInputModule
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    olfdisv2d_grb_filerecord = InputParamDefinitionType &
+    ( &
+    'OLF', & ! component
+    'DISV2D', & ! subcomponent
+    'OPTIONS', & ! block
+    'GRB_FILERECORD', & ! tag name
+    'GRB_FILERECORD', & ! fortran variable
+    'RECORD GRB6 FILEOUT GRB6_FILENAME', & ! type
+    '', & ! shape
+    '', & ! longname
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    olfdisv2d_grb6 = InputParamDefinitionType &
+    ( &
+    'OLF', & ! component
+    'DISV2D', & ! subcomponent
+    'OPTIONS', & ! block
+    'GRB6', & ! tag name
+    'GRB6', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'grb keyword', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    olfdisv2d_fileout = InputParamDefinitionType &
+    ( &
+    'OLF', & ! component
+    'DISV2D', & ! subcomponent
+    'OPTIONS', & ! block
+    'FILEOUT', & ! tag name
+    'FILEOUT', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    'file keyword', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    olfdisv2d_grb6_filename = InputParamDefinitionType &
+    ( &
+    'OLF', & ! component
+    'DISV2D', & ! subcomponent
+    'OPTIONS', & ! block
+    'GRB6_FILENAME', & ! tag name
+    'GRB6_FILENAME', & ! fortran variable
+    'STRING', & ! type
+    '', & ! shape
+    'file name of GRB information', & ! longname
+    .true., & ! required
+    .true., & ! multi-record
+    .true., & ! preserve case
     .false., & ! layered
     .false. & ! timeseries
     )
@@ -369,6 +445,10 @@ module OlfDisv2DInputModule
     [ &
     olfdisv2d_length_units, &
     olfdisv2d_nogrb, &
+    olfdisv2d_grb_filerecord, &
+    olfdisv2d_grb6, &
+    olfdisv2d_fileout, &
+    olfdisv2d_grb6_filename, &
     olfdisv2d_xorigin, &
     olfdisv2d_yorigin, &
     olfdisv2d_angrot, &

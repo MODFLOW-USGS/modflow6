@@ -32,6 +32,7 @@ module BaseDisModule
     character(len=LENMEMPATH) :: input_mempath = '' !< input context mempath
     character(len=LENMODELNAME), pointer :: name_model => null() !< name of the model
     character(len=LINELENGTH), pointer :: input_fname => null() !< input file name
+    character(len=LINELENGTH), pointer :: output_fname => null() !< output file name
     integer(I4B), pointer :: inunit => null() !< unit number for input file
     integer(I4B), pointer :: iout => null() !< unit number for output file
     integer(I4B), pointer :: nodes => null() !< number of nodes in solution
@@ -212,6 +213,7 @@ contains
     ! -- Strings
     deallocate (this%name_model)
     deallocate (this%input_fname)
+    deallocate (this%output_fname)
     !
     ! -- Scalars
     call mem_deallocate(this%inunit)
@@ -409,6 +411,7 @@ contains
     ! -- Allocate
     allocate (this%name_model)
     allocate (this%input_fname)
+    allocate (this%output_fname)
     !
     call mem_allocate(this%inunit, 'INUNIT', this%memoryPath)
     call mem_allocate(this%iout, 'IOUT', this%memoryPath)
@@ -428,6 +431,7 @@ contains
     this%name_model = name_model
     this%input_mempath = input_mempath
     this%input_fname = ''
+    this%output_fname = ''
     this%inunit = 0
     this%iout = 0
     this%nodes = 0
@@ -442,9 +446,14 @@ contains
     this%njas = 0
     this%lenuni = 0
     !
-    ! -- update input filename
+    ! -- update input and output filenames
     call mem_set_value(this%input_fname, 'INPUT_FNAME', &
                        this%input_mempath, found)
+    call mem_set_value(this%output_fname, 'GRB6_FILENAME', &
+                       this%input_mempath, found)
+    if (.not. found) then
+      this%output_fname = trim(this%input_fname)//'.grb'
+    end if
   end subroutine allocate_scalars
 
   !> @brief Allocate and initialize arrays

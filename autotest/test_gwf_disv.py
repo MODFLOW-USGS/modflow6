@@ -7,7 +7,7 @@ one of the cells inactive and test to make sure connectivity
 in binary grid file is correct.
 """
 
-import os
+from pathlib import Path
 
 import flopy
 import numpy as np
@@ -16,6 +16,7 @@ from flopy.utils.gridutil import get_disv_kwargs
 from framework import TestFramework
 
 cases = ["disv01a", "disv01b"]
+grb_filename = "disv.grb"
 
 
 def build_models(idx, test):
@@ -46,7 +47,7 @@ def build_models(idx, test):
     tdis = flopy.mf6.ModflowTdis(sim)
     gwf = flopy.mf6.ModflowGwf(sim, modelname=name)
     ims = flopy.mf6.ModflowIms(sim, print_option="SUMMARY")
-    disv = flopy.mf6.ModflowGwfdisv(gwf, **disvkwargs)
+    disv = flopy.mf6.ModflowGwfdisv(gwf, grb_filerecord=grb_filename, **disvkwargs)
     ic = flopy.mf6.ModflowGwfic(gwf, strt=0.0)
     npf = flopy.mf6.ModflowGwfnpf(gwf)
     spd = {0: [[(0, 0), 1.0], [(0, nrow * ncol - 1), 0.0]]}
@@ -55,9 +56,7 @@ def build_models(idx, test):
 
 
 def check_output(idx, test):
-    name = test.name
-
-    fname = os.path.join(test.workspace, name + ".disv.grb")
+    fname = Path(test.workspace) / grb_filename
     grbobj = flopy.mf6.utils.MfGrdFile(fname)
     ncpl = grbobj._datadict["NCPL"]
     ia = grbobj._datadict["IA"]
