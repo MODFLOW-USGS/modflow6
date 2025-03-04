@@ -44,7 +44,7 @@ reader urword
 tagged true
 optional false
 longname file keyword
-description keyword to specify that an output filename is expected next.
+description keyword to specify that an output filename is expected next. If this option is not provided, the output file will have the same name as the discretization input file, plus extension ``.grb''.
 
 block options
 name grb6_filename
