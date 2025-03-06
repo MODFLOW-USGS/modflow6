@@ -112,7 +112,7 @@ contains
     character(len=MAXCHARLEN) :: fname
     logical :: isfound
     logical :: endOfBlock
-    logical(LGP) :: foundchildclassoption
+    logical(LGP) :: found
     integer(I4B) :: ierr
     ! -- formats
     character(len=*), parameter :: fmtts = &
@@ -153,11 +153,11 @@ contains
         case default
           !
           ! -- Check for child class options
-          call this%pbst_options(keyword, foundchildclassoption)
+          call this%pbst_options(keyword, found)
           !
           ! -- Defer to subtype to read the option;
           ! -- if the subtype can't handle it, report an error
-          if (.not. this%read_option(keyword)) then
+          if (.not. found) then
             write (errmsg, '(a,3(1x,a),a)') &
               'Unknown', trim(adjustl(this%packName)), "option '", &
               trim(keyword), "'."
