@@ -68,4 +68,4 @@ if __name__ == "__main__":
         ftex.close()
         print(f"Created LaTex file {fnametex} from markdown deprecations file {fpath}")
     else:
-        warn(f"Deprecations not found: {fpath}")
+        warn(f"Deprecations file not found: {fpath}")

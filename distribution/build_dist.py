@@ -324,7 +324,7 @@ def build_distribution(
     build_documentation(
         bin_path=output_path / "bin",
         full=full,
-        output_path=output_path / "doc",
+        out_path=output_path / "doc",
         force=force,
     )
 

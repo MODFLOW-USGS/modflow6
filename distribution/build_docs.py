@@ -128,14 +128,38 @@ def build_deprecations_tex(force: bool = False):
             out, err, ret = run_py_script("mk_deprecations.py", md_path, verbose=True)
             assert not ret, out + err
 
-    # check deprecations files exist
     assert md_path.is_file()
+    assert tex_path.is_file()
+
+
+def build_notes_tex(force: bool = False):
+    """Build LaTeX files for the release notes."""
+
+    build_deprecations_tex(force=force)
+
+    toml_path = RELEASE_NOTES_PATH / "develop.toml"
+    tex_path = RELEASE_NOTES_PATH / "develop.tex"
+    if tex_path.is_file() and not force:
+        print(f"{tex_path} already exists.")
+    else:
+        tex_path.unlink(missing_ok=True)
+        with set_dir(RELEASE_NOTES_PATH):
+            out, err, ret = run_py_script(
+                "mk_releasenotes.py", toml_path, tex_path, verbose=True
+            )
+            assert not ret, out + err
+
     assert tex_path.is_file()
 
 
 @no_parallel
 def test_build_deprecations_tex():
     build_deprecations_tex(force=True)
+
+
+@no_parallel
+def test_build_notes_tex():
+    build_notes_tex(force=True)
 
 
 def build_mf6io_tex(models: Optional[list[str]] = None, force: bool = False):
@@ -183,7 +207,7 @@ def test_build_mf6io_tex():
     build_mf6io_tex(force=True)
 
 
-def build_usage_example_tex(
+def build_usage_tex(
     workspace_path: PathLike, bin_path: PathLike, example_model_path: PathLike
 ):
     """
@@ -320,13 +344,38 @@ def test_build_pdfs_from_tex(tmp_path):
     ]
 
     build_pdfs(tex_paths, tmp_path)
-    for p in tex_paths[:-1] + bbl_paths:
-        assert p.is_file()
+
+    expected_paths = tex_paths[:-1] + bbl_paths
+    assert all(p.is_file() for p in expected_paths)
+
+
+def fetch_example_docs(
+    out_path: PathLike, force: bool = False, repo_owner: str = "MODFLOW-USGS"
+):
+    pdf_name = "mf6examples.pdf"
+    if force or not (out_path / pdf_name).is_file():
+        latest = get_release(f"{repo_owner}/modflow6-examples", "latest")
+        assets = latest["assets"]
+        asset = next(iter([a for a in assets if a["name"] == pdf_name]), None)
+        download_and_unzip(asset["browser_download_url"], out_path, verbose=True)
+
+
+def fetch_usgs_pubs(out_path: PathLike, force: bool = False):
+    for url in PUB_URLS:
+        print(f"Downloading publication: {url}")
+        try:
+            download_and_unzip(url, path=out_path, delete_zip=False)
+            assert (out_path / url.rpartition("/")[2]).is_file()
+        except HTTPError as e:
+            if "404" in str(e):
+                warn(f"Publication not found: {url}")
+            else:
+                raise
 
 
 def build_documentation(
     bin_path: PathLike,
-    output_path: PathLike,
+    out_path: PathLike,
     force: bool = False,
     full: bool = False,
     models: Optional[list[str]] = None,
@@ -337,72 +386,46 @@ def build_documentation(
     print(f"Building {'full' if full else 'minimal'} documentation")
 
     bin_path = Path(bin_path).expanduser().absolute()
-    output_path = Path(output_path).expanduser().absolute()
+    out_path = Path(out_path).expanduser().absolute()
+    pdf_path = out_path / "mf6io.pdf"
 
-    if (output_path / "mf6io.pdf").is_file() and not force:
-        print(f"{output_path / 'mf6io.pdf'} already exists")
+    if not force and pdf_path.is_file():
+        print(f"{pdf_path} already exists, nothing to do")
         return
 
-    # make sure output directory exists
-    output_path.mkdir(parents=True, exist_ok=True)
+    out_path.mkdir(parents=True, exist_ok=True)
 
-    # build LaTex input/output docs from DFN files
-    build_mf6io_tex(force=force, models=models)
-
-    # build LaTeX input/output example model docs
     with TemporaryDirectory() as temp:
-        build_usage_example_tex(
+        build_mf6io_tex(force=force, models=models)
+        build_usage_tex(
             bin_path=bin_path,
             workspace_path=Path(temp),
             example_model_path=PROJ_ROOT_PATH / ".mf6minsim",
         )
+        build_notes_tex(force=force)
 
-    # build deprecations table LaTeX
-    build_deprecations_tex(force=force)
+        if full:
+            build_benchmark_tex(out_path=out_path, force=force, repo_owner=repo_owner)
+            fetch_example_docs(out_path=out_path, force=force, repo_owner=repo_owner)
+            fetch_usgs_pubs(out_path=out_path, force=force)
+            tex_paths = TEX_PATHS["full"]
+        else:
+            tex_paths = TEX_PATHS["minimal"]
 
-    if full:
-        # build benchmarks table LaTex, running benchmarks first if necessary
-        build_benchmark_tex(output_path=output_path, force=force)
-
-        # download example docs
-        pdf_name = "mf6examples.pdf"
-        if force or not (output_path / pdf_name).is_file():
-            latest = get_release(f"{repo_owner}/modflow6-examples", "latest")
-            assets = latest["assets"]
-            asset = next(iter([a for a in assets if a["name"] == pdf_name]), None)
-            download_and_unzip(asset["browser_download_url"], output_path, verbose=True)
-
-        # download publications
-        for url in PUB_URLS:
-            print(f"Downloading publication: {url}")
-            try:
-                download_and_unzip(url, path=output_path, delete_zip=False)
-                assert (output_path / url.rpartition("/")[2]).is_file()
-            except HTTPError as e:
-                if "404" in str(e):
-                    warn(f"Publication not found: {url}")
-                else:
-                    raise
-
-        # convert LaTex to PDF
-        build_pdfs(tex_paths=TEX_PATHS["full"], output_path=output_path, force=force)
-    else:
-        # just convert LaTeX to PDF
-        build_pdfs(tex_paths=TEX_PATHS["minimal"], output_path=output_path, force=force)
+        build_pdfs(tex_paths=tex_paths, output_path=out_path, force=force)
 
     # enforce os line endings on all text files
     windows_line_endings = True
-    convert_line_endings(output_path, windows_line_endings)
+    convert_line_endings(out_path, windows_line_endings)
 
     # make sure we have expected PDFs
-    assert (output_path / "mf6io.pdf").is_file()
+    assert pdf_path.is_file()
     if full:
-        assert (output_path / "mf6io.pdf").is_file()
-        assert (output_path / "ReleaseNotes.pdf").is_file()
-        assert (output_path / "zonebudget.pdf").is_file()
-        assert (output_path / "converter_mf5to6.pdf").is_file()
-        assert (output_path / "mf6suptechinfo.pdf").is_file()
-        assert (output_path / "mf6examples.pdf").is_file()
+        assert (out_path / "ReleaseNotes.pdf").is_file()
+        assert (out_path / "zonebudget.pdf").is_file()
+        assert (out_path / "converter_mf5to6.pdf").is_file()
+        assert (out_path / "mf6suptechinfo.pdf").is_file()
+        assert (out_path / "mf6examples.pdf").is_file()
 
 
 @no_parallel
@@ -477,7 +500,7 @@ Additional LaTeX files may be included in the distribution by specifying --tex-p
     models = args.model if args.model else DEFAULT_MODELS
     build_documentation(
         bin_path=bin_path,
-        output_path=output_path,
+        out_path=output_path,
         force=args.force,
         full=args.full,
         models=models,

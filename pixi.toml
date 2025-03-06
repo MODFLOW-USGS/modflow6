@@ -13,6 +13,7 @@ flaky = "*"
 fortran-language-server = "*"
 fprettify = "*"
 gitpython = "*"
+jinja2 = ">=3.1.5,<4"
 jupytext = "*"
 matplotlib = "*"
 meson = "==1.3.0"
@@ -37,7 +38,9 @@ ruff = "*"
 scipy = "*"
 shapely = "*"
 syrupy = "*"
+tomli = ">=2.2.1,<3"
 xmipy = "*"
+
 
 [feature.rtd.dependencies]
 numpy = "*"
