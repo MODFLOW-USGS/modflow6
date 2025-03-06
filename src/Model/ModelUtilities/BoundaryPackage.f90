@@ -1450,7 +1450,7 @@ contains
     ! Return with found = .false.
     found = .false.
   end subroutine bnd_options
-    
+
   !> @ brief Copy boundnames into boundnames_cst
   !!
   !!  boundnames_cst is an array of type(CharacterStringType),
