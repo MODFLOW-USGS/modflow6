@@ -72,20 +72,20 @@ def github_user() -> Optional[str]:
 
 
 def build_benchmark_tex(
-    output_path: PathLike,
+    out_path: PathLike,
     force: bool = False,
 ):
     """Build LaTeX files for MF6 performance benchmarks to go into the release notes."""
 
     # run benchmarks again if no benchmarks found on GitHub or overwrite requested
-    benchmarks_path = output_path / "run-time-comparison.md"
+    benchmarks_path = out_path / "run-time-comparison.md"
     if force or not benchmarks_path.is_file():
         run_benchmarks(
             build_path=PROJ_ROOT_PATH / "builddir",
             current_bin_path=PROJ_ROOT_PATH / "bin",
             previous_bin_path=PROJ_ROOT_PATH / "bin" / "rebuilt",
             examples_path=EXAMPLES_REPO_PATH / "examples",
-            output_path=output_path,
+            out_path=out_path,
         )
     assert benchmarks_path.is_file()
 
@@ -279,7 +279,7 @@ def build_usage_tex(
 
 def build_pdfs(
     tex_paths: list[PathLike],
-    output_path: PathLike,
+    out_path: PathLike,
     passes: int = 3,
     force: bool = False,
 ):
@@ -288,13 +288,13 @@ def build_pdfs(
     print("Building PDFs from LaTex:")
     pprint(tex_paths)
 
-    output_path = Path(output_path).expanduser().absolute()
+    out_path = Path(out_path).expanduser().absolute()
     built_paths = set()
     for tex_path in tex_paths:
         tex_path = Path(tex_path).expanduser().absolute()
         pdf_name = tex_path.stem + ".pdf"
         pdf_path = tex_path.parent / pdf_name
-        tgt_path = output_path / pdf_name
+        tgt_path = out_path / pdf_name
         if force or not tgt_path.is_file():
             print(f"Converting {tex_path} to PDF")
             with set_dir(tex_path.parent):
@@ -412,7 +412,7 @@ def build_documentation(
         else:
             tex_paths = TEX_PATHS["minimal"]
 
-        build_pdfs(tex_paths=tex_paths, output_path=out_path, force=force)
+        build_pdfs(tex_paths=tex_paths, out_path=out_path, force=force)
 
     # enforce os line endings on all text files
     windows_line_endings = True
