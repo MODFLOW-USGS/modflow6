@@ -69,13 +69,15 @@ module GweSfeModule
     integer(I4B), pointer :: idxbudoutf => null() !< index of outflow terms in flowbudptr
     integer(I4B), pointer :: idxbudsbcd => null() !< index of streambed conduction terms in flowbudptr
 
+    logical, pointer, public :: shf_active => null() !< logical indicating if a sensible heat flux object is active
+
     real(DP), dimension(:), pointer, contiguous :: temprain => null() !< rainfall temperature
     real(DP), dimension(:), pointer, contiguous :: tempevap => null() !< evaporation temperature
     real(DP), dimension(:), pointer, contiguous :: temproff => null() !< runoff temperature
     real(DP), dimension(:), pointer, contiguous :: tempiflw => null() !< inflow temperature
     real(DP), dimension(:), pointer, contiguous :: ktf => null() !< thermal conductivity between the sfe and groundwater cell
     real(DP), dimension(:), pointer, contiguous :: rfeatthk => null() !< thickness of streambed material through which thermal conduction occurs
-    
+        
     type(ShfType), pointer :: shf => null() ! sensible heat flux (shf) object
     integer(I4B), pointer :: inshf => null() ! SHF (sensible heat flux utility) unit number (0 if unused)
 
@@ -83,6 +85,7 @@ module GweSfeModule
 
     !procedure :: bnd_df => sfe_df
     procedure :: bnd_da => sfe_da
+    procedure :: bnd_ar => sfe_ar
     procedure :: allocate_scalars
     procedure :: apt_allocate_arrays => sfe_allocate_arrays
     procedure :: find_apt_package => find_sfe_package
@@ -170,10 +173,6 @@ contains
     sfeobj%depvartype = dvt
     sfeobj%depvarunit = dvu
     sfeobj%depvarunitabbrev = dvua
-    !
-    ! -- create sensible heat flux package
-    inshf = GetUnit()
-    call shf_cr(sfeobj%shf, namemodel, inshf, iout)
   end subroutine sfe_create
                         
   !> @brief Override boundary package type define function
@@ -200,11 +199,11 @@ contains
     class(GweSfeType), intent(inout) :: this
     !
     ! -- call parent class _ar routine
-    call this%tspapttype%bndtype%bnd_ar()
+    call this%tspapttype%bnd_ar()
     !
     ! -- activate appropriate pbst sub-packages
     if (this%inshf /= 0) then
-      call this%shf%shf_ar()
+      call this%shf%ar()
     end if
   end subroutine sfe_ar
   
@@ -250,6 +249,7 @@ contains
     found = .true.
     select case (option)
     case ('SHF6')
+      !
       call this%parser%GetStringCaps(keyword)
       if (trim(adjustl(keyword)) /= 'FILEIN') then
         errmsg = 'SHF6 keyword must be followed by "FILEIN" '// &
@@ -257,17 +257,18 @@ contains
         call store_error(errmsg)
         call this%parser%StoreErrorUnit()
       end if
-      if (this%shf%active) then
+      if (this%shf_active) then
         errmsg = 'Multiple SHF6 keywords detected in OPTIONS block. '// &
                  'Only one SHF6 entry allowed for a package.'
         call store_error(errmsg)
       end if
-      this%shf%active = .true.
+      this%shf_active = .true.
       call this%parser%GetString(fname)
+      !
+      ! -- create sensible heat flux object
+      call openfile(this%inshf, this%iout, fname, 'SHF')
+      call shf_cr(this%shf, this%name_model, this%inshf, this%iout)
       this%shf%inputFilename = fname
-      !inshf = GetUnit()
-      call openfile(this%inshf, this%iout, this%shf%inputFilename, 'SHF')
-      !this%shf%inunit = inshf
     case default
       !
       ! -- No options found
@@ -795,6 +796,7 @@ contains
     call mem_allocate(this%idxbudiflw, 'IDXBUDIFLW', this%memoryPath)
     call mem_allocate(this%idxbudoutf, 'IDXBUDOUTF', this%memoryPath)
     call mem_allocate(this%idxbudsbcd, 'IDXBUDSBCD', this%memoryPath)
+    call mem_allocate(this%shf_active, 'SHF_ACTIVE', this%memoryPath)
     call mem_allocate(this%inshf, 'INSHF', this%memoryPath)
     !
     ! -- Initialize
@@ -804,6 +806,7 @@ contains
     this%idxbudiflw = 0
     this%idxbudoutf = 0
     this%idxbudsbcd = 0
+    this%shf_active = .false.
     this%inshf = 0
   end subroutine allocate_scalars
 
@@ -857,6 +860,7 @@ contains
     call mem_deallocate(this%idxbudiflw)
     call mem_deallocate(this%idxbudoutf)
     call mem_deallocate(this%idxbudsbcd)
+    call mem_deallocate(this%shf_active)
     call mem_deallocate(this%inshf)
     !
     ! -- Deallocate time series

@@ -33,8 +33,10 @@ module SensHeatModule
 
   contains
 
-    procedure, public :: shf_ar
     procedure :: da => shf_da
+    procedure :: read_option => shf_read_option
+    procedure :: pbst_options => shf_options
+    procedure, private :: shf_allocate_scalars
   
   end type ShfType
   
@@ -56,24 +58,14 @@ contains
     call shf%init(name_model, 'SHF', 'SHF', inunit, iout)
     !
     ! -- allocate scalars
-    call shf%allocate_scalars()
+    call shf%shf_allocate_scalars()
   end subroutine shf_cr
   
-  !> @brief Allocate and read
-  !!
-  !!  Method to read and prepare period data for the SHF package
-  !<
-  subroutine shf_ar(this)
-    ! -- dummy
-    class(ShfType), intent(out) :: this !< ShfType object
-    !
-    
-  end subroutine shf_ar
 
   !> @brief Allocate scalars specific to the streamflow energy transport (SFE)
   !! package.
   !<
-  subroutine allocate_scalars(this)
+  subroutine shf_allocate_scalars(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -88,7 +80,7 @@ contains
     this%rhoa = 1.225  ! kg/m3
     this%cpa = 717.0  ! J/kg/C
     this%cd = 0.002  ! unitless
-  end subroutine allocate_scalars
+  end subroutine shf_allocate_scalars
   
   !> @brief Allocate arrays specific to the sensible heat flux (SHF) package
   !< 
@@ -111,6 +103,23 @@ contains
     end do
   end subroutine
 
+  !> @brief Set options specific to the ShfType
+  !!
+  !! This routine overrides PbstBaseType%bnd_options
+  !<
+  subroutine shf_options(this, option, found)
+    
+    found = .true.
+    foundgcclassoption = .false.
+    select case (option)
+    case ('FLOW_PACKAGE_NAME')
+      call this%parser%GetStringCaps(this%flowpackagename)
+      write (this%iout, '(4x,a)') &
+        'THIS '//trim(adjustl(this%text))//' PACKAGE CORRESPONDS TO A GWF &
+        &PACKAGE WITH THE NAME '//trim(adjustl(this%flowpackagename))
+
+  end subroutine shf_options
+  
   !> @brief Deallocate package memory
   !!
   !! Deallocate TVK package scalars and arrays.
@@ -129,5 +138,21 @@ contains
     ! -- Deallocate parent
     call pbstbase_da(this)
   end subroutine shf_da
-
+  
+  !> @brief Read a SHF-specific option from the OPTIONS block
+  !!
+  !! Process a single SHF-specific option. Used when reading the OPTIONS block
+  !! of the SHF package input file.
+  !<
+  function shf_read_option(this, keyword) result(success)
+    ! -- dummy
+    class(ShfType) :: this
+    character(len=*), intent(in) :: keyword
+    ! -- return
+    logical :: success
+    !
+    ! -- There are no TVK-specific options, so just return false
+    success = .false.
+  end function shf_read_option
+  
 end module SensHeatModule
