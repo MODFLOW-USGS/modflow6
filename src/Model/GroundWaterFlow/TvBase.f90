@@ -49,12 +49,11 @@ module TvBaseModule
     !! Deferred procedure called by the TvBaseType code to announce the
     !! specific package version and set any required array and variable
     !! pointers from other packages.
-    !!
     !<
     subroutine ar_set_pointers(this)
       ! -- modules
       import TvBaseType
-      ! -- dummy variables
+      ! -- dummy
       class(TvBaseType) :: this
     end subroutine
 
@@ -62,12 +61,11 @@ module TvBaseModule
     !!
     !! Deferred procedure called by the TvBaseType code to process a single
     !! keyword from the OPTIONS block of the package input file.
-    !!
     !<
     function read_option(this, keyword) result(success)
       ! -- modules
       import TvBaseType
-      ! -- dummy variables
+      ! -- dummy
       class(TvBaseType) :: this
       character(len=*), intent(in) :: keyword
       ! -- return
@@ -78,13 +76,12 @@ module TvBaseModule
     !!
     !! Deferred procedure called by the TvBaseType code to retrieve a pointer
     !! to a given node's value for a given named variable.
-    !!
     !<
     function get_pointer_to_value(this, n, varName) result(bndElem)
       ! -- modules
       use KindModule, only: I4B, DP
       import TvBaseType
-      ! -- dummy variables
+      ! -- dummy
       class(TvBaseType) :: this
       integer(I4B), intent(in) :: n
       character(len=*), intent(in) :: varName
@@ -96,13 +93,12 @@ module TvBaseModule
     !!
     !! Deferred procedure called by the TvBaseType code when a property value
     !! change occurs at (kper, kstp).
-    !!
     !<
     subroutine set_changed_at(this, kper, kstp)
       ! -- modules
       use KindModule, only: I4B
       import TvBaseType
-      ! -- dummy variables
+      ! -- dummy
       class(TvBaseType) :: this
       integer(I4B), intent(in) :: kper
       integer(I4B), intent(in) :: kstp
@@ -113,12 +109,11 @@ module TvBaseModule
     !! Deferred procedure called by the TvBaseType code when a new time step
     !! commences, indicating that any previously set per-node property value
     !! change flags should be reset.
-    !!
     !<
     subroutine reset_change_flags(this)
       ! -- modules
       import TvBaseType
-      ! -- dummy variables
+      ! -- dummy
       class(TvBaseType) :: this
     end subroutine
 
@@ -128,13 +123,12 @@ module TvBaseModule
     !! change occurs to perform any required validity checks on the value of
     !! the given variable at the given node. Perform any required updates to
     !! the property value if it is valid, or log an error if not.
-    !!
     !<
     subroutine validate_change(this, n, varName)
       ! -- modules
       use KindModule, only: I4B
       import TvBaseType
-      ! -- dummy variables
+      ! -- dummy
       class(TvBaseType) :: this
       integer(I4B), intent(in) :: n
       character(len=*), intent(in) :: varName
@@ -144,13 +138,12 @@ module TvBaseModule
 
 contains
 
-  !> @brief Initialise the TvBaseType object
+  !> @brief Initialize the TvBaseType object
   !!
   !! Allocate and initialize data members of the object.
-  !!
   !<
   subroutine init(this, name_model, pakname, ftype, inunit, iout)
-    ! -- dummy variables
+    ! -- dummy
     class(TvBaseType) :: this
     character(len=*), intent(in) :: name_model
     character(len=*), intent(in) :: pakname
@@ -168,10 +161,9 @@ contains
   !> @brief Allocate scalar variables
   !!
   !! Allocate scalar data members of the object.
-  !!
   !<
   subroutine tvbase_allocate_scalars(this)
-    ! -- dummy variables
+    ! -- dummy
     class(TvBaseType) :: this
     !
     ! -- Call standard NumericalPackageType allocate scalars
@@ -184,10 +176,9 @@ contains
   !> @brief Allocate and read method for package
   !!
   !! Allocate and read static data for the package.
-  !!
   !<
   subroutine ar(this, dis)
-    ! -- dummy variables
+    ! -- dummy
     class(TvBaseType) :: this
     class(DisBaseType), pointer, intent(in) :: dis
     !
@@ -219,12 +210,11 @@ contains
   !!
   !! Reads the OPTIONS block of the package's input file, deferring to the
   !! derived type to process any package-specific keywords.
-  !!
   !<
   subroutine read_options(this)
-    ! -- dummy variables
+    ! -- dummy
     class(TvBaseType) :: this
-    ! -- local variables
+    ! -- local
     character(len=LINELENGTH) :: keyword
     character(len=MAXCHARLEN) :: fname
     logical :: isfound
@@ -286,12 +276,11 @@ contains
   !> @brief Read and prepare method for package
   !!
   !! Read and prepare stress period data for the package.
-  !!
   !<
   subroutine rp(this)
-    ! -- dummy variables
+    ! -- dummy
     class(TvBaseType) :: this
-    ! -- local variables
+    ! -- local
     character(len=LINELENGTH) :: line, cellid, varName, text
     logical :: isfound, endOfBlock, haveChanges
     integer(I4B) :: ierr, node
@@ -407,12 +396,11 @@ contains
   !> @brief Advance the package
   !!
   !! Advance data for a new time step.
-  !!
   !<
   subroutine ad(this)
-    ! -- dummy variables
+    ! -- dummy
     class(TvBaseType) :: this
-    ! -- local variables
+    ! -- local
     integer(I4B) :: i, n, numlinks
     type(TimeSeriesLinkType), pointer :: tsLink
     !
@@ -454,10 +442,9 @@ contains
   !> @brief Deallocate package memory
   !!
   !! Deallocate package scalars and arrays.
-  !!
   !<
   subroutine tvbase_da(this)
-    ! -- dummy variables
+    ! -- dummy
     class(TvBaseType) :: this
     !
     ! -- Deallocate time series manager

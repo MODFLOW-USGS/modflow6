@@ -1,14 +1,14 @@
-!> -- @ brief Energy Storage and Transfer (EST) Module
+!>  @ brief Energy Storage and Transfer (EST) Module
 !!
-!!    The GweEstModule contains the GweEstType, which is related
-!!    to GwtEstModule; however, there are some important differences
-!!    owing to the fact that a sorbed phase is not considered.
-!!    Instead, a single temperature is simulated for each grid
-!!    cell and is representative of both the aqueous and solid
-!!    phases (i.e., instantaneous thermal equilibrium is
-!!    assumed).  Also, "thermal bleeding" is accommodated, where
-!!    conductive processes can transport into, through, or
-!!    out of dry cells that are part of the active domain.
+!!  The GweEstModule contains the GweEstType, which is related
+!!  to GwtEstModule; however, there are some important differences
+!!  owing to the fact that a sorbed phase is not considered.
+!!  Instead, a single temperature is simulated for each grid
+!!  cell and is representative of both the aqueous and solid
+!!  phases (i.e., instantaneous thermal equilibrium is
+!!  assumed).  Also, "thermal bleeding" is accommodated, where
+!!  conductive processes can transport into, through, or
+!!  out of dry cells that are part of the active domain.
 !<
 module GweEstModule
 
@@ -489,7 +489,7 @@ contains
     real(DP) :: vcell
     real(DP) :: decay_rate
     !
-    ! -- Calculate decay change
+    ! -- calculate decay change
     do n = 1, nodes
       !
       ! -- skip if transport inactive
@@ -515,7 +515,6 @@ contains
       this%ratedcys(n) = rate
       idiag = this%dis%con%ia(n)
       flowja(idiag) = flowja(idiag) + rate
-      !
     end do
   end subroutine est_cq_dcy_solid
 
@@ -640,8 +639,6 @@ contains
       this%ibound => null()
       this%fmi => null()
     end if
-    !
-    ! -- Scalars
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
