@@ -41,10 +41,13 @@ module GweSfeModule
   use TspFmiModule, only: TspFmiType
   use SfrModule, only: SfrType
   use ObserveModule, only: ObserveType
+  use BaseDisModule, only: DisBaseType
   use TspAptModule, only: TspAptType, apt_process_obsID, &
                           apt_process_obsID12
   use GweInputDataModule, only: GweInputDataType
+  use SensHeatModule, only: ShfType, shf_cr
   use MatrixBaseModule
+  use InputOutputModule, only: openfile
   !
   implicit none
   !
@@ -66,16 +69,23 @@ module GweSfeModule
     integer(I4B), pointer :: idxbudoutf => null() !< index of outflow terms in flowbudptr
     integer(I4B), pointer :: idxbudsbcd => null() !< index of streambed conduction terms in flowbudptr
 
+    logical, pointer, public :: shf_active => null() !< logical indicating if a sensible heat flux object is active
+
     real(DP), dimension(:), pointer, contiguous :: temprain => null() !< rainfall temperature
     real(DP), dimension(:), pointer, contiguous :: tempevap => null() !< evaporation temperature
     real(DP), dimension(:), pointer, contiguous :: temproff => null() !< runoff temperature
     real(DP), dimension(:), pointer, contiguous :: tempiflw => null() !< inflow temperature
     real(DP), dimension(:), pointer, contiguous :: ktf => null() !< thermal conductivity between the sfe and groundwater cell
     real(DP), dimension(:), pointer, contiguous :: rfeatthk => null() !< thickness of streambed material through which thermal conduction occurs
+        
+    type(ShfType), pointer :: shf => null() ! sensible heat flux (shf) object
+    integer(I4B), pointer :: inshf => null() ! SHF (sensible heat flux utility) unit number (0 if unused)
 
   contains
 
+    !procedure :: bnd_df => sfe_df
     procedure :: bnd_da => sfe_da
+    procedure :: bnd_ar => sfe_ar
     procedure :: allocate_scalars
     procedure :: apt_allocate_arrays => sfe_allocate_arrays
     procedure :: find_apt_package => find_sfe_package
@@ -94,6 +104,8 @@ module GweSfeModule
     procedure :: pak_bd_obs => sfe_bd_obs
     procedure :: pak_set_stressperiod => sfe_set_stressperiod
     procedure :: apt_read_cvs => sfe_read_cvs
+    procedure :: gc_options => sfe_options
+    procedure, private :: source_options
 
   end type GweSfeType
 
@@ -103,6 +115,8 @@ contains
   !<
   subroutine sfe_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         fmi, eqnsclfac, gwecommon, dvt, dvu, dvua)
+    ! -- modules
+    use InputOutputModule, only: getunit
     ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B), intent(in) :: id
@@ -118,6 +132,7 @@ contains
     character(len=*), intent(in) :: dvu !< For GWE, set to "energy" in TspAptType
     character(len=*), intent(in) :: dvua !< For GWE, set to "E" in TspAptType
     ! -- local
+    integer(I4B) :: inshf
     type(GweSfeType), pointer :: sfeobj
     !
     ! -- Allocate the object and assign values to object variables
@@ -159,6 +174,107 @@ contains
     sfeobj%depvarunit = dvu
     sfeobj%depvarunitabbrev = dvua
   end subroutine sfe_create
+                        
+  !> @brief Override boundary package type define function
+  !<
+  !subroutine sfe_df(this, neq, dis)
+  !  ! -- dummy
+  !  class(GweSfeType), intent(inout) :: this
+  !  integer(I4B), intent(inout) :: neq !< number of equations
+  !  class(DisBaseType), pointer :: dis !< discretization object
+  !  ! -- local
+  !  !
+  !  ! -- call original define routine in parent class
+  !  call this%bnd_df(neq, dis)
+  !  !
+  !  ! -- supplement define routine with ability to add utility packages
+  !  !call this%source_options()
+  !  !
+  !end subroutine sfe_df
+  
+  !> @brief Allocate and read method for sfe package
+  !<
+  subroutine sfe_ar(this)
+    ! -- dummy
+    class(GweSfeType), intent(inout) :: this
+    !
+    ! -- call parent class _ar routine
+    call this%tspapttype%bnd_ar()
+    !
+    ! -- activate appropriate pbst sub-packages
+    if (this%inshf /= 0) then
+      call this%shf%ar()
+    end if
+  end subroutine sfe_ar
+  
+  !> @brief Update simulation options from input mempath
+  !<
+  subroutine source_options(this)
+    ! -- modules
+    use SourceCommonModule, only: filein_fname
+    ! -- dummy
+    class(GweSfeType) :: this
+    ! -- locals
+    character(len=LINELENGTH) :: shf6_filename
+    !
+    ! -- enforce 0 or 1 SHF6_FILENAME entries in the options block
+    if (filein_fname(shf6_filename, 'SHF6_FILENAME', this%input_mempath, &
+                     this%input_fname)) then
+      call openfile(this%inshf, this%iout, shf6_filename, 'SHF')
+      call shf_cr(this%shf, this%name_model, this%inshf, this%iout)
+    end if
+  end subroutine source_options
+  
+  !> @brief Set options specific to the GweSfeType
+  !!
+  !! This routine overrides TspAptType%gc_options
+  !<
+  subroutine sfe_options(this, option, found)
+    ! -- modules
+    use ConstantsModule, only: MAXCHARLEN, LGP
+    use OpenSpecModule, only: access, form
+    use InputOutputModule, only: urword, getunit, assign_iounit, openfile
+    ! -- dummy
+    class(GweSfeType), intent(inout) :: this
+    character(len=*), intent(inout) :: option
+    logical, intent(inout) :: found
+    ! -- local
+    character(len=MAXCHARLEN) :: fname, keyword
+    logical(LGP) :: foundgcclassoption
+    ! -- formats
+    character(len=*), parameter :: fmtaptbin = &
+      "(4x, a, 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, &
+      &/4x, 'OPENED ON UNIT: ', I0)"
+    !
+    found = .true.
+    select case (option)
+    case ('SHF6')
+      !
+      call this%parser%GetStringCaps(keyword)
+      if (trim(adjustl(keyword)) /= 'FILEIN') then
+        errmsg = 'SHF6 keyword must be followed by "FILEIN" '// &
+                     'then by filename.'
+        call store_error(errmsg)
+        call this%parser%StoreErrorUnit()
+      end if
+      if (this%shf_active) then
+        errmsg = 'Multiple SHF6 keywords detected in OPTIONS block. '// &
+                 'Only one SHF6 entry allowed for a package.'
+        call store_error(errmsg)
+      end if
+      this%shf_active = .true.
+      call this%parser%GetString(fname)
+      !
+      ! -- create sensible heat flux object
+      call openfile(this%inshf, this%iout, fname, 'SHF')
+      call shf_cr(this%shf, this%name_model, this%inshf, this%iout)
+      this%shf%inputFilename = fname
+    case default
+      !
+      ! -- No options found
+      found = .false.
+    end select
+  end subroutine sfe_options
 
   !> @brief Find corresponding sfe package
   !<
@@ -680,6 +796,8 @@ contains
     call mem_allocate(this%idxbudiflw, 'IDXBUDIFLW', this%memoryPath)
     call mem_allocate(this%idxbudoutf, 'IDXBUDOUTF', this%memoryPath)
     call mem_allocate(this%idxbudsbcd, 'IDXBUDSBCD', this%memoryPath)
+    call mem_allocate(this%shf_active, 'SHF_ACTIVE', this%memoryPath)
+    call mem_allocate(this%inshf, 'INSHF', this%memoryPath)
     !
     ! -- Initialize
     this%idxbudrain = 0
@@ -688,6 +806,8 @@ contains
     this%idxbudiflw = 0
     this%idxbudoutf = 0
     this%idxbudsbcd = 0
+    this%shf_active = .false.
+    this%inshf = 0
   end subroutine allocate_scalars
 
   !> @brief Allocate arrays specific to the streamflow energy transport (SFE)
@@ -727,6 +847,12 @@ contains
     ! -- dummy
     class(GweSfeType) :: this
     !
+    ! -- SHF (sensible heat flux)
+    if (this%inshf /= 0) then
+      call this%shf%da()
+      deallocate (this%shf)
+    end if
+    !
     ! -- Deallocate scalars
     call mem_deallocate(this%idxbudrain)
     call mem_deallocate(this%idxbudevap)
@@ -734,6 +860,8 @@ contains
     call mem_deallocate(this%idxbudiflw)
     call mem_deallocate(this%idxbudoutf)
     call mem_deallocate(this%idxbudsbcd)
+    call mem_deallocate(this%shf_active)
+    call mem_deallocate(this%inshf)
     !
     ! -- Deallocate time series
     call mem_deallocate(this%temprain)

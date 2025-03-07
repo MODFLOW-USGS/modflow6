@@ -154,6 +154,7 @@ module TspAptModule
     procedure :: apt_solve
     procedure :: pak_solve
     procedure :: bnd_options => apt_options
+    procedure :: gc_options
     procedure :: read_dimensions => apt_read_dimensions
     procedure :: apt_read_cvs
     procedure :: read_initial_attr => apt_read_initial_attr
@@ -1320,12 +1321,14 @@ contains
     logical, intent(inout) :: found
     ! -- local
     character(len=MAXCHARLEN) :: fname, keyword
+    logical(LGP) :: foundgcclassoption
     ! -- formats
     character(len=*), parameter :: fmtaptbin = &
       "(4x, a, 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, &
       &/4x, 'OPENED ON UNIT: ', I0)"
     !
     found = .true.
+    foundgcclassoption = .false.
     select case (option)
     case ('FLOW_PACKAGE_NAME')
       call this%parser%GetStringCaps(this%flowpackagename)
@@ -1394,11 +1397,31 @@ contains
       end if
     case default
       !
-      ! -- No options found
-      found = .false.
+      ! -- check for grandchild class options
+      call this%gc_options(option, foundgcclassoption)
+      !
+      ! -- No grandchild options found
+      found = foundgcclassoption
     end select
   end subroutine apt_options
-
+  
+  !> @ brief Read additional grandchild options for package
+  !!
+  !!  Check whether daughter packages are specified in the options block. 
+  !!  This method should be overridden by the (grand)child package to read the
+  !!  options that are in addition to the base options implemented in the  
+  !!  boundary package class.
+  !<
+  subroutine gc_options(this, option, found)
+    ! -- dummy
+    class(TspAptType), intent(inout) :: this !< TspAptType object
+    character(len=*), intent(inout) :: option !< option keyword string
+    logical(LGP), intent(inout) :: found !< boolean indicating if the option was found
+    !
+    ! Return with found = .false.
+    found = .false.
+  end subroutine gc_options
+  
   !> @brief Determine dimensions for this advanced package
   !<
   subroutine apt_read_dimensions(this)
