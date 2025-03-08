@@ -405,7 +405,7 @@ def build_documentation(
         build_notes_tex(force=force)
 
         if full:
-            build_benchmark_tex(out_path=out_path, force=force, repo_owner=repo_owner)
+            build_benchmark_tex(out_path=out_path, force=force)
             fetch_example_docs(out_path=out_path, force=force, repo_owner=repo_owner)
             fetch_usgs_pubs(out_path=out_path, force=force)
             tex_paths = TEX_PATHS["full"]
