@@ -425,6 +425,7 @@ modflow_sources = files(
     'Utilities' / 'STLStackInt.f90',
     'Utilities' / 'STLVecInt.f90',
     'Utilities' / 'StringList.f90',
+    'Utilities' / 'SVD.f90',
     'Utilities' / 'Table.f90',
     'Utilities' / 'TableTerm.f90',
     'Utilities' / 'Timer.f90',
